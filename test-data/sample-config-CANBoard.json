@@ -1,0 +1,23 @@
+{
+  "deviceId": "CANBoard_001",
+  "deviceType": "CANBoard",
+  "name": "Sensor Data Logger",
+  "lastModified": "2025-06-08T14:25:00Z",
+  "settings": {
+    "can_node_id": 5,
+    "sample_rate": 200,
+    "analog_channel_1_enabled": true,
+    "analog_channel_1_range": "0-5V",
+    "analog_channel_2_enabled": true,
+    "analog_channel_2_range": "4-20mA",
+    "analog_channel_3_enabled": false,
+    "analog_channel_3_range": "0-10V",
+    "digital_output_1_mode": "push-pull",
+    "digital_output_2_mode": "open-drain",
+    "calibration_offset_ch1": 0.05,
+    "calibration_scale_ch1": 1.002
+  },
+  "description": "Data acquisition for pressure and temperature sensors",
+  "location": "Dashboard - Center Console",
+  "tags": ["sensors", "logging", "dashboard"]
+}

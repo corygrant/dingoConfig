@@ -1,0 +1,123 @@
+{
+  "deviceType": "dingoPDM",
+  "version": "1.0",
+  "name": "dingoPDM Power Distribution Module",
+  "description": "CAN-based power distribution module with 12 outputs",
+  "communication": {
+    "protocol": "CAN",
+    "baudRate": 500000,
+    "baseId": 0x600,
+    "maxNodes": 16
+  },
+  "parameters": [
+    {
+      "id": "output1_enabled",
+      "name": "Output 1 Enabled",
+      "type": "boolean",
+      "default": false,
+      "description": "Enable/disable output channel 1"
+    },
+    {
+      "id": "output1_current_limit",
+      "name": "Output 1 Current Limit",
+      "type": "float",
+      "min": 0.1,
+      "max": 30.0,
+      "default": 10.0,
+      "unit": "A",
+      "description": "Current limit for output channel 1"
+    },
+    {
+      "id": "output1_startup_delay",
+      "name": "Output 1 Startup Delay",
+      "type": "integer",
+      "min": 0,
+      "max": 5000,
+      "default": 0,
+      "unit": "ms",
+      "description": "Delay before enabling output channel 1"
+    },
+    {
+      "id": "can_node_id",
+      "name": "CAN Node ID",
+      "type": "integer",
+      "min": 1,
+      "max": 16,
+      "default": 1,
+      "description": "CAN bus node identifier"
+    },
+    {
+      "id": "diagnostic_interval",
+      "name": "Diagnostic Interval",
+      "type": "integer",
+      "min": 100,
+      "max": 10000,
+      "default": 1000,
+      "unit": "ms",
+      "description": "Interval for diagnostic message transmission"
+    }
+  ],
+  "telemetry": [
+    {
+      "id": "input_voltage",
+      "name": "Input Voltage",
+      "type": "float",
+      "unit": "V",
+      "canId": 0x600,
+      "byteOffset": 0,
+      "byteLength": 2,
+      "scale": 0.01,
+      "description": "Main input voltage"
+    },
+    {
+      "id": "total_current",
+      "name": "Total Current",
+      "type": "float",
+      "unit": "A",
+      "canId": 0x600,
+      "byteOffset": 2,
+      "byteLength": 2,
+      "scale": 0.01,
+      "description": "Total current consumption"
+    },
+    {
+      "id": "output1_current",
+      "name": "Output 1 Current",
+      "type": "float",
+      "unit": "A",
+      "canId": 0x601,
+      "byteOffset": 0,
+      "byteLength": 2,
+      "scale": 0.01,
+      "description": "Current through output channel 1"
+    },
+    {
+      "id": "device_temperature",
+      "name": "Device Temperature",
+      "type": "float",
+      "unit": "°C",
+      "canId": 0x602,
+      "byteOffset": 0,
+      "byteLength": 2,
+      "scale": 0.1,
+      "offset": -40,
+      "description": "Internal device temperature"
+    }
+  ],
+  "commands": [
+    {
+      "id": "reset_device",
+      "name": "Reset Device",
+      "description": "Reset the device to default state",
+      "canId": 0x650,
+      "data": [0x01]
+    },
+    {
+      "id": "save_config",
+      "name": "Save Configuration",
+      "description": "Save current configuration to non-volatile memory",
+      "canId": 0x650,
+      "data": [0x02]
+    }
+  ]
+}

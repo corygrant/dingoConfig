@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project>
+  <PropertyGroup>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <WarningsAsErrors />
+    <WarningsNotAsErrors />
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <!-- Test Coverage Settings -->
+  <PropertyGroup Condition="'$(IsTestProject)' == 'true'">
+    <CollectCoverage>true</CollectCoverage>
+    <CoverletOutputFormat>opencover</CoverletOutputFormat>
+    <Exclude>[*]*.Program,[*]*.Startup,[*]*Tests*</Exclude>
+    <ExcludeByFile>**/Program.cs,**/Startup.cs</ExcludeByFile>
+  </PropertyGroup>
+</Project>

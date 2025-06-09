@@ -1,0 +1,89 @@
+{
+  "deviceType": "CANBoard",
+  "version": "1.0",
+  "name": "CANBoard Data Acquisition Module",
+  "description": "Multi-channel analog and digital I/O CAN module",
+  "communication": {
+    "protocol": "CAN",
+    "baudRate": 500000,
+    "baseId": 0x700,
+    "maxNodes": 32
+  },
+  "parameters": [
+    {
+      "id": "analog_channel_1_enabled",
+      "name": "Analog Channel 1 Enabled",
+      "type": "boolean",
+      "default": true,
+      "description": "Enable analog input channel 1"
+    },
+    {
+      "id": "analog_channel_1_range",
+      "name": "Analog Channel 1 Range",
+      "type": "enum",
+      "options": ["0-5V", "0-10V", "4-20mA"],
+      "default": "0-5V",
+      "description": "Input range for analog channel 1"
+    },
+    {
+      "id": "digital_output_1_mode",
+      "name": "Digital Output 1 Mode",
+      "type": "enum",
+      "options": ["push-pull", "open-drain"],
+      "default": "push-pull",
+      "description": "Output driver mode for digital channel 1"
+    },
+    {
+      "id": "sample_rate",
+      "name": "Sample Rate",
+      "type": "integer",
+      "min": 1,
+      "max": 1000,
+      "default": 100,
+      "unit": "Hz",
+      "description": "Analog input sampling rate"
+    }
+  ],
+  "telemetry": [
+    {
+      "id": "analog_channel_1",
+      "name": "Analog Channel 1",
+      "type": "float",
+      "unit": "V",
+      "canId": 0x700,
+      "byteOffset": 0,
+      "byteLength": 2,
+      "scale": 0.001,
+      "description": "Analog input channel 1 value"
+    },
+    {
+      "id": "digital_inputs",
+      "name": "Digital Inputs",
+      "type": "integer",
+      "canId": 0x701,
+      "byteOffset": 0,
+      "byteLength": 1,
+      "description": "Digital input states (bit field)"
+    }
+  ],
+  "commands": [
+    {
+      "id": "set_digital_output",
+      "name": "Set Digital Output",
+      "description": "Set digital output state",
+      "canId": 0x750,
+      "parameters": [
+        {
+          "name": "channel",
+          "type": "integer",
+          "min": 1,
+          "max": 8
+        },
+        {
+          "name": "state",
+          "type": "boolean"
+        }
+      ]
+    }
+  ]
+}

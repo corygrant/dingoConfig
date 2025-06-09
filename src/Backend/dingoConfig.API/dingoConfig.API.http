@@ -1,0 +1,6 @@
+@dingoConfig.API_HostAddress = http://localhost:5031
+
+GET {{dingoConfig.API_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
