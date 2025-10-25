@@ -39,8 +39,9 @@ public class UsbAdapter : ICommsAdapter
         {
             return Task.FromResult<(bool success, string? error)>((false, e.Message));
         }
-
-        return Task.FromResult<(bool success, string? error)>((_serial.IsOpen(), null));
+        
+        return Task.FromResult<(bool success, string? error)>((true, null));
+        //return Task.FromResult<(bool success, string? error)>((_serial.IsOpen(), null));
     }
 
     public Task<(bool success, string? error)> StopAsync()
