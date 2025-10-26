@@ -1,29 +1,159 @@
+// infrastructure/BackgroundServices/CanDataPipeline.cs
+
 using System.Threading.Channels;
+using application.Services;
+using domain.Events;
+using domain.Interfaces;
 using domain.Models;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 
 namespace infrastructure.BackgroundServices;
 
-public class CommsDataPipeline
+public class CommsDataPipeline(
+    ICommsAdapter commsAdapter,
+    DeviceManager deviceManager,
+    ILogger<CommsDataPipeline> logger)
+    : BackgroundService
 {
-    private readonly Channel<CanData> _rxChannel;
-    private readonly Channel<CanData> _txChannel;
+    private readonly DeviceManager _deviceManager = deviceManager;
 
-    public CommsDataPipeline()
+    // RX Channel - Incoming CAN frames from adapter
+    private readonly Channel<CanData> _rxChannel = Channel.CreateBounded<CanData>(
+        new BoundedChannelOptions(50000)
+        {
+            FullMode = BoundedChannelFullMode.DropOldest, // Don't block adapter
+            SingleReader = true,
+            SingleWriter = false // Multiple adapters could write
+        });
+    
+    // TX Channel - Outgoing CAN frames to adapter
+    private readonly Channel<CanData> _txChannel = Channel.CreateBounded<CanData>(
+        new BoundedChannelOptions(10000)
+        {
+            FullMode = BoundedChannelFullMode.DropOldest,
+            SingleReader = true,
+            SingleWriter = false
+        });
+
+    // RX Channel - Large buffer for high message rate
+    // Don't block adapter
+    // Multiple adapters could write
+    // TX Normal Priority Channel
+
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        _rxChannel = Channel.CreateBounded<CanData>(
-            new BoundedChannelOptions(50000)
+        // Subscribe to adapter events
+        commsAdapter.DataReceived += OnDataReceived;
+        
+        // Start both pipelines
+        var rxTask = ProcessRxPipelineAsync(stoppingToken);
+        var txTask = ProcessTxPipelineAsync(stoppingToken);
+        
+        await Task.WhenAll(rxTask, txTask);
+    }
+    
+    // ============================================
+    // RX Pipeline (Receive from CAN bus)
+    // ============================================
+    
+    private void OnDataReceived(object? sender, CanDataEventArgs e)
+    {
+        // Queue frame for processing (non-blocking)
+        _rxChannel.Writer.TryWrite(e.Data);
+    }
+    
+    private async Task ProcessRxPipelineAsync(CancellationToken ct)
+    {
+        logger.LogInformation("RX Pipeline started");
+        
+        await foreach (var frame in _rxChannel.Reader.ReadAllAsync(ct))
+        {
+            try
             {
-                FullMode = BoundedChannelFullMode.DropOldest,
-                SingleReader = true,
-                SingleWriter = true
-            });
-
-        _txChannel = Channel.CreateBounded<CanData>(
-            new BoundedChannelOptions(50000)
+                // Route frame to appropriate device
+                // Devices will parse it and update their state
+                // (Devices subscribed to adapter events handle this)
+            }
+            catch (Exception ex)
             {
-                FullMode = BoundedChannelFullMode.DropOldest,
-                SingleReader = true,
-                SingleWriter = true
-            });
+                logger.LogError(ex, "Error processing RX frame: {CanId:X}", frame.Id);
+            }
+        }
+        
+        logger.LogInformation("RX Pipeline stopped");
+    }
+    
+    // ============================================
+    // TX Pipeline (Transmit to CAN bus)
+    // ============================================
+    
+    private async Task ProcessTxPipelineAsync(CancellationToken ct)
+    {
+        logger.LogInformation("TX Pipeline started");
+        
+        try
+        {
+            while (!ct.IsCancellationRequested)
+            {
+                if (_txChannel.Reader.TryRead(out var normalRequest))
+                {
+                    await TransmitFrameAsync(normalRequest, ct);
+                    continue;
+                }
+                
+                // If no messages, wait a bit
+                await Task.Delay(1, ct);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // Expected during shutdown
+        }
+        
+        logger.LogInformation("TX Pipeline stopped");
+    }
+    
+    private async Task TransmitFrameAsync(CanData data, CancellationToken ct)
+    {
+        try
+        {
+            await commsAdapter.WriteAsync(data, ct);
+            
+            logger.LogDebug(
+                "TX frame sent: CanId={Id:X}, Length={Len}", 
+                data.Id, 
+                data.Len);
+            
+            // Complete the request (signal to caller)
+            request.CompletionSource?.TrySetResult();
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(
+                ex, 
+                "Error transmitting frame: {CanId:X}", 
+                request.Frame.CanId);
+            
+            request.CompletionSource?.TrySetException(ex);
+        }
+    }
+    
+    // ============================================
+    // Public API for Transmitting
+    // ============================================
+    
+    /// <summary>
+    /// Queue a frame for transmission (normal priority)
+    /// </summary>
+    public void QueueTransmit(CanData frame)
+    {
+        _txChannel.Writer.TryWrite(frame);
+    }
+    
+    public override void Dispose()
+    {
+        commsAdapter.DataReceived -= OnDataReceived;
+        base.Dispose();
     }
 }

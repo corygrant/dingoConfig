@@ -14,10 +14,12 @@
     </ItemGroup>
 
     <ItemGroup>
+      <ProjectReference Include="..\application\application.csproj" />
       <ProjectReference Include="..\domain\domain.csproj" />
     </ItemGroup>
 
     <ItemGroup>
+      <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="10.0.0-rc.2.25502.107" />
       <PackageReference Include="System.IO.Ports" Version="10.0.0-rc.2.25502.107" />
     </ItemGroup>
 

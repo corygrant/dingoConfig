@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.IO.Ports;
 using domain.Enums;
 using domain.Interfaces;
+using domain.Models;
 
 namespace infrastructure.Comms.Adapters;
 
@@ -11,7 +12,7 @@ public class UsbAdapter : ICommsAdapter
     private static Stopwatch _rxStopwatch;
     private readonly int _rxTimeDelta;
 
-    public Task<(bool success, string? error)> InitAsync(string port, CanBitRate bitRate)
+    public Task<(bool success, string? error)> InitAsync(string port, CanBitRate bitRate, CancellationToken ct = default)
     {
         try
         {
@@ -27,7 +28,7 @@ public class UsbAdapter : ICommsAdapter
         return Task.FromResult<(bool success, string? error)>((true, null));
     }
 
-    public Task<(bool success, string? error)> StartAsync()
+    public Task<(bool success, string? error)> StartAsync(CancellationToken ct)
     {
         try
         {
@@ -49,6 +50,13 @@ public class UsbAdapter : ICommsAdapter
         throw new NotImplementedException();
     }
 
+    public Task<(bool success, string? error)> WriteAsync(CanData data, CancellationToken ct)
+    {
+        throw new NotImplementedException();
+    }
+
+    public DataReceivedHandler DataReceived { get; set; }
+
     public Task<(bool success, string? error)> WriteAsync()
     {
         throw new NotImplementedException();
@@ -58,4 +66,6 @@ public class UsbAdapter : ICommsAdapter
     {
         throw new NotImplementedException();
     }
+
+    public bool IsConnected { get; }
 }
