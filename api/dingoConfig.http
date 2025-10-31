@@ -1,6 +1,24 @@
 @dingoConfig_HostAddress = http://localhost:5022
 
-GET {{dingoConfig_HostAddress}}/weatherforecast/
+GET {{dingoConfig_HostAddress}}/api/Adapter/available
 Accept: application/json
 
 ###
+
+GET {{dingoConfig_HostAddress}}/api/Adapter/status
+Accept: application/json
+
+###
+
+POST {{dingoConfig_HostAddress}}/api/Adapter/connect
+Accept: application/json
+{
+    "adapterType": "SLCAN",
+    "Port": "/dev/ttyACM0",
+    "Bitrate": "500K
+}
+
+###
+
+POST {{dingoConfig_HostAddress}}/api/Adapter/disconnect
+Accept: application/json

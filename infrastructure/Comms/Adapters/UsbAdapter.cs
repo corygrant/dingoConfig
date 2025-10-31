@@ -11,8 +11,11 @@ public class UsbAdapter : ICommsAdapter
     private static SerialPort _serial;
     private static Stopwatch _rxStopwatch;
     private readonly int _rxTimeDelta;
+    private TimeSpan _rxTimeDelta1;
 
-    public Task<(bool success, string? error)> InitAsync(string port, CanBitRate bitRate, CancellationToken ct = default)
+    public string? Name { get; set; }
+
+    public bool InitAsync(string port, CanBitRate bitRate, CancellationToken ct = default)
     {
         try
         {
@@ -22,13 +25,13 @@ public class UsbAdapter : ICommsAdapter
         }
         catch (Exception e)
         {
-            return Task.FromResult<(bool success, string? error)>((false, e.Message));
+            return false;
         }
 
-        return Task.FromResult<(bool success, string? error)>((true, null));
+        return true;
     }
 
-    public Task<(bool success, string? error)> StartAsync(CancellationToken ct)
+    public bool StartAsync(CancellationToken ct)
     {
         try
         {
@@ -38,19 +41,19 @@ public class UsbAdapter : ICommsAdapter
         }
         catch (Exception e)
         {
-            return Task.FromResult<(bool success, string? error)>((false, e.Message));
+            return false;
         }
-        
-        return Task.FromResult<(bool success, string? error)>((true, null));
+
+        return true;
         //return Task.FromResult<(bool success, string? error)>((_serial.IsOpen(), null));
     }
 
-    public Task<(bool success, string? error)> StopAsync()
+    public bool StopAsync()
     {
         throw new NotImplementedException();
     }
 
-    public Task<(bool success, string? error)> WriteAsync(CanData data, CancellationToken ct)
+    public bool WriteAsync(CanData data, CancellationToken ct)
     {
         throw new NotImplementedException();
     }
@@ -66,6 +69,8 @@ public class UsbAdapter : ICommsAdapter
     {
         throw new NotImplementedException();
     }
+
+    TimeSpan ICommsAdapter.RxTimeDelta => _rxTimeDelta1;
 
     public bool IsConnected { get; }
 }

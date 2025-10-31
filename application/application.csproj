@@ -7,7 +7,26 @@
     </PropertyGroup>
 
     <ItemGroup>
+      <Folder Include="ConfigFile\Commands\" />
+      <Folder Include="ConfigFile\Queries\" />
+      <Folder Include="Devices\Commands\" />
+      <Folder Include="Devices\Queries\" />
       <Folder Include="Mappings\" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <Reference Include="Microsoft.Extensions.Logging.Abstractions">
+        <HintPath>..\..\..\..\.nuget\packages\microsoft.extensions.logging.abstractions\10.0.0-rc.2.25502.107\lib\net9.0\Microsoft.Extensions.Logging.Abstractions.dll</HintPath>
+      </Reference>
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\contracts\contracts.csproj" />
+      <ProjectReference Include="..\domain\domain.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <PackageReference Include="MediatR" Version="13.1.0" />
     </ItemGroup>
 
 </Project>

@@ -1,7 +1,7 @@
 // infrastructure/BackgroundServices/CanDataPipeline.cs
 
 using System.Threading.Channels;
-using application.Services;
+using application.Devices;
 using domain.Events;
 using domain.Interfaces;
 using domain.Models;
@@ -11,13 +11,11 @@ using Microsoft.Extensions.Logging;
 namespace infrastructure.BackgroundServices;
 
 public class CommsDataPipeline(
-    ICommsAdapter commsAdapter,
+    ICommsAdapterManager adapterManager,
     DeviceManager deviceManager,
     ILogger<CommsDataPipeline> logger)
     : BackgroundService
 {
-    private readonly DeviceManager _deviceManager = deviceManager;
-
     // RX Channel - Incoming CAN frames from adapter
     private readonly Channel<CanData> _rxChannel = Channel.CreateBounded<CanData>(
         new BoundedChannelOptions(50000)
@@ -44,7 +42,9 @@ public class CommsDataPipeline(
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         // Subscribe to adapter events
-        commsAdapter.DataReceived += OnDataReceived;
+        //if (adapterManager.ActiveAdapter == null) throw new NullReferenceException();
+            
+        //adapterManager.ActiveAdapter.DataReceived += OnDataReceived;
         
         // Start both pipelines
         var rxTask = ProcessRxPipelineAsync(stoppingToken);
@@ -118,7 +118,9 @@ public class CommsDataPipeline(
     {
         try
         {
-            await commsAdapter.WriteAsync(data, ct);
+            if (adapterManager.ActiveAdapter == null) throw new NullReferenceException();
+            
+            adapterManager.ActiveAdapter.WriteAsync(data, ct);
             
             logger.LogDebug(
                 "TX frame sent: CanId={Id:X}, Length={Len}", 
@@ -148,7 +150,11 @@ public class CommsDataPipeline(
     
     public override void Dispose()
     {
-        commsAdapter.DataReceived -= OnDataReceived;
+        if (adapterManager is { ActiveAdapter: not null })
+        {
+            adapterManager.ActiveAdapter.DataReceived -= OnDataReceived;
+        }
+
         base.Dispose();
     }
 }

@@ -6,22 +6,25 @@ namespace infrastructure.Comms.Adapters;
 
 public class SimAdapter : ICommsAdapter
 {
-    public Task<(bool success, string? error)> InitAsync(string port, CanBitRate bitRate, CancellationToken ct)
+    private TimeSpan _rxTimeDelta;
+    public string? Name { get; set; }
+
+    public bool InitAsync(string port, CanBitRate bitRate, CancellationToken ct)
     {
         throw new NotImplementedException();
     }
 
-    public Task<(bool success, string? error)> StartAsync(CancellationToken ct)
+    public bool StartAsync(CancellationToken ct)
     {
         throw new NotImplementedException();
     }
 
-    public Task<(bool success, string? error)> StopAsync()
+    public bool StopAsync()
     {
         throw new NotImplementedException();
     }
 
-    public Task<(bool success, string? error)> WriteAsync(CanData data, CancellationToken ct)
+    public bool WriteAsync(CanData data, CancellationToken ct)
     {
         throw new NotImplementedException();
     }
@@ -31,6 +34,8 @@ public class SimAdapter : ICommsAdapter
     {
         throw new NotImplementedException();
     }
+
+    TimeSpan ICommsAdapter.RxTimeDelta => _rxTimeDelta;
 
     public bool IsConnected { get; }
 }
