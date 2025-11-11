@@ -7,23 +7,17 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="MediatR" Version="12.5.0" />
         <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="9.0.8"/>
         <PackageReference Include="Swashbuckle.AspNetCore.Swagger" Version="9.0.6" />
         <PackageReference Include="Swashbuckle.AspNetCore.SwaggerGen" Version="9.0.6" />
         <PackageReference Include="Swashbuckle.AspNetCore.SwaggerUI" Version="9.0.6" />
+        <PackageReference Include="System.IO.Ports" Version="9.0.10" />
     </ItemGroup>
 
     <ItemGroup>
       <Folder Include="Middleware\" />
       <Folder Include="Realtime\Hubs\" />
       <Folder Include="wwwroot\" />
-    </ItemGroup>
-
-    <ItemGroup>
-      <ProjectReference Include="..\contracts\contracts.csproj" />
-      <ProjectReference Include="..\domain\domain.csproj" />
-      <ProjectReference Include="..\infrastructure\infrastructure.csproj" />
     </ItemGroup>
 
 </Project>

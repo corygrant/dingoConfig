@@ -1,16 +1,8 @@
-using application.ConfigFile;
-using application.Devices;
-using domain.Interfaces;
-using infrastructure.BackgroundServices;
-using infrastructure.Comms;
-using infrastructure.Comms.Adapters;
+using api.Services;
+using api.Adapters;
+using api.BackgroundServices;
 
 var builder = WebApplication.CreateBuilder(args);
-
-builder.Services.AddMediatR(cfg =>
-{
-    cfg.RegisterServicesFromAssembly(typeof(DeviceManager).Assembly);
-});
 
 // Add services to the container.
 builder.Services.AddTransient<UsbAdapter>();

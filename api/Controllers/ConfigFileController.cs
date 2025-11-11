@@ -2,7 +2,9 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace api.Controllers;
 
-public class ConfigFileController : BaseApiController
+[Route("api/[controller]")]
+[ApiController]
+public class ConfigFileController : ControllerBase
 {
     /*
     [HttpPost("{filename}")]

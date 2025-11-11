@@ -1,38 +1,47 @@
-using application.CommsAdapters.Commands;
-using application.CommsAdapters.Queries;
-using contracts.Adapters;
+using api.Models.Adapters;
+using api.Enums;
+using api.Adapters;
 using Microsoft.AspNetCore.Mvc;
 
 namespace api.Controllers;
 
-public class AdapterController()
-    : BaseApiController
+[Route("api/[controller]")]
+[ApiController]
+public class AdapterController(ICommsAdapterManager comms) : ControllerBase
 {
-
     [HttpGet("available")]
-    public async Task<AdapterAvailableResponse> GetAvailable()
+    public AdapterAvailableResponse GetAvailable()
     {
-        return await Mediator.Send(new GetAdapterAvailable.Query());
+        return comms.GetAvailable();
     }
-    
+
     [HttpGet("status")]
-    public async Task<ActionResult<AdapterStatusResponse>> GetStatus()
+    public ActionResult<AdapterStatusResponse> GetStatus()
     {
-        return await Mediator.Send(new GetAdapterStatus.Query());
+        return comms.GetStatus();
     }
 
     [HttpPost("connect")]
     public async Task<ActionResult> Connect([FromBody] ConnectAdapterRequest request)
     {
-        if (await Mediator.Send(new ConnectAdapter.Command { Settings = request }))
+        CanBitRate br = request.Bitrate switch
+        {
+            "1000K" => CanBitRate.BitRate1000K,
+            "500K" => CanBitRate.BitRate500K,
+            "250K" => CanBitRate.BitRate250K,
+            "125K" => CanBitRate.BitRate125K,
+            _ => throw new ArgumentException($"Unknown bitrate type: {request.Bitrate}")
+        };
+
+        if (await comms.ConnectAsync(comms.ToAdapter(request.AdapterType), request.Port, br, CancellationToken.None))
             return Ok();
         return Problem();
     }
-    
+
     [HttpPost("disconnect")]
     public async Task<ActionResult> Disconnect()
     {
-        await Mediator.Send(new DisconnectAdapter.Command());
+        await comms.DisconnectAsync();
         return Ok();
     }
 }
