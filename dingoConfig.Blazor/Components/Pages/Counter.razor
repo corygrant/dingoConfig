@@ -9,11 +9,20 @@
 
 <button class="btn btn-primary" @onclick="IncrementCount">Click me</button>
 
+<MudButton Variant="Variant.Filled" Color="Color.Dark" OnClick="Callback">Connect</MudButton>
+<MudTextField @bind-Value="textvar" Label="Standard" Variant="Variant.Filled"></MudTextField>
 @code {
     private int currentCount = 0;
-
+    private string textvar = "";
+    
     private void IncrementCount()
     {
         currentCount++;
     }
+
+    private void Callback(MouseEventArgs obj)
+    {
+        textvar = "pressed";
+    }
+
 }

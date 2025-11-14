@@ -6,6 +6,21 @@
 
 <input type="checkbox" title="Navigation menu" class="navbar-toggler" />
 
+<MudPaper Width="250px" Class="py-3" Elevation="0">
+    <MudTreeView Items="@Devices" SelectionMode="SelectionMode.SingleSelection" @bind-SelectedValues="SelectedValue">
+        <ItemTemplate>
+            @{
+                var presenter = context as TreeItemPresenter;
+            }
+            <MudTreeViewItem @bind-Expanded="@context.Expanded" Items="@context.Children" Value="@context.Value" CanExpand="true"
+                             Icon="@context.Icon" Text="@context.Text" EndText="@presenter?.Number?.ToString()" EndTextTypo="@Typo.caption" ></MudTreeViewItem>
+        </ItemTemplate>
+    </MudTreeView>
+    <MudNavMenu>
+        <MudText Typo="Typo.h6" Class="px-4">dingoConfig</MudText>
+        <MudNavLink Href="/Counter">Counter</MudNavLink>
+    </MudNavMenu>
+</MudPaper>
 <div class="nav-scrollable" onclick="document.querySelector('.navbar-toggler').click()">
     <nav class="nav flex-column">
         <div class="nav-item px-3">
@@ -28,3 +43,35 @@
     </nav>
 </div>
 
+@code 
+{
+    public IReadOnlyCollection<string> SelectedValue { get; set; }
+    public List<TreeItemData<string>> Devices { get; set; } = new();
+
+    public class TreeItemPresenter : TreeItemData<string>
+    {
+        public int? Number { get; set; }
+
+        public TreeItemPresenter(string text, string icon, int? number = null) : base(text)
+        {
+            Text = text;
+            Icon = icon;
+            Number = number;
+            Value = "ddd";
+        }
+    }
+
+    protected override void OnInitialized()
+    {
+        Devices.Add(new TreeItemPresenter("PDM", Icons.Material.Filled.Assistant, 10)
+        {
+            Expanded = false,
+            Children =
+            [
+                new TreeItemPresenter("Settings", Icons.Material.Filled.Commute, 90),
+                new TreeItemPresenter("Plots", Icons.Material.Filled.AddChart, 9)
+            ]
+        });
+    }
+    }
+}
