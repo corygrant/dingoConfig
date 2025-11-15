@@ -1,0 +1,41 @@
+using dingoConfig.Enums;
+using dingoConfig.Adapters;
+using dingoConfig.Models;
+
+namespace dingoConfig.Adapters;
+
+public class PcanAdapter  : ICommsAdapter
+{
+    private TimeSpan _rxTimeDelta;
+    public string? Name => "PCAN";
+
+    public Task<bool> InitAsync(string port, CanBitRate bitRate, CancellationToken ct)
+    {
+        throw new NotImplementedException();
+    }
+
+    public Task<bool> StartAsync(CancellationToken ct)
+    {
+        throw new NotImplementedException();
+    }
+
+    public Task<bool> StopAsync()
+    {
+        throw new NotImplementedException();
+    }
+
+    public Task<bool> WriteAsync(CanData data, CancellationToken ct)
+    {
+        throw new NotImplementedException();
+    }
+
+    public event DataReceivedHandler? DataReceived;
+    public TimeSpan RxTimeDelta()
+    {
+        throw new NotImplementedException();
+    }
+
+    TimeSpan ICommsAdapter.RxTimeDelta => _rxTimeDelta;
+
+    public bool IsConnected { get; }
+}
