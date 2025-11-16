@@ -2,7 +2,7 @@ using System.Text.Json.Serialization;
 using domain.Devices.dingoPdm.Enums;
 using domain.Interfaces;
 
-namespace domain.Devices.dingoPdm;
+namespace domain.Devices.dingoPdm.Functions;
 
 public class Counter(int num, string name) : IDeviceFunction
 {

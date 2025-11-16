@@ -2,7 +2,7 @@ using System.Text.Json.Serialization;
 using domain.Devices.dingoPdm.Enums;
 using domain.Interfaces;
 
-namespace domain.Devices.dingoPdm;
+namespace domain.Devices.dingoPdm.Functions;
 
 public class Flasher(int num, string name) : IDeviceFunction
 {
@@ -11,7 +11,6 @@ public class Flasher(int num, string name) : IDeviceFunction
     [JsonPropertyName("enabled")] public bool Enabled {get; set;}
     [JsonPropertyName("single")] public bool Single {get; set;}
     [JsonPropertyName("input")] public VarMap Input {get; set;}
-    [JsonPropertyName("inputValue")] public bool InputValue {get; set;}
     [JsonPropertyName("onTime")] public int OnTime {get; set;}
     [JsonPropertyName("offTime")] public int  OffTime {get; set;}
     

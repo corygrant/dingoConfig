@@ -3,7 +3,7 @@ using domain.Devices.dingoPdm.Enums;
 using domain.Enums;
 using domain.Interfaces;
 
-namespace domain.Devices.dingoPdm;
+namespace domain.Devices.dingoPdm.Functions;
 
 public class VirtualInput(int num, string name) : IDeviceFunction
 {

@@ -1,7 +1,7 @@
 using System.Collections.Concurrent;
 using System.Collections.ObjectModel;
 using System.Text.Json.Serialization;
-using domain.Devices.dingoPdm;
+using domain.Devices.dingoPdm.Functions;
 using domain.Devices.dingoPdm.Enums;
 using domain.Enums;
 using domain.Interfaces;
@@ -33,7 +33,7 @@ public class dingoPdmDevice : IDevice
     [JsonIgnore] public double BatteryVoltage { get; set; }
     [JsonIgnore] public double BoardTempC { get; set; }
     [JsonIgnore] public double BoardTempF { get; set; }
-    [JsonIgnore] public string Version { get; set; }
+    [JsonIgnore] public string Version { get; set; } = "";
     [JsonIgnore] public bool SleepEnabled { get; set; }
     [JsonIgnore] public bool CanFiltersEnabled { get; set; }
     [JsonIgnore] public CanBitRate BitRate { get; set; }
