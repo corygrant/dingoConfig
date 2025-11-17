@@ -1,6 +1,7 @@
 using System.Text.Json.Serialization;
 using domain.Devices.dingoPdm.Enums;
 using domain.Interfaces;
+using domain.Models;
 using static domain.Common.DbcSignalCodec;
 
 namespace domain.Devices.dingoPdm.Functions;
@@ -8,6 +9,7 @@ namespace domain.Devices.dingoPdm.Functions;
 public class Wiper(string name) : IDeviceFunction
 {
     [JsonPropertyName("name")] public string Name {get; set;} = name;
+    [JsonIgnore] public int Number => 1; // Singleton function
     [JsonPropertyName("enabled")] public bool Enabled {get; set;}
     [JsonPropertyName("mode")] public WiperMode Mode { get; set; }
     [JsonPropertyName("slowInput")] public VarMap SlowInput { get; set; }
@@ -28,32 +30,164 @@ public class Wiper(string name) : IDeviceFunction
     [JsonIgnore] public WiperState State { get; set; }
     [JsonIgnore] public WiperSpeed Speed { get; set; }
 
-    public static byte[] Request(int index)
+    public static int ExtractIndex(byte data, MessagePrefix prefix)
     {
-        var data = new byte[8];
-        InsertSignalInt(data, (long)MessagePrefix.Wiper, 0, 8);
         return data;
     }
-
-    public bool Receive(byte[] data)
+    
+    public DeviceResponse? CreateUploadRequest(int baseId, MessagePrefix prefix)
     {
-        if (data.Length != 8) return false;
+        var data = new byte[8];
+        switch (prefix)
+        {
+            case MessagePrefix.Wiper:
+                InsertSignalInt(data, (long)MessagePrefix.Wiper, 0, 8);
 
-        Enabled = ExtractSignalInt(data, 8, 1) == 1;
-        Mode = (WiperMode)ExtractSignalInt(data, 9, 2);
-        ParkStopLevel = ExtractSignalInt(data, 11, 1) == 1;
-        WashWipeCycles = (byte)ExtractSignalInt(data, 12, 4);
-        SlowInput = (VarMap)ExtractSignalInt(data, 16, 8);
-        FastInput = (VarMap)ExtractSignalInt(data, 24, 8);
-        InterInput = (VarMap)ExtractSignalInt(data, 32, 8);
-        OnInput = (VarMap)ExtractSignalInt(data, 40, 8);
-        ParkInput = (VarMap)ExtractSignalInt(data, 48, 8);
-        WashInput = (VarMap)ExtractSignalInt(data, 56, 8);
+                return new DeviceResponse
+                {
+                    Sent = false,
+                    Received = false,
+                    Prefix = (int)MessagePrefix.Wiper,
+                    Index = 0,
+                    Data = new CanData
+                    {
+                        Id = baseId - 1,
+                        Len = 1,
+                        Payload = data
+                    },
+                    MsgDescription = "Wiper"
+                };
+            
+            case MessagePrefix.WiperSpeed:
+                InsertSignalInt(data, (long)MessagePrefix.WiperSpeed, 0, 8);
 
-        return true;
+                return new DeviceResponse
+                {
+                    Sent = false,
+                    Received = false,
+                    Prefix = (int)MessagePrefix.WiperSpeed,
+                    Index = 0,
+                    Data = new CanData
+                    {
+                        Id = baseId - 1,
+                        Len = 1,
+                        Payload = data
+                    },
+                    MsgDescription = "WiperSpeed"
+                };
+            
+            case MessagePrefix.WiperDelays:
+                InsertSignalInt(data, (long)MessagePrefix.WiperDelays, 0, 8);
+
+                return new DeviceResponse
+                {
+                    Sent = false,
+                    Received = false,
+                    Prefix = (int)MessagePrefix.WiperDelays,
+                    Index = 0,
+                    Data = new CanData
+                    {
+                        Id = baseId - 1,
+                        Len = 1,
+                        Payload = data
+                    },
+                    MsgDescription = "WiperDelay"
+                };
+            
+            default:
+                return null;
+        }
     }
 
-    public byte[] Write()
+    public DeviceResponse? CreateDownloadRequest(int baseId, MessagePrefix prefix)
+    {
+        return prefix switch
+        {
+            MessagePrefix.Wiper => new DeviceResponse
+            {
+                Sent = false,
+                Received = false,
+                Prefix = (int)MessagePrefix.Wiper,
+                Index = 0,
+                Data = new CanData { Id = baseId - 1, Len = 8, Payload = Write() },
+                MsgDescription = "Wiper"
+            },
+            MessagePrefix.WiperSpeed => new DeviceResponse
+            {
+                Sent = false,
+                Received = false,
+                Prefix = (int)MessagePrefix.WiperSpeed,
+                Index = 0,
+                Data = new CanData { Id = baseId - 1, Len = 7, Payload = WriteSpeed() },
+                MsgDescription = "WiperSpeed"
+            },
+            MessagePrefix.WiperDelays => new DeviceResponse
+            {
+                Sent = false,
+                Received = false,
+                Prefix = (int)MessagePrefix.WiperDelays,
+                Index = 0,
+                Data = new CanData { Id = baseId - 1, Len = 7, Payload = WriteDelays() },
+                MsgDescription = "WiperDelay"
+            },
+            _ => null
+        };
+    }
+
+    public bool Receive(byte[] data, MessagePrefix prefix)
+    {
+        switch (prefix)
+        {
+            case MessagePrefix.Wiper:
+                if (data.Length != 8) return false;
+
+                Enabled = ExtractSignalInt(data, 8, 1) == 1;
+                Mode = (WiperMode)ExtractSignalInt(data, 9, 2);
+                ParkStopLevel = ExtractSignalInt(data, 11, 1) == 1;
+                WashWipeCycles = (byte)ExtractSignalInt(data, 12, 4);
+                SlowInput = (VarMap)ExtractSignalInt(data, 16, 8);
+                FastInput = (VarMap)ExtractSignalInt(data, 24, 8);
+                InterInput = (VarMap)ExtractSignalInt(data, 32, 8);
+                OnInput = (VarMap)ExtractSignalInt(data, 40, 8);
+                ParkInput = (VarMap)ExtractSignalInt(data, 48, 8);
+                WashInput = (VarMap)ExtractSignalInt(data, 56, 8);
+
+                return true;
+            
+            case MessagePrefix.WiperSpeed:
+                if (data.Length != 7) return false;
+
+                SwipeInput = (VarMap)ExtractSignalInt(data, 8, 8);
+                SpeedInput = (VarMap)ExtractSignalInt(data, 16, 8);
+                SpeedMap[0] = (WiperSpeed)ExtractSignalInt(data, 24, 4);
+                SpeedMap[1] = (WiperSpeed)ExtractSignalInt(data, 28, 4);
+                SpeedMap[2] = (WiperSpeed)ExtractSignalInt(data, 32, 4);
+                SpeedMap[3] = (WiperSpeed)ExtractSignalInt(data, 36, 4);
+                SpeedMap[4] = (WiperSpeed)ExtractSignalInt(data, 40, 4);
+                SpeedMap[5] = (WiperSpeed)ExtractSignalInt(data, 44, 4);
+                SpeedMap[6] = (WiperSpeed)ExtractSignalInt(data, 48, 4);
+                SpeedMap[7] = (WiperSpeed)ExtractSignalInt(data, 52, 4);
+
+                return true;
+            
+            case MessagePrefix.WiperDelays:
+                if (data.Length != 7) return false;
+
+                IntermitTime[0] = ExtractSignal(data, 8, 8, factor: 0.1);
+                IntermitTime[1] = ExtractSignal(data, 16, 8, factor: 0.1);
+                IntermitTime[2] = ExtractSignal(data, 24, 8, factor: 0.1);
+                IntermitTime[3] = ExtractSignal(data, 32, 8, factor: 0.1);
+                IntermitTime[4] = ExtractSignal(data, 40, 8, factor: 0.1);
+                IntermitTime[5] = ExtractSignal(data, 48, 8, factor: 0.1);
+
+                return true;
+            
+            default:
+                return false;
+        }
+    }
+
+    private byte[] Write()
     {
         var data = new byte[8];
         InsertSignalInt(data, (long)MessagePrefix.Wiper, 0, 8);
@@ -70,32 +204,7 @@ public class Wiper(string name) : IDeviceFunction
         return data;
     }
 
-    public static byte[] RequestSpeed()
-    {
-        var data = new byte[8];
-        InsertSignalInt(data, (long)MessagePrefix.WiperSpeed, 0, 8);
-        return data;
-    }
-
-    public bool ReceiveSpeed(byte[] data)
-    {
-        if (data.Length != 7) return false;
-
-        SwipeInput = (VarMap)ExtractSignalInt(data, 8, 8);
-        SpeedInput = (VarMap)ExtractSignalInt(data, 16, 8);
-        SpeedMap[0] = (WiperSpeed)ExtractSignalInt(data, 24, 4);
-        SpeedMap[1] = (WiperSpeed)ExtractSignalInt(data, 28, 4);
-        SpeedMap[2] = (WiperSpeed)ExtractSignalInt(data, 32, 4);
-        SpeedMap[3] = (WiperSpeed)ExtractSignalInt(data, 36, 4);
-        SpeedMap[4] = (WiperSpeed)ExtractSignalInt(data, 40, 4);
-        SpeedMap[5] = (WiperSpeed)ExtractSignalInt(data, 44, 4);
-        SpeedMap[6] = (WiperSpeed)ExtractSignalInt(data, 48, 4);
-        SpeedMap[7] = (WiperSpeed)ExtractSignalInt(data, 52, 4);
-
-        return true;
-    }
-
-    public byte[] WriteSpeed()
+    private byte[] WriteSpeed()
     {
         var data = new byte[8];
         InsertSignalInt(data, (long)MessagePrefix.WiperSpeed, 0, 8);
@@ -112,28 +221,7 @@ public class Wiper(string name) : IDeviceFunction
         return data;
     }
 
-    public static byte[] RequestDelays()
-    {
-        var data = new byte[8];
-        InsertSignalInt(data, (long)MessagePrefix.WiperDelays, 0, 8);
-        return data;
-    }
-
-    public bool ReceiveDelays(byte[] data)
-    {
-        if (data.Length != 7) return false;
-
-        IntermitTime[0] = ExtractSignal(data, 8, 8, factor: 0.1);
-        IntermitTime[1] = ExtractSignal(data, 16, 8, factor: 0.1);
-        IntermitTime[2] = ExtractSignal(data, 24, 8, factor: 0.1);
-        IntermitTime[3] = ExtractSignal(data, 32, 8, factor: 0.1);
-        IntermitTime[4] = ExtractSignal(data, 40, 8, factor: 0.1);
-        IntermitTime[5] = ExtractSignal(data, 48, 8, factor: 0.1);
-
-        return true;
-    }
-
-    public byte[] WriteDelays()
+    private byte[] WriteDelays()
     {
         var data = new byte[8];
         InsertSignalInt(data, (long)MessagePrefix.WiperDelays, 0, 8);

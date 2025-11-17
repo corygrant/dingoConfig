@@ -2,6 +2,7 @@ using System.Text.Json.Serialization;
 using domain.Devices.dingoPdm.Enums;
 using domain.Enums;
 using domain.Interfaces;
+using domain.Models;
 using static domain.Common.DbcSignalCodec;
 
 namespace domain.Devices.dingoPdm.Functions;
@@ -16,17 +17,59 @@ public class Input(int num, string name) : IDeviceFunction
     [JsonPropertyName("mode")] public InputMode Mode { get; set; }
     [JsonPropertyName("debounceTime")] public int DebounceTime { get; set; }
     [JsonPropertyName("pull")] public InputPull Pull { get; set; }
-
-    public static byte[] Request(int index)
+    
+    public static int ExtractIndex(byte data, MessagePrefix prefix)
     {
+        return (data & 0xF0) >> 4;
+    }
+    
+    public DeviceResponse? CreateUploadRequest(int baseId, MessagePrefix prefix)
+    {
+        if (prefix != MessagePrefix.Inputs) return null;
+        
         var data = new byte[8];
         InsertSignalInt(data, (long)MessagePrefix.Inputs, 0, 8);
-        InsertSignalInt(data, index, 12, 4);
-        return data;
+        InsertSignalInt(data, Number - 1, 12, 4);
+
+        return new DeviceResponse
+        {
+            Sent = false,
+            Received = false,
+            Prefix = (int)MessagePrefix.Inputs,
+            Index = Number - 1,
+            Data = new CanData
+            {
+                Id = baseId - 1,
+                Len = 2,
+                Payload = data
+            },
+            MsgDescription = $"Input{Number}"
+        };
     }
 
-    public bool Receive(byte[] data)
+    public DeviceResponse? CreateDownloadRequest(int baseId, MessagePrefix prefix)
     {
+        if (prefix != MessagePrefix.Inputs) return null;
+        
+        return new DeviceResponse
+        {
+            Sent = false,
+            Received = false,
+            Prefix = (int)MessagePrefix.Inputs,
+            Index = Number - 1,
+            Data = new CanData
+            {
+                Id = baseId - 1,
+                Len = 4,
+                Payload = Write()
+            },
+            MsgDescription = $"Input{Number}"
+        };
+    }
+
+    public bool Receive(byte[] data, MessagePrefix prefix)
+    {
+        if (prefix != MessagePrefix.Inputs) return false;
         if (data.Length != 4) return false;
 
         Enabled = ExtractSignalInt(data, 8, 1) == 1;
@@ -38,7 +81,7 @@ public class Input(int num, string name) : IDeviceFunction
         return true;
     }
 
-    public byte[] Write()
+    private byte[] Write()
     {
         byte[] data = new byte[8];
         InsertSignalInt(data, (long)MessagePrefix.Inputs, 0, 8);

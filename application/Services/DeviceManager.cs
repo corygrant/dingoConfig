@@ -1,4 +1,5 @@
 using domain.Devices;
+using domain.Devices.dingoPdm;
 using domain.Interfaces;
 using Microsoft.Extensions.Logging;
 

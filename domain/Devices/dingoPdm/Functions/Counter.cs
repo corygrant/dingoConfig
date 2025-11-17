@@ -1,6 +1,7 @@
 using System.Text.Json.Serialization;
 using domain.Devices.dingoPdm.Enums;
 using domain.Interfaces;
+using domain.Models;
 using static domain.Common.DbcSignalCodec;
 
 namespace domain.Devices.dingoPdm.Functions;
@@ -19,19 +20,61 @@ public class Counter(int num, string name) : IDeviceFunction
     [JsonPropertyName("decEdge")] public InputEdge DecEdge {get; set;}
     [JsonPropertyName("resetEdge")] public InputEdge ResetEdge {get; set;}
     [JsonPropertyName("wrapAround")] public bool WrapAround {get; set;}
-    
+
     [JsonIgnore] public int Value {get; set;}
     
-    public static byte[] Request(int index)
+    public static int ExtractIndex(byte data, MessagePrefix prefix)
     {
-        var data = new byte[8];
-        InsertSignalInt(data, (long)MessagePrefix.Counter, 0, 8);
-        InsertSignalInt(data, index, 8, 8);
         return data;
     }
-
-    public bool Receive(byte[] data)
+    
+    public DeviceResponse? CreateUploadRequest(int baseId, MessagePrefix prefix)
     {
+        if (prefix != MessagePrefix.Counter) return null;
+        
+        var data = new byte[8];
+        InsertSignalInt(data, (long)MessagePrefix.Counter, 0, 8);
+        InsertSignalInt(data, Number - 1, 8, 8);
+
+        return new DeviceResponse
+        {
+            Sent = false,
+            Received = false,
+            Prefix = (int)MessagePrefix.Counter,
+            Index = Number - 1,
+            Data = new CanData
+            {
+                Id = baseId - 1,
+                Len = 2,
+                Payload = data
+            },
+            MsgDescription = $"Counter{Number}"
+        };
+    }
+
+    public DeviceResponse? CreateDownloadRequest(int baseId, MessagePrefix prefix)
+    {
+        if (prefix != MessagePrefix.Counter) return null;
+        
+        return new DeviceResponse
+        {
+            Sent = false,
+            Received = false,
+            Prefix = (int)MessagePrefix.Counter,
+            Index = Number - 1,
+            Data = new CanData
+            {
+                Id = baseId - 1,
+                Len = 8,
+                Payload = Write()
+            },
+            MsgDescription = $"Counter{Number}"
+        };
+    }
+
+    public bool Receive(byte[] data, MessagePrefix prefix)
+    {
+        if (prefix != MessagePrefix.Counter) return false;
         if (data.Length != 8) return false;
 
         Enabled = ExtractSignalInt(data, 16, 1) == 1;
@@ -48,7 +91,7 @@ public class Counter(int num, string name) : IDeviceFunction
         return true;
     }
 
-    public byte[] Write()
+    private byte[] Write()
     {
         var data = new byte[8];
         InsertSignalInt(data, (long)MessagePrefix.Counter, 0, 8);

@@ -2,6 +2,7 @@ using System.Text.Json.Serialization;
 using domain.Devices.dingoPdm.Enums;
 using domain.Enums;
 using domain.Interfaces;
+using domain.Models;
 using static domain.Common.DbcSignalCodec;
 
 namespace domain.Devices.dingoPdm.Functions;
@@ -21,19 +22,61 @@ public class VirtualInput(int num, string name) : IDeviceFunction
     [JsonPropertyName("var2")] public VarMap Var2 { get; set; }
     [JsonPropertyName("cond2")] public Conditional Cond2 { get; set; }
     [JsonPropertyName("mode")] public InputMode Mode {get; set;}
-    
+
     [JsonIgnore] public bool Value {get; set;}
     
-    public static byte[] Request(int index)
+    public static int ExtractIndex(byte data, MessagePrefix prefix)
     {
-        var data = new byte[8];
-        InsertSignalInt(data, (long)MessagePrefix.VirtualInputs, 0, 8);
-        InsertSignalInt(data, index, 8, 8);
         return data;
     }
-
-    public bool Receive(byte[] data)
+    
+    public DeviceResponse? CreateUploadRequest(int baseId, MessagePrefix prefix)
     {
+        if (prefix != MessagePrefix.VirtualInputs) return null;
+        
+        var data = new byte[8];
+        InsertSignalInt(data, (long)MessagePrefix.VirtualInputs, 0, 8);
+        InsertSignalInt(data, Number - 1, 8, 8);
+
+        return new DeviceResponse
+        {
+            Sent = false,
+            Received = false,
+            Prefix = (int)MessagePrefix.VirtualInputs,
+            Index = Number - 1,
+            Data = new CanData
+            {
+                Id = baseId - 1,
+                Len = 2,
+                Payload = data
+            },
+            MsgDescription = $"VirtualInput{Number}"
+        };
+    }
+
+    public DeviceResponse? CreateDownloadRequest(int baseId, MessagePrefix prefix)
+    {
+        if (prefix != MessagePrefix.VirtualInputs) return null;
+        
+        return new DeviceResponse
+        {
+            Sent = false,
+            Received = false,
+            Prefix = (int)MessagePrefix.VirtualInputs,
+            Index = Number - 1,
+            Data = new CanData
+            {
+                Id = baseId - 1,
+                Len = 7,
+                Payload = Write()
+            },
+            MsgDescription = $"VirtualInput{Number}"
+        };
+    }
+
+    public bool Receive(byte[] data, MessagePrefix prefix)
+    {
+        if (prefix != MessagePrefix.VirtualInputs) return false;
         if (data.Length != 7) return false;
 
         Enabled = ExtractSignalInt(data, 8, 1) == 1;
@@ -52,21 +95,21 @@ public class VirtualInput(int num, string name) : IDeviceFunction
         return true;
     }
 
-    public byte[] Write()
+    private byte[] Write()
     {
         var data = new byte[8];
         InsertSignalInt(data, (long)MessagePrefix.VirtualInputs, 0, 8);
-        InsertBool(data, Enabled, 8); 
-        InsertBool(data, Not0, 9);    
-        InsertBool(data, Not1, 10);   
-        InsertBool(data, Not2, 11);   
-        InsertSignalInt(data, Number - 1, 16, 8);  
-        InsertSignalInt(data, (long)Var0, 24, 8);  
-        InsertSignalInt(data, (long)Var1, 32, 8);  
-        InsertSignalInt(data, (long)Var2, 40, 8);  
-        InsertSignalInt(data, (long)Mode, 54, 2);  
-        InsertSignalInt(data, (long)Cond1, 50, 2); 
-        InsertSignalInt(data, (long)Cond0, 48, 2); 
+        InsertBool(data, Enabled, 8);
+        InsertBool(data, Not0, 9);
+        InsertBool(data, Not1, 10);
+        InsertBool(data, Not2, 11);
+        InsertSignalInt(data, Number - 1, 16, 8);
+        InsertSignalInt(data, (long)Var0, 24, 8);
+        InsertSignalInt(data, (long)Var1, 32, 8);
+        InsertSignalInt(data, (long)Var2, 40, 8);
+        InsertSignalInt(data, (long)Mode, 54, 2);
+        InsertSignalInt(data, (long)Cond1, 50, 2);
+        InsertSignalInt(data, (long)Cond0, 48, 2);
         return data;
     }
 }

@@ -1,14 +1,15 @@
+using domain.Devices.dingoPdm;
 using domain.Devices.dingoPdm.Enums;
 
 namespace domain.Devices.dingoPdmMax;
 
 public class dingoPdmMaxDevice(string name, int baseId) : dingoPdmDevice(name, baseId)
 {
-    protected override int _minMajorVersion { get; } = 0;
-    protected override int _minMinorVersion { get; } = 4;
-    protected override int _minBuildVersion { get; } = 7;
+    protected override int MinMajorVersion { get; } = 0;
+    protected override int MinMinorVersion { get; } = 4;
+    protected override int MinBuildVersion { get; } = 7;
 
-    protected override int _numOutputs { get; } = 4;
+    protected override int NumOutputs { get; } = 4;
 
     protected override void ReadMessage2(byte[] data)
     {

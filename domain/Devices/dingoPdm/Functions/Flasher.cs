@@ -1,6 +1,7 @@
 using System.Text.Json.Serialization;
 using domain.Devices.dingoPdm.Enums;
 using domain.Interfaces;
+using domain.Models;
 using static domain.Common.DbcSignalCodec;
 
 namespace domain.Devices.dingoPdm.Functions;
@@ -14,19 +15,61 @@ public class Flasher(int num, string name) : IDeviceFunction
     [JsonPropertyName("input")] public VarMap Input {get; set;}
     [JsonPropertyName("onTime")] public int OnTime {get; set;}
     [JsonPropertyName("offTime")] public int  OffTime {get; set;}
-    
+
     [JsonIgnore] public bool Value {get; set;}
     
-    public static byte[] Request(int index)
+    public static int ExtractIndex(byte data, MessagePrefix prefix)
     {
+        return (data & 0xF0) >> 4;
+    }
+    
+    public DeviceResponse? CreateUploadRequest(int baseId, MessagePrefix prefix)
+    {
+        if (prefix != MessagePrefix.Flashers) return null;
+        
         var data = new byte[8];
         InsertSignalInt(data, (long)MessagePrefix.Flashers, 0, 8);
-        InsertSignalInt(data, index, 12, 4);
-        return data;
+        InsertSignalInt(data, Number - 1, 12, 4);
+
+        return new DeviceResponse
+        {
+            Sent = false,
+            Received = false,
+            Prefix = (int)MessagePrefix.Flashers,
+            Index = Number - 1,
+            Data = new CanData
+            {
+                Id = baseId - 1,
+                Len = 2,
+                Payload = data
+            },
+            MsgDescription = $"Flasher{Number}"
+        };
     }
 
-    public bool Receive(byte[] data)
+    public DeviceResponse? CreateDownloadRequest(int baseId, MessagePrefix prefix)
     {
+        if (prefix != MessagePrefix.Flashers) return null;
+        
+        return new DeviceResponse
+        {
+            Sent = false,
+            Received = false,
+            Prefix = (int)MessagePrefix.Flashers,
+            Index = Number - 1,
+            Data = new CanData
+            {
+                Id = baseId - 1,
+                Len = 6,
+                Payload = Write()
+            },
+            MsgDescription = $"Flasher{Number}"
+        };
+    }
+
+    public bool Receive(byte[] data, MessagePrefix prefix)
+    {
+        if (prefix != MessagePrefix.Flashers) return false;
         if (data.Length != 6) return false;
 
         Enabled = ExtractSignalInt(data, 8, 1) == 1;
@@ -38,7 +81,7 @@ public class Flasher(int num, string name) : IDeviceFunction
         return true;
     }
 
-    public byte[] Write()
+    private byte[] Write()
     {
         var data = new byte[8];
         InsertSignalInt(data, (long)MessagePrefix.Flashers, 0, 8);

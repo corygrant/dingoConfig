@@ -2,6 +2,7 @@ using System.Text.Json.Serialization;
 using domain.Devices.dingoPdm.Enums;
 using domain.Enums;
 using domain.Interfaces;
+using domain.Models;
 using static domain.Common.DbcSignalCodec;
 
 namespace domain.Devices.dingoPdm.Functions;
@@ -14,20 +15,61 @@ public class Condition(int num, string name) : IDeviceFunction
     [JsonPropertyName("input")] public VarMap Input { get; set; }
     [JsonPropertyName("operator")] public Operator Operator {get; set;}
     [JsonPropertyName("arg")] public int Arg {get; set;}
-    
+
     [JsonIgnore] public int Value {get; set;}
     
-    
-    public static byte[] Request(int index)
+    public static int ExtractIndex(byte data, MessagePrefix prefix)
     {
-        var data = new byte[8];
-        InsertSignalInt(data, (long)MessagePrefix.Conditions, 0, 8);
-        InsertSignalInt(data, index, 8, 8);
         return data;
     }
-
-    public bool Receive(byte[] data)
+    
+    public DeviceResponse? CreateUploadRequest(int baseId, MessagePrefix prefix)
     {
+        if (prefix != MessagePrefix.Conditions) return null;
+        
+        var data = new byte[8];
+        InsertSignalInt(data, (long)MessagePrefix.Conditions, 0, 8);
+        InsertSignalInt(data, Number - 1, 8, 8);
+
+        return new DeviceResponse
+        {
+            Sent = false,
+            Received = false,
+            Prefix = (int)MessagePrefix.Conditions,
+            Index = Number - 1,
+            Data = new CanData
+            {
+                Id = baseId - 1,
+                Len = 2,
+                Payload = data
+            },
+            MsgDescription = $"Condition{Number}"
+        };
+    }
+
+    public DeviceResponse? CreateDownloadRequest(int baseId, MessagePrefix prefix)
+    {
+        if (prefix != MessagePrefix.Conditions) return null;
+        
+        return new DeviceResponse
+        {
+            Sent = false,
+            Received = false,
+            Prefix = (int)MessagePrefix.Conditions,
+            Index = Number - 1,
+            Data = new CanData
+            {
+                Id = baseId - 1,
+                Len = 6,
+                Payload = Write()
+            },
+            MsgDescription = $"Condition{Number}"
+        };
+    }
+
+    public bool Receive(byte[] data, MessagePrefix prefix)
+    {
+        if (prefix != MessagePrefix.Conditions) return false;
         if (data.Length != 6) return false;
 
         Enabled = ExtractSignalInt(data, 16, 1) == 1;
@@ -38,7 +80,7 @@ public class Condition(int num, string name) : IDeviceFunction
         return true;
     }
 
-    public byte[] Write()
+    private byte[] Write()
     {
         var data = new byte[8];
         InsertSignalInt(data, (long)MessagePrefix.Conditions, 0, 8);

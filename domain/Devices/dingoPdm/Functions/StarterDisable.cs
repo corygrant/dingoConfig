@@ -1,6 +1,7 @@
 using System.Text.Json.Serialization;
 using domain.Devices.dingoPdm.Enums;
 using domain.Interfaces;
+using domain.Models;
 using static domain.Common.DbcSignalCodec;
 
 namespace domain.Devices.dingoPdm.Functions;
@@ -8,6 +9,7 @@ namespace domain.Devices.dingoPdm.Functions;
 public class StarterDisable(string name) : IDeviceFunction
 {
     [JsonPropertyName("name")] public string Name {get; set;} = name;
+    [JsonIgnore] public int Number => 1; // Singleton function
     [JsonPropertyName("enabled")] public bool Enabled {get; set;}
     [JsonPropertyName("input")] public VarMap Input {get; set;}
     [JsonPropertyName("output1")] bool Output1 {get; set;}
@@ -18,16 +20,58 @@ public class StarterDisable(string name) : IDeviceFunction
     [JsonPropertyName("output6")] bool Output6 {get; set;}
     [JsonPropertyName("output7")] bool Output7 {get; set;}
     [JsonPropertyName("output8")] bool Output8 {get; set;}
-
-    public static byte[] Request(int index)
+    
+    public static int ExtractIndex(byte data, MessagePrefix prefix)
     {
-        var data = new byte[8];
-        InsertSignalInt(data, (long)MessagePrefix.StarterDisable, 0, 8);
         return data;
     }
-
-    public bool Receive(byte[] data)
+    
+    public DeviceResponse? CreateUploadRequest(int baseId, MessagePrefix prefix)
     {
+        if (prefix != MessagePrefix.StarterDisable) return null;
+        
+        var data = new byte[8];
+        InsertSignalInt(data, (long)MessagePrefix.StarterDisable, 0, 8);
+
+        return new DeviceResponse
+        {
+            Sent = false,
+            Received = false,
+            Prefix = (int)MessagePrefix.StarterDisable,
+            Index = 0,
+            Data = new CanData
+            {
+                Id = baseId - 1,
+                Len = 1,
+                Payload = data
+            },
+            MsgDescription = "StarterDisable"
+        };
+    }
+
+    public DeviceResponse? CreateDownloadRequest(int baseId, MessagePrefix prefix)
+    {
+        if (prefix != MessagePrefix.StarterDisable) return null;
+        
+        return new DeviceResponse
+        {
+            Sent = false,
+            Received = false,
+            Prefix = (int)MessagePrefix.StarterDisable,
+            Index = 0,
+            Data = new CanData
+            {
+                Id = baseId - 1,
+                Len = 4,
+                Payload = Write()
+            },
+            MsgDescription = "StarterDisable"
+        };
+    }
+
+    public bool Receive(byte[] data, MessagePrefix prefix)
+    {
+        if (prefix != MessagePrefix.StarterDisable) return false;
         if (data.Length != 4) return false;
 
         Enabled = ExtractSignalInt(data, 8, 1) == 1;
@@ -44,7 +88,7 @@ public class StarterDisable(string name) : IDeviceFunction
         return true;
     }
 
-    public byte[] Write()
+    private byte[] Write()
     {
         var data = new byte[8];
         InsertSignalInt(data, (long)MessagePrefix.StarterDisable, 0, 8);
