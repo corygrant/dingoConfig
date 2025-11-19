@@ -1,6 +1,6 @@
 namespace domain.Models;
 
-public class CanData
+public class CanFrame
 {
     public int Id { get; set; }
     public int Len { get; set; }

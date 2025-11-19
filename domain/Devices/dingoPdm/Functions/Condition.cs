@@ -23,7 +23,7 @@ public class Condition(int num, string name) : IDeviceFunction
         return data;
     }
     
-    public DeviceResponse? CreateUploadRequest(int baseId, MessagePrefix prefix)
+    public DeviceCanFrame? CreateUploadRequest(int baseId, MessagePrefix prefix)
     {
         if (prefix != MessagePrefix.Conditions) return null;
         
@@ -31,13 +31,13 @@ public class Condition(int num, string name) : IDeviceFunction
         InsertSignalInt(data, (long)MessagePrefix.Conditions, 0, 8);
         InsertSignalInt(data, Number - 1, 8, 8);
 
-        return new DeviceResponse
+        return new DeviceCanFrame
         {
             Sent = false,
             Received = false,
             Prefix = (int)MessagePrefix.Conditions,
             Index = Number - 1,
-            Data = new CanData
+            Frame = new CanFrame
             {
                 Id = baseId - 1,
                 Len = 2,
@@ -47,17 +47,17 @@ public class Condition(int num, string name) : IDeviceFunction
         };
     }
 
-    public DeviceResponse? CreateDownloadRequest(int baseId, MessagePrefix prefix)
+    public DeviceCanFrame? CreateDownloadRequest(int baseId, MessagePrefix prefix)
     {
         if (prefix != MessagePrefix.Conditions) return null;
         
-        return new DeviceResponse
+        return new DeviceCanFrame
         {
             Sent = false,
             Received = false,
             Prefix = (int)MessagePrefix.Conditions,
             Index = Number - 1,
-            Data = new CanData
+            Frame = new CanFrame
             {
                 Id = baseId - 1,
                 Len = 6,

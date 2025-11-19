@@ -15,6 +15,6 @@ public interface IDeviceFunction
     public bool Receive(byte[] data, MessagePrefix prefix);
 
     // Methods to create device request/response messages
-    public DeviceResponse? CreateUploadRequest(int baseId, MessagePrefix prefix);
-    public DeviceResponse? CreateDownloadRequest(int baseId, MessagePrefix prefix);
+    public DeviceCanFrame? CreateUploadRequest(int baseId, MessagePrefix prefix);
+    public DeviceCanFrame? CreateDownloadRequest(int baseId, MessagePrefix prefix);
 }

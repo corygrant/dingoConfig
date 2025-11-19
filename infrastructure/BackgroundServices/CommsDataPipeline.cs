@@ -16,7 +16,7 @@ public class CommsDataPipeline(
     : BackgroundService
 {
     // RX Channel - Incoming CAN frames from adapter
-    private readonly Channel<CanData> _rxChannel = Channel.CreateBounded<CanData>(
+    private readonly Channel<CanFrame> _rxChannel = Channel.CreateBounded<CanFrame>(
         new BoundedChannelOptions(50000)
         {
             FullMode = BoundedChannelFullMode.DropOldest, // Don't block adapter
@@ -25,7 +25,7 @@ public class CommsDataPipeline(
         });
     
     // TX Channel - Outgoing CAN frames to adapter
-    private readonly Channel<CanData> _txChannel = Channel.CreateBounded<CanData>(
+    private readonly Channel<CanFrame> _txChannel = Channel.CreateBounded<CanFrame>(
         new BoundedChannelOptions(10000)
         {
             FullMode = BoundedChannelFullMode.DropOldest,
@@ -56,10 +56,10 @@ public class CommsDataPipeline(
     // RX Pipeline (Receive from CAN bus)
     // ============================================
     
-    private void OnDataReceived(object? sender, CanDataEventArgs e)
+    private void OnDataReceived(object? sender, CanFrameEventArgs e)
     {
         // Queue frame for processing (non-blocking)
-        _rxChannel.Writer.TryWrite(e.Data);
+        _rxChannel.Writer.TryWrite(e.Frame);
     }
     
     private async Task ProcessRxPipelineAsync(CancellationToken ct)
@@ -113,7 +113,7 @@ public class CommsDataPipeline(
         logger.LogInformation("TX Pipeline stopped");
     }
     
-    private async Task TransmitFrameAsync(CanData data, CancellationToken ct)
+    private async Task TransmitFrameAsync(CanFrame frame, CancellationToken ct)
     {
         try
         {
@@ -121,23 +121,23 @@ public class CommsDataPipeline(
             {
                 logger.LogDebug(
                     "TX frame dropped: No active adapter. CanId={Id:X}",
-                    data.Id);
+                    frame.Id);
                 return;
             }
 
-            await adapterManager.ActiveAdapter.WriteAsync(data, ct);
+            await adapterManager.ActiveAdapter.WriteAsync(frame, ct);
 
             logger.LogDebug(
                 "TX frame sent: CanId={Id:X}, Length={Len}",
-                data.Id,
-                data.Len);
+                frame.Id,
+                frame.Len);
         }
         catch (Exception ex)
         {
             logger.LogError(
                 ex,
                 "Error transmitting frame: {CanId:X}",
-                data.Id);
+                frame.Id);
         }
     }
     
@@ -148,7 +148,7 @@ public class CommsDataPipeline(
     /// <summary>
     /// Queue a frame for transmission (normal priority)
     /// </summary>
-    public void QueueTransmit(CanData frame)
+    public void QueueTransmit(CanFrame frame)
     {
         _txChannel.Writer.TryWrite(frame);
     }

@@ -35,7 +35,7 @@ public class Wiper(string name) : IDeviceFunction
         return data;
     }
     
-    public DeviceResponse? CreateUploadRequest(int baseId, MessagePrefix prefix)
+    public DeviceCanFrame? CreateUploadRequest(int baseId, MessagePrefix prefix)
     {
         var data = new byte[8];
         switch (prefix)
@@ -43,13 +43,13 @@ public class Wiper(string name) : IDeviceFunction
             case MessagePrefix.Wiper:
                 InsertSignalInt(data, (long)MessagePrefix.Wiper, 0, 8);
 
-                return new DeviceResponse
+                return new DeviceCanFrame
                 {
                     Sent = false,
                     Received = false,
                     Prefix = (int)MessagePrefix.Wiper,
                     Index = 0,
-                    Data = new CanData
+                    Frame = new CanFrame
                     {
                         Id = baseId - 1,
                         Len = 1,
@@ -61,13 +61,13 @@ public class Wiper(string name) : IDeviceFunction
             case MessagePrefix.WiperSpeed:
                 InsertSignalInt(data, (long)MessagePrefix.WiperSpeed, 0, 8);
 
-                return new DeviceResponse
+                return new DeviceCanFrame
                 {
                     Sent = false,
                     Received = false,
                     Prefix = (int)MessagePrefix.WiperSpeed,
                     Index = 0,
-                    Data = new CanData
+                    Frame = new CanFrame
                     {
                         Id = baseId - 1,
                         Len = 1,
@@ -79,13 +79,13 @@ public class Wiper(string name) : IDeviceFunction
             case MessagePrefix.WiperDelays:
                 InsertSignalInt(data, (long)MessagePrefix.WiperDelays, 0, 8);
 
-                return new DeviceResponse
+                return new DeviceCanFrame
                 {
                     Sent = false,
                     Received = false,
                     Prefix = (int)MessagePrefix.WiperDelays,
                     Index = 0,
-                    Data = new CanData
+                    Frame = new CanFrame
                     {
                         Id = baseId - 1,
                         Len = 1,
@@ -99,35 +99,35 @@ public class Wiper(string name) : IDeviceFunction
         }
     }
 
-    public DeviceResponse? CreateDownloadRequest(int baseId, MessagePrefix prefix)
+    public DeviceCanFrame? CreateDownloadRequest(int baseId, MessagePrefix prefix)
     {
         return prefix switch
         {
-            MessagePrefix.Wiper => new DeviceResponse
+            MessagePrefix.Wiper => new DeviceCanFrame
             {
                 Sent = false,
                 Received = false,
                 Prefix = (int)MessagePrefix.Wiper,
                 Index = 0,
-                Data = new CanData { Id = baseId - 1, Len = 8, Payload = Write() },
+                Frame = new CanFrame { Id = baseId - 1, Len = 8, Payload = Write() },
                 MsgDescription = "Wiper"
             },
-            MessagePrefix.WiperSpeed => new DeviceResponse
+            MessagePrefix.WiperSpeed => new DeviceCanFrame
             {
                 Sent = false,
                 Received = false,
                 Prefix = (int)MessagePrefix.WiperSpeed,
                 Index = 0,
-                Data = new CanData { Id = baseId - 1, Len = 7, Payload = WriteSpeed() },
+                Frame = new CanFrame { Id = baseId - 1, Len = 7, Payload = WriteSpeed() },
                 MsgDescription = "WiperSpeed"
             },
-            MessagePrefix.WiperDelays => new DeviceResponse
+            MessagePrefix.WiperDelays => new DeviceCanFrame
             {
                 Sent = false,
                 Received = false,
                 Prefix = (int)MessagePrefix.WiperDelays,
                 Index = 0,
-                Data = new CanData { Id = baseId - 1, Len = 7, Payload = WriteDelays() },
+                Frame = new CanFrame { Id = baseId - 1, Len = 7, Payload = WriteDelays() },
                 MsgDescription = "WiperDelay"
             },
             _ => null

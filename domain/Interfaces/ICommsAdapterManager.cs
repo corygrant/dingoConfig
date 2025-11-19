@@ -13,5 +13,5 @@ public interface ICommsAdapterManager
     Task<bool> ConnectAsync(ICommsAdapter commsAdapter, string port, CanBitRate bitRate,  CancellationToken ct = default);
     Task<bool> DisconnectAsync();
 
-    event EventHandler<CanDataEventArgs>? DataReceived;
+    event EventHandler<CanFrameEventArgs>? DataReceived;
 }

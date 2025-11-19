@@ -38,7 +38,7 @@ public class Output(int num, string name) : IDeviceFunction
         return (data & 0xF0) >> 4;
     }
     
-    public DeviceResponse? CreateUploadRequest(int baseId, MessagePrefix prefix)
+    public DeviceCanFrame? CreateUploadRequest(int baseId, MessagePrefix prefix)
     {
         switch (prefix)
         {
@@ -48,13 +48,13 @@ public class Output(int num, string name) : IDeviceFunction
                 InsertSignalInt(data, (long)MessagePrefix.Outputs, 0, 8);
                 InsertSignalInt(data, Number - 1, 12, 4);
 
-                return new DeviceResponse
+                return new DeviceCanFrame
                 {
                     Sent = false,
                     Received = false,
                     Prefix = (int)MessagePrefix.Outputs,
                     Index = Number - 1,
-                    Data = new CanData
+                    Frame = new CanFrame
                     {
                         Id = baseId - 1,
                         Len = 2,
@@ -69,13 +69,13 @@ public class Output(int num, string name) : IDeviceFunction
                 InsertSignalInt(data, (long)MessagePrefix.OutputsPwm, 0, 8);
                 InsertSignalInt(data, Number - 1, 12, 4);
 
-                return new DeviceResponse
+                return new DeviceCanFrame
                 {
                     Sent = false,
                     Received = false,
                     Prefix = (int)MessagePrefix.OutputsPwm,
                     Index = Number - 1,
-                    Data = new CanData
+                    Frame = new CanFrame
                     {
                         Id = baseId - 1,
                         Len = 2,
@@ -89,26 +89,26 @@ public class Output(int num, string name) : IDeviceFunction
         }
     }
 
-    public DeviceResponse? CreateDownloadRequest(int baseId, MessagePrefix prefix)
+    public DeviceCanFrame? CreateDownloadRequest(int baseId, MessagePrefix prefix)
     {
         return prefix switch
         {
-            MessagePrefix.Outputs => new DeviceResponse
+            MessagePrefix.Outputs => new DeviceCanFrame
             {
                 Sent = false,
                 Received = false,
                 Prefix = (int)MessagePrefix.Outputs,
                 Index = Number - 1,
-                Data = new CanData { Id = baseId - 1, Len = 8, Payload = Write() },
+                Frame = new CanFrame { Id = baseId - 1, Len = 8, Payload = Write() },
                 MsgDescription = $"Output{Number}"
             },
-            MessagePrefix.OutputsPwm => new DeviceResponse
+            MessagePrefix.OutputsPwm => new DeviceCanFrame
             {
                 Sent = false,
                 Received = false,
                 Prefix = (int)MessagePrefix.OutputsPwm,
                 Index = Number - 1,
-                Data = new CanData { Id = baseId - 1, Len = 8, Payload = WritePwm() },
+                Frame = new CanFrame { Id = baseId - 1, Len = 8, Payload = WritePwm() },
                 MsgDescription = $"OutputPwm{Number}"
             },
             _ => null

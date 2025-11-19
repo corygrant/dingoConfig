@@ -26,20 +26,20 @@ public class StarterDisable(string name) : IDeviceFunction
         return data;
     }
     
-    public DeviceResponse? CreateUploadRequest(int baseId, MessagePrefix prefix)
+    public DeviceCanFrame? CreateUploadRequest(int baseId, MessagePrefix prefix)
     {
         if (prefix != MessagePrefix.StarterDisable) return null;
         
         var data = new byte[8];
         InsertSignalInt(data, (long)MessagePrefix.StarterDisable, 0, 8);
 
-        return new DeviceResponse
+        return new DeviceCanFrame
         {
             Sent = false,
             Received = false,
             Prefix = (int)MessagePrefix.StarterDisable,
             Index = 0,
-            Data = new CanData
+            Frame = new CanFrame
             {
                 Id = baseId - 1,
                 Len = 1,
@@ -49,17 +49,17 @@ public class StarterDisable(string name) : IDeviceFunction
         };
     }
 
-    public DeviceResponse? CreateDownloadRequest(int baseId, MessagePrefix prefix)
+    public DeviceCanFrame? CreateDownloadRequest(int baseId, MessagePrefix prefix)
     {
         if (prefix != MessagePrefix.StarterDisable) return null;
         
-        return new DeviceResponse
+        return new DeviceCanFrame
         {
             Sent = false,
             Received = false,
             Prefix = (int)MessagePrefix.StarterDisable,
             Index = 0,
-            Data = new CanData
+            Frame = new CanFrame
             {
                 Id = baseId - 1,
                 Len = 4,

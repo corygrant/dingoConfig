@@ -126,7 +126,7 @@ public class dingoPdmDevice : IDevice
         return (id >= BaseId) && (id <= BaseId + 31);
     }
     
-    public bool Read(int id, byte[] data, ref ConcurrentDictionary<(int BaseId, int Prefix, int Index), DeviceResponse> queue)
+    public bool Read(int id, byte[] data, ref ConcurrentDictionary<(int BaseId, int Prefix, int Index), DeviceCanFrame> queue)
     {
         if (!InIdRange(id)) 
             return false;
@@ -325,7 +325,7 @@ public class dingoPdmDevice : IDevice
         Outputs[7].CurrentDutyCycle = ExtractSignal(data, 56, 8);
     }
 
-    protected void ReadSettingsResponse(byte[] data, ConcurrentDictionary<(int BaseId, int Prefix, int Index), DeviceResponse> queue)
+    protected void ReadSettingsResponse(byte[] data, ConcurrentDictionary<(int BaseId, int Prefix, int Index), DeviceCanFrame> queue)
     {
         //Response is prefix + 128
         if (data[0] < 128)
@@ -337,7 +337,7 @@ public class dingoPdmDevice : IDevice
 
         //Vars used below
         (int BaseId, int, int) key;
-        DeviceResponse response;
+        DeviceCanFrame canFrame;
 
         switch (prefix)
         {
@@ -351,9 +351,9 @@ public class dingoPdmDevice : IDevice
                 }
 
                 key = (BaseId, (int)MessagePrefix.Version, 0);
-                if (queue.TryGetValue(key, out response!))
+                if (queue.TryGetValue(key, out canFrame!))
                 {
-                    response.TimeSentTimer?.Dispose();
+                    canFrame.TimeSentTimer?.Dispose();
                     queue.TryRemove(key, out _);
                 }
 
@@ -366,9 +366,9 @@ public class dingoPdmDevice : IDevice
                 BitRate = (CanBitRate)((data[1] & 0xF0)>>4);
 
                 key = (BaseId, (int)MessagePrefix.Can, 0);
-                if (queue.TryGetValue(key, out response!))
+                if (queue.TryGetValue(key, out canFrame!))
                 {
-                    response.TimeSentTimer?.Dispose();
+                    canFrame.TimeSentTimer?.Dispose();
                     queue.TryRemove(key, out _);
                 }
 
@@ -382,9 +382,9 @@ public class dingoPdmDevice : IDevice
                     if (Inputs[index].Receive(data, prefix))
                     {
                         key = (BaseId, (int)MessagePrefix.Inputs, index);
-                        if (queue.TryGetValue(key, out response!))
+                        if (queue.TryGetValue(key, out canFrame!))
                         {
-                            response.TimeSentTimer?.Dispose();
+                            canFrame.TimeSentTimer?.Dispose();
                             queue.TryRemove(key, out _);
                         }
                     }
@@ -400,9 +400,9 @@ public class dingoPdmDevice : IDevice
                     if (Outputs[index].Receive(data, prefix))
                     {
                         key = (BaseId, (int)MessagePrefix.Outputs, index);
-                        if (queue.TryGetValue(key, out response!))
+                        if (queue.TryGetValue(key, out canFrame!))
                         {
-                            response.TimeSentTimer?.Dispose();
+                            canFrame.TimeSentTimer?.Dispose();
                             queue.TryRemove(key, out _);
                         }
                     }
@@ -418,9 +418,9 @@ public class dingoPdmDevice : IDevice
                     if (Outputs[index].Receive(data, prefix))
                     {
                         key = (BaseId, (int)MessagePrefix.OutputsPwm, index);
-                        if (queue.TryGetValue(key, out response!))
+                        if (queue.TryGetValue(key, out canFrame!))
                         {
-                            response.TimeSentTimer?.Dispose();
+                            canFrame.TimeSentTimer?.Dispose();
                             queue.TryRemove(key, out _);
                         }
                     }
@@ -436,9 +436,9 @@ public class dingoPdmDevice : IDevice
                     if (VirtualInputs[index].Receive(data, prefix))
                     {
                         key = (BaseId, (int)MessagePrefix.VirtualInputs, index);
-                        if (queue.TryGetValue(key, out response!))
+                        if (queue.TryGetValue(key, out canFrame!))
                         {
-                            response.TimeSentTimer?.Dispose();
+                            canFrame.TimeSentTimer?.Dispose();
                             queue.TryRemove(key, out _);
                         }
                     }
@@ -454,9 +454,9 @@ public class dingoPdmDevice : IDevice
                     if (Flashers[index].Receive(data, prefix))
                     {
                         key = (BaseId, (int)MessagePrefix.Flashers, index);
-                        if (queue.TryGetValue(key, out response!))
+                        if (queue.TryGetValue(key, out canFrame!))
                         {
-                            response.TimeSentTimer?.Dispose();
+                            canFrame.TimeSentTimer?.Dispose();
                             queue.TryRemove(key, out _);
                         }
                     }
@@ -468,9 +468,9 @@ public class dingoPdmDevice : IDevice
                 if (Wipers.Receive(data, prefix))
                 {
                     key = (BaseId, (int)MessagePrefix.Wiper, 0);
-                    if (queue.TryGetValue(key, out response!))
+                    if (queue.TryGetValue(key, out canFrame!))
                     {
-                        response.TimeSentTimer?.Dispose();
+                        canFrame.TimeSentTimer?.Dispose();
                         queue.TryRemove(key, out _);
                     }
                 }
@@ -481,9 +481,9 @@ public class dingoPdmDevice : IDevice
                 if (Wipers.Receive(data, prefix))
                 {
                     key = (BaseId, (int)MessagePrefix.WiperSpeed, 0);
-                    if (queue.TryGetValue(key, out response!))
+                    if (queue.TryGetValue(key, out canFrame!))
                     {
-                        response.TimeSentTimer?.Dispose();
+                        canFrame.TimeSentTimer?.Dispose();
                         queue.TryRemove(key, out _);
                     }
                 }
@@ -494,9 +494,9 @@ public class dingoPdmDevice : IDevice
                 if (Wipers.Receive(data, prefix))
                 {
                     key = (BaseId, (int)MessagePrefix.WiperDelays, 0);
-                    if (queue.TryGetValue(key, out response!))
+                    if (queue.TryGetValue(key, out canFrame!))
                     {
-                        response.TimeSentTimer?.Dispose();
+                        canFrame.TimeSentTimer?.Dispose();
                         queue.TryRemove(key, out _);
                     }
                 }
@@ -507,9 +507,9 @@ public class dingoPdmDevice : IDevice
                 if (StarterDisable.Receive(data, prefix))
                 {
                     key = (BaseId, (int)MessagePrefix.StarterDisable, 0);
-                    if (queue.TryGetValue(key, out response!))
+                    if (queue.TryGetValue(key, out canFrame!))
                     {
-                        response.TimeSentTimer?.Dispose();
+                        canFrame.TimeSentTimer?.Dispose();
                         queue.TryRemove(key, out _);
                     }
                 }
@@ -523,9 +523,9 @@ public class dingoPdmDevice : IDevice
                     if(CanInputs[index].Receive(data, prefix))
                     {
                         key = (BaseId, (int)MessagePrefix.CanInputs, index);
-                        if (queue.TryGetValue(key, out response!))
+                        if (queue.TryGetValue(key, out canFrame!))
                         {
-                            response.TimeSentTimer?.Dispose();
+                            canFrame.TimeSentTimer?.Dispose();
                             queue.TryRemove(key, out _);
                         }
                     }
@@ -540,9 +540,9 @@ public class dingoPdmDevice : IDevice
                     if (CanInputs[index].Receive(data, prefix))
                     {
                         key = (BaseId, (int)MessagePrefix.CanInputsId, index);
-                        if (queue.TryGetValue(key, out response!))
+                        if (queue.TryGetValue(key, out canFrame!))
                         {
-                            response.TimeSentTimer?.Dispose();
+                            canFrame.TimeSentTimer?.Dispose();
                             queue.TryRemove(key, out _);
                         }
                     }
@@ -557,9 +557,9 @@ public class dingoPdmDevice : IDevice
 					if (Counters[index].Receive(data, prefix))
 					{
 						key = (BaseId, (int)MessagePrefix.Counter, index);
-						if (queue.TryGetValue(key, out response!))
+						if (queue.TryGetValue(key, out canFrame!))
 						{
-							response.TimeSentTimer?.Dispose();
+							canFrame.TimeSentTimer?.Dispose();
 							queue.TryRemove(key, out _);
 						}
 					}
@@ -574,9 +574,9 @@ public class dingoPdmDevice : IDevice
 					if (Conditions[index].Receive(data, prefix))
 					{
 						key = (BaseId, (int)MessagePrefix.Conditions, index);
-						if (queue.TryGetValue(key, out response!))
+						if (queue.TryGetValue(key, out canFrame!))
 						{
-							response.TimeSentTimer?.Dispose();
+							canFrame.TimeSentTimer?.Dispose();
 							queue.TryRemove(key, out _);
 						}
 					}
@@ -591,9 +591,9 @@ public class dingoPdmDevice : IDevice
                     //Logger.Info($"{Name} ID: {BaseId}, Burn Successful");
 
                     key = (BaseId, (int)MessagePrefix.BurnSettings, 0);
-                    if (queue.TryGetValue(key, out response!))
+                    if (queue.TryGetValue(key, out canFrame!))
                     {
-                        response.TimeSentTimer?.Dispose();
+                        canFrame.TimeSentTimer?.Dispose();
                         queue.TryRemove(key, out _);
                     }
                 }
@@ -612,9 +612,9 @@ public class dingoPdmDevice : IDevice
                     //Logger.Info($"{Name} ID: {BaseId}, Sleep Successful");
 
                     key = (BaseId, (int)MessagePrefix.Sleep, 0);
-                    if (queue.TryGetValue(key, out response!))
+                    if (queue.TryGetValue(key, out canFrame!))
                     {
-                        response.TimeSentTimer?.Dispose();
+                        canFrame.TimeSentTimer?.Dispose();
                         queue.TryRemove(key, out _);
                     }
                 }
@@ -654,21 +654,21 @@ public class dingoPdmDevice : IDevice
         }
     }
 
-    public List<DeviceResponse> GetUploadMsgs()
+    public List<DeviceCanFrame> GetUploadMsgs()
     {
         var id = BaseId - 1;
 
-        var msgs = new List<DeviceResponse>
+        var msgs = new List<DeviceCanFrame>
         {
             //Request settings messages
             //Version
-            new DeviceResponse
+            new DeviceCanFrame
             {
                 Sent = false,
                 Received = false,
                 Prefix = (int)MessagePrefix.Version,
                 Index = 0,
-                Data = new CanData
+                Frame = new CanFrame
                 {
                     Id = id,
                     Len = 1,
@@ -677,13 +677,13 @@ public class dingoPdmDevice : IDevice
                 MsgDescription="Version"
             },
             //CAN settings
-            new DeviceResponse
+            new DeviceCanFrame
             {
                 Sent = false,
                 Received = false,
                 Prefix = (int)MessagePrefix.Can,
                 Index = 0,
-                Data = new CanData
+                Frame = new CanFrame
                 {
                     Id = id,
                     Len = 1,
@@ -788,19 +788,19 @@ public class dingoPdmDevice : IDevice
 		return msgs;
     }
 
-    public List<DeviceResponse> GetDownloadMsgs()
+    public List<DeviceCanFrame> GetDownloadMsgs()
     {
         var id = BaseId - 1;
 
-        List<DeviceResponse> msgs =
+        List<DeviceCanFrame> msgs =
         [
-            new DeviceResponse
+            new DeviceCanFrame
             {
                 Sent = false,
                 Received = false,
                 Prefix = (int)MessagePrefix.Can,
                 Index = 0,
-                Data = new CanData
+                Frame = new CanFrame
                 {
                     Id = id,
                     Len = 4,
@@ -913,19 +913,19 @@ public class dingoPdmDevice : IDevice
 		return msgs;
     }
 
-    public List<DeviceResponse> GetUpdateMsgs(int newId)
+    public List<DeviceCanFrame> GetUpdateMsgs(int newId)
     {
         var id = BaseId - 1;
 
-        List<DeviceResponse> msgs =
+        List<DeviceCanFrame> msgs =
         [
-            new DeviceResponse
+            new DeviceCanFrame
             {
                 Sent = false,
                 Received = false,
                 Prefix = (int)MessagePrefix.Can,
                 Index = 0,
-                Data = new CanData
+                Frame = new CanFrame
                 {
                     Id = id,
                     Len = 4,
@@ -948,15 +948,15 @@ public class dingoPdmDevice : IDevice
         return msgs;
     }
 
-    public DeviceResponse GetBurnMsg()
+    public DeviceCanFrame GetBurnMsg()
     {
-        return new DeviceResponse
+        return new DeviceCanFrame
         {
             Sent = false,
             Received = false,
             Prefix = (int)MessagePrefix.BurnSettings,
             Index = 0,
-            Data = new CanData
+            Frame = new CanFrame
             {
                 Id = BaseId - 1,
                 Len = 4,
@@ -966,15 +966,15 @@ public class dingoPdmDevice : IDevice
         };
     }
 
-    public DeviceResponse GetSleepMsg()
+    public DeviceCanFrame GetSleepMsg()
     {
-        return new DeviceResponse
+        return new DeviceCanFrame
         {
             Sent = false,
             Received = false,
             Prefix = (int)MessagePrefix.Sleep,
             Index = 0,
-            Data = new CanData
+            Frame = new CanFrame
             {
                 Id = BaseId - 1,
                 Len = 5,
@@ -985,15 +985,15 @@ public class dingoPdmDevice : IDevice
         };
     }
 
-    public DeviceResponse GetVersionMsg()
+    public DeviceCanFrame GetVersionMsg()
     {
-        return new DeviceResponse
+        return new DeviceCanFrame
         {
             Sent = false,
             Received = false,
             Prefix = (int)MessagePrefix.Version,
             Index = 0,
-            Data = new CanData
+            Frame = new CanFrame
             {
                 Id = BaseId - 1,
                 Len = 1,

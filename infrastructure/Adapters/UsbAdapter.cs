@@ -53,7 +53,7 @@ public class UsbAdapter : ICommsAdapter
         throw new NotImplementedException();
     }
 
-    public Task<bool> WriteAsync(CanData data, CancellationToken ct)
+    public Task<bool> WriteAsync(CanFrame frame, CancellationToken ct)
     {
         throw new NotImplementedException();
     }

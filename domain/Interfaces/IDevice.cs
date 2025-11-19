@@ -12,13 +12,13 @@ public interface IDevice
     DateTime LastRxTime {get; set;}
 
     void UpdateConnected();
-    bool Read(int id, byte[] data, ref ConcurrentDictionary<(int BaseId, int Prefix, int Index), DeviceResponse> queue);
+    bool Read(int id, byte[] data, ref ConcurrentDictionary<(int BaseId, int Prefix, int Index), DeviceCanFrame> queue);
     void Clear();
     bool InIdRange(int id);
-    List<DeviceResponse> GetUploadMsgs();
-    List<DeviceResponse> GetDownloadMsgs();
-    List<DeviceResponse> GetUpdateMsgs(int newId);
-    DeviceResponse GetBurnMsg();
-    DeviceResponse GetSleepMsg();
-    DeviceResponse GetVersionMsg();
+    List<DeviceCanFrame> GetUploadMsgs();
+    List<DeviceCanFrame> GetDownloadMsgs();
+    List<DeviceCanFrame> GetUpdateMsgs(int newId);
+    DeviceCanFrame GetBurnMsg();
+    DeviceCanFrame GetSleepMsg();
+    DeviceCanFrame GetVersionMsg();
 }

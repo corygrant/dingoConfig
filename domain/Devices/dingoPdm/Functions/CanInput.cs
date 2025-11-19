@@ -40,7 +40,7 @@ public class CanInput(int num, string name) : IDeviceFunction
         return data;
     }
 
-    public DeviceResponse? CreateUploadRequest(int baseId, MessagePrefix prefix)
+    public DeviceCanFrame? CreateUploadRequest(int baseId, MessagePrefix prefix)
     {
         switch (prefix)
         {
@@ -50,13 +50,13 @@ public class CanInput(int num, string name) : IDeviceFunction
                 InsertSignalInt(data, (long)MessagePrefix.CanInputs, 0, 8);
                 InsertSignalInt(data, Number - 1, 8, 8);
 
-                return new DeviceResponse
+                return new DeviceCanFrame
                 {
                     Sent = false,
                     Received = false,
                     Prefix = (int)MessagePrefix.CanInputs,
                     Index = Number - 1,
-                    Data = new CanData
+                    Frame = new CanFrame
                     {
                         Id = baseId - 1,
                         Len = 2,
@@ -71,13 +71,13 @@ public class CanInput(int num, string name) : IDeviceFunction
                 InsertSignalInt(data, (long)MessagePrefix.CanInputsId, 0, 8);
                 InsertSignalInt(data, Number - 1, 8, 8);
 
-                return new DeviceResponse
+                return new DeviceCanFrame
                 {
                     Sent = false,
                     Received = false,
                     Prefix = (int)MessagePrefix.CanInputsId,
                     Index = Number - 1,
-                    Data = new CanData
+                    Frame = new CanFrame
                     {
                         Id = baseId - 1,
                         Len = 2,
@@ -91,26 +91,26 @@ public class CanInput(int num, string name) : IDeviceFunction
         }
     }
 
-    public DeviceResponse? CreateDownloadRequest(int baseId, MessagePrefix prefix)
+    public DeviceCanFrame? CreateDownloadRequest(int baseId, MessagePrefix prefix)
     {
         return prefix switch
         {
-            MessagePrefix.CanInputs => new DeviceResponse
+            MessagePrefix.CanInputs => new DeviceCanFrame
             {
                 Sent = false,
                 Received = false,
                 Prefix = (int)MessagePrefix.CanInputs,
                 Index = Number - 1,
-                Data = new CanData { Id = baseId - 1, Len = 7, Payload = Write() },
+                Frame = new CanFrame { Id = baseId - 1, Len = 7, Payload = Write() },
                 MsgDescription = $"CANInput{Number}"
             },
-            MessagePrefix.CanInputsId => new DeviceResponse
+            MessagePrefix.CanInputsId => new DeviceCanFrame
             {
                 Sent = false,
                 Received = false,
                 Prefix = (int)MessagePrefix.CanInputsId,
                 Index = Number - 1,
-                Data = new CanData { Id = baseId - 1, Len = 8, Payload = WriteId() },
+                Frame = new CanFrame { Id = baseId - 1, Len = 8, Payload = WriteId() },
                 MsgDescription = $"CANInputId{Number}"
             },
             _ => null

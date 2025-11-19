@@ -23,7 +23,7 @@ public class Flasher(int num, string name) : IDeviceFunction
         return (data & 0xF0) >> 4;
     }
     
-    public DeviceResponse? CreateUploadRequest(int baseId, MessagePrefix prefix)
+    public DeviceCanFrame? CreateUploadRequest(int baseId, MessagePrefix prefix)
     {
         if (prefix != MessagePrefix.Flashers) return null;
         
@@ -31,13 +31,13 @@ public class Flasher(int num, string name) : IDeviceFunction
         InsertSignalInt(data, (long)MessagePrefix.Flashers, 0, 8);
         InsertSignalInt(data, Number - 1, 12, 4);
 
-        return new DeviceResponse
+        return new DeviceCanFrame
         {
             Sent = false,
             Received = false,
             Prefix = (int)MessagePrefix.Flashers,
             Index = Number - 1,
-            Data = new CanData
+            Frame = new CanFrame
             {
                 Id = baseId - 1,
                 Len = 2,
@@ -47,17 +47,17 @@ public class Flasher(int num, string name) : IDeviceFunction
         };
     }
 
-    public DeviceResponse? CreateDownloadRequest(int baseId, MessagePrefix prefix)
+    public DeviceCanFrame? CreateDownloadRequest(int baseId, MessagePrefix prefix)
     {
         if (prefix != MessagePrefix.Flashers) return null;
         
-        return new DeviceResponse
+        return new DeviceCanFrame
         {
             Sent = false,
             Received = false,
             Prefix = (int)MessagePrefix.Flashers,
             Index = Number - 1,
-            Data = new CanData
+            Frame = new CanFrame
             {
                 Id = baseId - 1,
                 Len = 6,

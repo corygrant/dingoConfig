@@ -28,7 +28,7 @@ public class Counter(int num, string name) : IDeviceFunction
         return data;
     }
     
-    public DeviceResponse? CreateUploadRequest(int baseId, MessagePrefix prefix)
+    public DeviceCanFrame? CreateUploadRequest(int baseId, MessagePrefix prefix)
     {
         if (prefix != MessagePrefix.Counter) return null;
         
@@ -36,13 +36,13 @@ public class Counter(int num, string name) : IDeviceFunction
         InsertSignalInt(data, (long)MessagePrefix.Counter, 0, 8);
         InsertSignalInt(data, Number - 1, 8, 8);
 
-        return new DeviceResponse
+        return new DeviceCanFrame
         {
             Sent = false,
             Received = false,
             Prefix = (int)MessagePrefix.Counter,
             Index = Number - 1,
-            Data = new CanData
+            Frame = new CanFrame
             {
                 Id = baseId - 1,
                 Len = 2,
@@ -52,17 +52,17 @@ public class Counter(int num, string name) : IDeviceFunction
         };
     }
 
-    public DeviceResponse? CreateDownloadRequest(int baseId, MessagePrefix prefix)
+    public DeviceCanFrame? CreateDownloadRequest(int baseId, MessagePrefix prefix)
     {
         if (prefix != MessagePrefix.Counter) return null;
         
-        return new DeviceResponse
+        return new DeviceCanFrame
         {
             Sent = false,
             Received = false,
             Prefix = (int)MessagePrefix.Counter,
             Index = Number - 1,
-            Data = new CanData
+            Frame = new CanFrame
             {
                 Id = baseId - 1,
                 Len = 8,

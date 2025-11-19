@@ -91,28 +91,28 @@ public class SlcanAdapter : ICommsAdapter
         return Task.FromResult(true);
     }
 
-    public Task<bool> WriteAsync(CanData data, CancellationToken ct)
+    public Task<bool> WriteAsync(CanFrame frame, CancellationToken ct)
     {
         if (!_serial.IsOpen) 
             return Task.FromResult(false);
-        if (data.Payload.Length != 8) 
+        if (frame.Payload.Length != 8) 
             return Task.FromResult(false);
 
         try
         {
             byte[] d = new byte[22];
             d[0] = (byte)'t';
-            d[1] = (byte)((data.Id & 0xF00) >> 8);
-            d[2] = (byte)((data.Id & 0xF0) >> 4);
-            d[3] = (byte)(data.Id & 0xF);
-            d[4] = (byte)data.Len;
+            d[1] = (byte)((frame.Id & 0xF00) >> 8);
+            d[2] = (byte)((frame.Id & 0xF0) >> 4);
+            d[3] = (byte)(frame.Id & 0xF);
+            d[4] = (byte)frame.Len;
 
             int lastByte = 0;
 
-            for (int i = 0; i < data.Len; i++)
+            for (int i = 0; i < frame.Len; i++)
             {
-                d[5 + (i * 2)] = Convert.ToByte((data.Payload[i] & 0xF0) >> 4);
-                d[6 + (i * 2)] = Convert.ToByte(data.Payload[i] & 0xF);
+                d[5 + (i * 2)] = Convert.ToByte((frame.Payload[i] & 0xF0) >> 4);
+                d[6 + (i * 2)] = Convert.ToByte(frame.Payload[i] & 0xF);
                 lastByte = 6 + (i * 2);
             }
 
@@ -175,14 +175,14 @@ public class SlcanAdapter : ICommsAdapter
                 payload = new byte[8];
             }
 
-            CanData data = new CanData
+            CanFrame frame = new CanFrame
             {
                 Id = id,
                 Len = len,
                 Payload = payload
             };
 
-            DataReceived?.Invoke(this,new CanDataEventArgs(data));
+            DataReceived?.Invoke(this,new CanFrameEventArgs(frame));
         }
     }
 }
