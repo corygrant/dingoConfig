@@ -42,13 +42,16 @@ public class CommsDataPipeline(
     {
         // Subscribe to adapter events
         //if (adapterManager.ActiveAdapter == null) throw new NullReferenceException();
-            
+
         //adapterManager.ActiveAdapter.DataReceived += OnDataReceived;
-        
+
+        // Set up the transmit callback for DeviceManager
+        deviceManager.SetTransmitCallback(QueueTransmit);
+
         // Start both pipelines
         var rxTask = ProcessRxPipelineAsync(stoppingToken);
         var txTask = ProcessTxPipelineAsync(stoppingToken);
-        
+
         await Task.WhenAll(rxTask, txTask);
     }
     
@@ -65,21 +68,21 @@ public class CommsDataPipeline(
     private async Task ProcessRxPipelineAsync(CancellationToken ct)
     {
         logger.LogInformation("RX Pipeline started");
-        
+
         await foreach (var frame in _rxChannel.Reader.ReadAllAsync(ct))
         {
             try
             {
-                // Route frame to appropriate device
-                // Devices will parse it and update their state
-                // (Devices subscribed to adapter events handle this)
+                // Route frame to DeviceManager
+                // DeviceManager passes to all devices so they can update their state/config
+                deviceManager.OnCanDataReceived(frame);
             }
             catch (Exception ex)
             {
                 logger.LogError(ex, "Error processing RX frame: {CanId:X}", frame.Id);
             }
         }
-        
+
         logger.LogInformation("RX Pipeline stopped");
     }
     

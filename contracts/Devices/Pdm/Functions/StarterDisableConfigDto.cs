@@ -1,10 +1,9 @@
-
 namespace contracts.Devices.Pdm.Functions;
 
-public class StarterDisableStateDto
+public class StarterDisableConfigDto
 {
-    public string Name { get; set; } = string.Empty;
     public int Number { get; set; } = 1; // Always 1 for singleton function
+    public string Name { get; set; } = string.Empty;
     public bool Enabled { get; set; }
     public int Input { get; set; }
     public bool Output1 { get; set; }
