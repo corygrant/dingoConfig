@@ -1,5 +1,25 @@
 ﻿@page "/not-found"
 @layout MainLayout
 
-<h3>Not Found</h3>
-<p>Sorry, the content you are looking for does not exist.</p>
+<PageTitle>Not Found</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Medium" Class="mt-8">
+    <MudPaper Class="pa-8 text-center" Elevation="0">
+        <MudIcon Icon="@Icons.Material.Filled.SearchOff"
+                 Size="Size.Large"
+                 Color="Color.Error"
+                 Style="font-size: 6rem;" />
+
+        <MudText Typo="Typo.h3" Class="mt-4 mb-2">404 - Page Not Found</MudText>
+        <MudText Typo="Typo.body1" Color="Color.Secondary" Class="mb-6">
+            Sorry, the page you are looking for does not exist.
+        </MudText>
+
+        <MudButton Variant="Variant.Filled"
+                   Color="Color.Primary"
+                   StartIcon="@Icons.Material.Filled.Home"
+                   Href="/">
+            Return to Home
+        </MudButton>
+    </MudPaper>
+</MudContainer>

@@ -3,26 +3,61 @@
 
 <PageTitle>Counter</PageTitle>
 
-<h1>Counter</h1>
+<MudContainer MaxWidth="MaxWidth.Medium" Class="mt-8">
+    <MudPaper Class="pa-6" Elevation="2">
+        <MudText Typo="Typo.h3" GutterBottom="true">Counter</MudText>
 
-<p role="status">Current count: @currentCount</p>
+        <MudText Typo="Typo.h4" Class="my-4" Color="Color.Primary">
+            Current count: @currentCount
+        </MudText>
 
-<button class="btn btn-primary" @onclick="IncrementCount">Click me</button>
+        <MudStack Row="true" Spacing="3" Class="mb-4">
+            <MudButton Variant="Variant.Filled"
+                       Color="Color.Primary"
+                       StartIcon="@Icons.Material.Filled.Add"
+                       OnClick="IncrementCount">
+                Increment
+            </MudButton>
+            <MudButton Variant="Variant.Filled"
+                       Color="Color.Secondary"
+                       StartIcon="@Icons.Material.Filled.Refresh"
+                       OnClick="ResetCount">
+                Reset
+            </MudButton>
+        </MudStack>
 
-<MudButton Variant="Variant.Filled" Color="Color.Dark" OnClick="Callback">Connect</MudButton>
-<MudTextField @bind-Value="textvar" Label="Standard" Variant="Variant.Filled"></MudTextField>
+        <MudDivider Class="my-4" />
+
+        <MudTextField @bind-Value="textvar"
+                      Label="Text Input"
+                      Variant="Variant.Outlined"
+                      Class="mb-4" />
+
+        <MudButton Variant="Variant.Filled"
+                   Color="Color.Dark"
+                   StartIcon="@Icons.Material.Filled.Link"
+                   OnClick="Callback">
+            Connect
+        </MudButton>
+    </MudPaper>
+</MudContainer>
+
 @code {
     private int currentCount = 0;
     private string textvar = "";
-    
+
     private void IncrementCount()
     {
         currentCount++;
+    }
+
+    private void ResetCount()
+    {
+        currentCount = 0;
     }
 
     private void Callback(MouseEventArgs obj)
     {
         textvar = "pressed";
     }
-
 }

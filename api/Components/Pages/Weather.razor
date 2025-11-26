@@ -1,40 +1,55 @@
-﻿@page "/weather"
+@page "/weather"
 @attribute [StreamRendering]
 
 <PageTitle>Weather</PageTitle>
 
-<h1>Weather</h1>
+<MudContainer MaxWidth="MaxWidth.Large" Class="mt-4">
+    <MudText Typo="Typo.h3" Class="mb-4">Weather Forecast</MudText>
+    <MudText Typo="Typo.body1" Class="mb-4">This component demonstrates showing data with MudBlazor table.</MudText>
 
-<p>This component demonstrates showing data.</p>
-
-@if (forecasts == null)
-{
-    <p><em>Loading...</em></p>
-}
-else
-{
-    <table class="table">
-        <thead>
-            <tr>
-                <th>Date</th>
-                <th aria-label="Temperature in Celsius">Temp. (C)</th>
-                <th aria-label="Temperature in Fahrenheit">Temp. (F)</th>
-                <th>Summary</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach (var forecast in forecasts)
-            {
-                <tr>
-                    <td>@forecast.Date.ToShortDateString()</td>
-                    <td>@forecast.TemperatureC</td>
-                    <td>@forecast.TemperatureF</td>
-                    <td>@forecast.Summary</td>
-                </tr>
-            }
-        </tbody>
-    </table>
-}
+    @if (forecasts == null)
+    {
+        <MudProgressLinear Indeterminate="true" Class="my-4" />
+        <MudText Typo="Typo.body2" Color="Color.Secondary">Loading weather data...</MudText>
+    }
+    else
+    {
+        <MudTable Items="@forecasts"
+                  Hover="true"
+                  Striped="true"
+                  Elevation="2"
+                  Dense="false">
+            <HeaderContent>
+                <MudTh>Date</MudTh>
+                <MudTh>
+                    <MudTooltip Text="Temperature in Celsius">
+                        Temp. (C)
+                    </MudTooltip>
+                </MudTh>
+                <MudTh>
+                    <MudTooltip Text="Temperature in Fahrenheit">
+                        Temp. (F)
+                    </MudTooltip>
+                </MudTh>
+                <MudTh>Summary</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd DataLabel="Date">@context.Date.ToShortDateString()</MudTd>
+                <MudTd DataLabel="Temp. (C)">
+                    <MudChip T="string" Size="Size.Small" Color="@GetTempColor(context.TemperatureC)">
+                        @context.TemperatureC°
+                    </MudChip>
+                </MudTd>
+                <MudTd DataLabel="Temp. (F)">@context.TemperatureF°</MudTd>
+                <MudTd DataLabel="Summary">
+                    <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">
+                        @context.Summary
+                    </MudChip>
+                </MudTd>
+            </RowTemplate>
+        </MudTable>
+    }
+</MudContainer>
 
 @code {
     private WeatherForecast[]? forecasts;
@@ -52,6 +67,15 @@ else
             TemperatureC = Random.Shared.Next(-20, 55),
             Summary = summaries[Random.Shared.Next(summaries.Length)]
         }).ToArray();
+    }
+
+    private Color GetTempColor(int tempC)
+    {
+        if (tempC < 0) return Color.Info;
+        if (tempC < 10) return Color.Primary;
+        if (tempC < 20) return Color.Success;
+        if (tempC < 30) return Color.Warning;
+        return Color.Error;
     }
 
     private class WeatherForecast

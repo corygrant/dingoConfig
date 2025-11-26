@@ -1,47 +1,31 @@
-﻿<div class="top-row ps-3 navbar navbar-dark">
-    <div class="container-fluid">
-        <a class="navbar-brand" href="">dingoConfig.Blazor</a>
-    </div>
-</div>
+﻿<MudNavMenu>
+    <MudText Typo="Typo.h6" Class="px-4 py-3">dingoConfig</MudText>
+    <MudDivider Class="mb-2" />
 
-<input type="checkbox" title="Navigation menu" class="navbar-toggler" />
+    <MudNavLink Href="" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Home">
+        Home
+    </MudNavLink>
 
-<div class="nav-scrollable" onclick="document.querySelector('.navbar-toggler').click()">
-    <nav class="nav flex-column">
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
-                <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Home
-            </NavLink>
-        </div>
+    <MudNavGroup Title="Examples" Icon="@Icons.Material.Filled.Code" Expanded="false">
+        <MudNavLink Href="counter" Icon="@Icons.Material.Filled.PlusOne">
+            Counter
+        </MudNavLink>
+        <MudNavLink Href="weather" Icon="@Icons.Material.Filled.Cloud">
+            Weather
+        </MudNavLink>
+    </MudNavGroup>
 
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="counter">
-                <span class="bi bi-plus-square-fill-nav-menu" aria-hidden="true"></span> Counter
-            </NavLink>
-        </div>
+    <MudDivider Class="my-2" />
 
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="weather">
-                <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Weather
-            </NavLink>
-        </div>
+    <MudNavLink Href="adapter" Icon="@Icons.Material.Filled.Cable">
+        Adapter
+    </MudNavLink>
+    <MudNavLink Href="devices" Icon="@Icons.Material.Filled.Devices">
+        Devices
+    </MudNavLink>
+</MudNavMenu>
 
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="adapter">
-                <span class="bi bi-plug-fill-nav-menu" aria-hidden="true"></span> Adapter
-            </NavLink>
-        </div>
-
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="devices">
-                <span class="bi bi-display-fill-nav-menu" aria-hidden="true"></span> Devices
-            </NavLink>
-        </div>
-
-    </nav>
-</div>
-
-@code 
+@code
 {
 
 }
