@@ -9,7 +9,7 @@ namespace domain.Devices.dingoPdm.Functions;
 
 public class VirtualInput(int number, string name) : IDeviceFunction
 {
-    [JsonPropertyName("name")] public string Name {get; } = name;
+    [JsonPropertyName("name")] public string Name {get; set; } = name;
     [JsonPropertyName("number")] public int Number {get; } = number;
     [JsonPropertyName("enabled")] public bool Enabled {get; set;}
     [JsonPropertyName("not0")] public bool Not0 {get; set;}

@@ -5,7 +5,11 @@
 <MudDataGrid Items="@CanInputs" Dense="true" Hover="true" Striped="true" EditMode="DataGridEditMode.Cell" ReadOnly="false">
     <Columns>
         <PropertyColumn Property="x => x.Number" Title="No." />
-        <PropertyColumn Property="x => x.Name" />
+        <PropertyColumn Property="x => x.Name">
+            <EditTemplate>
+                <MudTextField @bind-Value="context.Item.Name" Variant="Variant.Outlined" Margin="Margin.Dense" />
+            </EditTemplate>
+        </PropertyColumn>
         <PropertyColumn Property="x => x.Enabled">
             <EditTemplate>
                 <MudCheckBox @bind-Value="context.Item.Enabled" Dense="true" />
