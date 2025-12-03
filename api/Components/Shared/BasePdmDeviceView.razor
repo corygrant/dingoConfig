@@ -90,67 +90,103 @@
                 @* Inputs *@
                 @if (_device.Inputs.Any())
                 {
-                    <MudExpansionPanel Text="@($"Inputs ({_device.Inputs.Count})")">
-                        <InputsGrid Inputs="_device.Inputs" />
+                    <MudExpansionPanel Text="@($"Inputs ({_device.Inputs.Count})")"
+                                       ExpandedChanged="@((bool expanded) => _inputsExpanded = expanded)">
+                        @if (_inputsExpanded)
+                        {
+                            <InputsGrid Inputs="_device.Inputs"/>
+                        }
                     </MudExpansionPanel>
                 }
 
                 @* Outputs *@
                 @if (_device.Outputs.Any())
                 {
-                    <MudExpansionPanel Text="@($"Outputs ({_device.Outputs.Count})")">
-                        <OutputsGrid Outputs="_device.Outputs" />
+                    <MudExpansionPanel Text="@($"Outputs ({_device.Outputs.Count})")"
+                                       ExpandedChanged="@((bool expanded) => _outputsExpanded = expanded)">
+                        @if (_outputsExpanded)
+                        {
+                            <OutputsGrid Outputs="_device.Outputs" />
+                        }
                     </MudExpansionPanel>
                 }
 
                 @* CAN Inputs *@
                 @if (_device.CanInputs.Any())
                 {
-                    <MudExpansionPanel Text="@($"CAN Inputs ({_device.CanInputs.Count})")">
-                        <CanInputsGrid CanInputs="_device.CanInputs" />
+                    <MudExpansionPanel Text="@($"CAN Inputs ({_device.CanInputs.Count})")"
+                                       ExpandedChanged="@((bool expanded) => _canInputsExpanded = expanded)">
+                        @if (_canInputsExpanded)
+                        {
+                            <CanInputsGrid CanInputs="_device.CanInputs" />
+                        }
                     </MudExpansionPanel>
                 }
 
                 @* Virtual Inputs *@
                 @if (_device.VirtualInputs.Any())
                 {
-                    <MudExpansionPanel Text="@($"Virtual Inputs ({_device.VirtualInputs.Count})")">
-                        <VirtualInputsGrid VirtualInputs="_device.VirtualInputs" />
+                    <MudExpansionPanel Text="@($"Virtual Inputs ({_device.VirtualInputs.Count})")"
+                                       ExpandedChanged="@((bool expanded) => _virtualInputsExpanded = expanded)">
+                        @if (_virtualInputsExpanded)
+                        {
+                            <VirtualInputsGrid VirtualInputs="_device.VirtualInputs" />
+                        }
                     </MudExpansionPanel>
                 }
 
                 @* Conditions *@
                 @if (_device.Conditions.Any())
                 {
-                    <MudExpansionPanel Text="@($"Conditions ({_device.Conditions.Count})")">
-                        <ConditionsGrid Conditions="_device.Conditions" />
+                    <MudExpansionPanel Text="@($"Conditions ({_device.Conditions.Count})")"
+                                       ExpandedChanged="@((bool expanded) => _conditionsExpanded = expanded)">
+                        @if (_conditionsExpanded)
+                        {
+                            <ConditionsGrid Conditions="_device.Conditions" />
+                        }
                     </MudExpansionPanel>
                 }
 
                 @* Counters *@
                 @if (_device.Counters.Any())
                 {
-                    <MudExpansionPanel Text="@($"Counters ({_device.Counters.Count})")">
-                        <CountersGrid Counters="_device.Counters" />
+                    <MudExpansionPanel Text="@($"Counters ({_device.Counters.Count})")"
+                                       ExpandedChanged="@((bool expanded) => _countersExpanded = expanded)">
+                        @if (_countersExpanded)
+                        {
+                            <CountersGrid Counters="_device.Counters" />
+                        }
                     </MudExpansionPanel>
                 }
 
                 @* Flashers *@
                 @if (_device.Flashers.Any())
                 {
-                    <MudExpansionPanel Text="@($"Flashers ({_device.Flashers.Count})")">
-                        <FlashersGrid Flashers="_device.Flashers" />
+                    <MudExpansionPanel Text="@($"Flashers ({_device.Flashers.Count})")"
+                                       ExpandedChanged="@((bool expanded) => _flashersExpanded = expanded)">
+                        @if (_flashersExpanded)
+                        {
+                            <FlashersGrid Flashers="_device.Flashers" />
+                        }
                     </MudExpansionPanel>
                 }
 
                 @* Wiper *@
-                <MudExpansionPanel Text="Wiper">
-                    <WiperConfig Wiper="_device.Wipers" />
+                <MudExpansionPanel Text="Wiper"
+                                   ExpandedChanged="@((bool expanded) => _wiperExpanded = expanded)">
+                    @if (_wiperExpanded)
+                    {
+                        <WiperConfig Wiper="_device.Wipers" />
+                    }
                 </MudExpansionPanel>
 
                 @* Starter Disable *@
-                <MudExpansionPanel Text="Starter Disable">
-                    <StarterDisableConfig StarterDisable="_device.StarterDisable" />
+                <MudExpansionPanel Text="Starter Disable"
+                                   ExpandedChanged="@((bool expanded) => _starterDisableExpanded = expanded)">
+                    @if (_starterDisableExpanded)
+                    {
+                        <StarterDisableConfig StarterDisable="_device.StarterDisable" />
+                    }
                 </MudExpansionPanel>
             </MudExpansionPanels>
         }
@@ -166,6 +202,17 @@
     public string DeviceName { get; set; } = null!;
 
     private TDevice? _device;
+
+    // Expansion panel state tracking for lazy loading
+    private bool _inputsExpanded = false;
+    private bool _outputsExpanded = false;
+    private bool _canInputsExpanded = false;
+    private bool _virtualInputsExpanded = false;
+    private bool _conditionsExpanded = false;
+    private bool _countersExpanded = false;
+    private bool _flashersExpanded = false;
+    private bool _wiperExpanded = false;
+    private bool _starterDisableExpanded = false;
 
     protected override void OnParametersSet()
     {
