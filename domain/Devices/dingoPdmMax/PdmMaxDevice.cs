@@ -11,6 +11,14 @@ public class PdmMaxDevice(string name, int baseId) : PdmDevice(name, baseId)
 
     protected override int NumOutputs { get; } = 4;
 
+    protected override void SetLimits()
+    {
+        Outputs[0].NominalCurrentLimit = 26.0;
+        Outputs[1].NominalCurrentLimit = 26.0;
+        Outputs[2].NominalCurrentLimit = 26.0;
+        Outputs[3].NominalCurrentLimit = 26.0;
+    }
+
     protected override void ReadMessage2(byte[] data)
     {
         //Unused with Max

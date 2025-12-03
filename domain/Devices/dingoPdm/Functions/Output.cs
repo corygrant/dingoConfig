@@ -12,12 +12,12 @@ public class Output(int number, string name) : IDeviceFunction
     [JsonPropertyName("enabled")] public bool Enabled { get; set; }
     [JsonPropertyName("name")] public string Name { get; set; } = name;
     [JsonPropertyName("number")] public int Number { get; } = number;
-    [JsonPropertyName("currentLimit")] public int CurrentLimit { get; set; }
+    [JsonPropertyName("currentLimit")] public double CurrentLimit { get; set; }
     [JsonPropertyName("resetCountLimit")] public int ResetCountLimit { get; set; }
     [JsonPropertyName("resetMode")] public ResetMode ResetMode { get; set; }
-    [JsonPropertyName("resetTime")] public double ResetTime { get; set; }
-    [JsonPropertyName("inrushCurrentLimit")] public int InrushCurrentLimit { get; set; }
-    [JsonPropertyName("inrushTime")] public double InrushTime { get; set; }
+    [JsonPropertyName("resetTime")] public int ResetTime { get; set; }
+    [JsonPropertyName("inrushCurrentLimit")] public double InrushCurrentLimit { get; set; }
+    [JsonPropertyName("inrushTime")] public int InrushTime { get; set; }
     [JsonPropertyName("input")] public VarMap Input { get; set; }
     [JsonPropertyName("softStartEnabled")] public bool SoftStartEnabled { get; set; }
     [JsonPropertyName("variableDutyCycle")] public bool VariableDutyCycle { get; set; }
@@ -32,6 +32,9 @@ public class Output(int number, string name) : IDeviceFunction
     [JsonIgnore] public int ResetCount { get; set; }
     [JsonIgnore] public double CurrentDutyCycle { get; set; }
     [JsonIgnore] public double CalculatedPower { get; set; }
+    
+    //Limit checks
+    [JsonIgnore] public double NominalCurrentLimit { get; set; }
     
     public static int ExtractIndex(byte data, MessagePrefix prefix)
     {
@@ -127,9 +130,9 @@ public class Output(int number, string name) : IDeviceFunction
                 CurrentLimit = (int)ExtractSignalInt(data, 24, 8);
                 ResetMode = (ResetMode)ExtractSignalInt(data, 32, 4);
                 ResetCountLimit = (int)ExtractSignalInt(data, 36, 4);
-                ResetTime = ExtractSignal(data, 40, 8, factor: 0.1);
+                ResetTime = (int)ExtractSignalInt(data, 40, 8, factor: 0.1);
                 InrushCurrentLimit = (int)ExtractSignalInt(data, 48, 8);
-                InrushTime = ExtractSignal(data, 56, 8, factor: 0.1);
+                InrushTime = (int)ExtractSignalInt(data, 56, 8, factor: 0.1);
 
                 return true;
             case MessagePrefix.OutputsPwm when data.Length != 8:
@@ -164,11 +167,11 @@ public class Output(int number, string name) : IDeviceFunction
         InsertBool(data, Enabled, 8);
         InsertSignalInt(data, Number - 1, 12, 4);
         InsertSignalInt(data, (long)Input, 16, 8);
-        InsertSignalInt(data, CurrentLimit, 24, 8);
+        InsertSignal(data, CurrentLimit, 24, 8);
         InsertSignalInt(data, (long)ResetMode, 32, 4);
         InsertSignalInt(data, ResetCountLimit, 36, 4);
         InsertSignal(data, ResetTime, 40, 8, factor: 0.1);
-        InsertSignalInt(data, InrushCurrentLimit, 48, 8);
+        InsertSignal(data, InrushCurrentLimit, 48, 8);
         InsertSignal(data, InrushTime, 56, 8, factor: 0.1);
         return data;
     }

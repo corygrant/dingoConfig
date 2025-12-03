@@ -1,9 +1,10 @@
 @using domain.Devices.dingoPdm.Functions
 @using domain.Devices.dingoPdm.Enums
 
-<MudDataGrid Items="@Outputs" Dense="true" Hover="true" Striped="true" EditMode="DataGridEditMode.Cell" ReadOnly="false">
+<MudDataGrid Items="@Outputs" Dense="true" Hover="true" Striped="false" EditMode="DataGridEditMode.Cell" ReadOnly="false" 
+             SortMode="SortMode.None" ColumnResizeMode="ResizeMode.Container" Virtualize="true">
     <Columns>
-        <PropertyColumn Property="x => x.Number" Title="No." />
+        <PropertyColumn Property="x => x.Number" Title="Num" Editable="false" />
         <PropertyColumn Property="x => x.Name">
             <EditTemplate>
                 <MudTextField @bind-Value="context.Item.Name" Variant="Variant.Outlined" Margin="Margin.Dense" />
@@ -14,7 +15,7 @@
                 <MudCheckBox @bind-Value="context.Item.Enabled" Dense="true" />
             </EditTemplate>
         </PropertyColumn>
-        <PropertyColumn Property="x => x.Input" Title="Input Source">
+        <PropertyColumn Property="x => x.Input" Title="Variable">
             <EditTemplate>
                 <MudSelect T="VarMap" @bind-Value="context.Item.Input" Variant="Variant.Outlined" Dense="true">
                     @foreach (VarMap varMap in Enum.GetValues(typeof(VarMap)))
@@ -24,8 +25,22 @@
                 </MudSelect>
             </EditTemplate>
         </PropertyColumn>
-        <PropertyColumn Property="x => x.CurrentLimit" Title="Current Limit (A)" />
-        <PropertyColumn Property="x => x.InrushCurrentLimit" Title="Inrush Limit (A)" />
+        <TemplateColumn Title="Current Limit (A)">
+            <EditTemplate>
+                <MudNumericField @bind-Value="@context.Item.CurrentLimit" 
+                                 Min="0"
+                                 Max="@((context.Item.NominalCurrentLimit * CurrentLimitMult))"
+                                 Step="1.0"/>
+            </EditTemplate>
+        </TemplateColumn>
+        <TemplateColumn Title="Inrush Limit (A)">
+            <EditTemplate>
+                <MudNumericField @bind-Value="@context.Item.InrushCurrentLimit" 
+                                 Min="0"
+                                 Max="@((context.Item.NominalCurrentLimit * InrushLimitMult))"
+                                 Step="1.0"/>
+            </EditTemplate>
+        </TemplateColumn>
         <PropertyColumn Property="x => x.InrushTime" Title="Inrush Time (s)" />
         <PropertyColumn Property="x => x.ResetMode">
             <EditTemplate>
@@ -57,4 +72,7 @@
 @code {
     [Parameter, EditorRequired]
     public List<Output> Outputs { get; set; } = null!;
+
+    private const double CurrentLimitMult = 1.5;
+    private const double InrushLimitMult = 3.0;
 }

@@ -1,99 +1,12 @@
 @using contracts.Devices.PdmMax
-@using domain.Devices.dingoPdm.Enums
+@using domain.Devices.dingoPdmMax
 
-<MudCard>
-    <MudCardHeader>
-        <CardHeaderContent>
-            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                <MudText Typo="Typo.h5">PDM-Max Device</MudText>
-                <MudChip T="string" Color="@(State.Connected ? Color.Success : Color.Error)" Size="Size.Small">
-                    @(State.Connected ? "Connected" : "Disconnected")
-                </MudChip>
-            </MudStack>
-        </CardHeaderContent>
-        <CardHeaderActions>
-            <MudText Typo="Typo.caption">GUID: @State.Guid</MudText>
-        </CardHeaderActions>
-    </MudCardHeader>
-    <MudCardContent>
-        @* Device-level metrics *@
-        <MudGrid>
-            <MudItem xs="12" md="3">
-                <MudText Typo="Typo.h6">@State.BatteryVoltage.ToString("F1") V</MudText>
-                <MudText Typo="Typo.body2" Color="Color.Secondary">Battery Voltage</MudText>
-            </MudItem>
-            <MudItem xs="12" md="3">
-                <MudText Typo="Typo.h6">@State.TotalCurrent.ToString("F1") A</MudText>
-                <MudText Typo="Typo.body2" Color="Color.Secondary">Total Current</MudText>
-            </MudItem>
-            <MudItem xs="12" md="3">
-                <MudText Typo="Typo.h6">@State.BoardTempC.ToString("F1") °C</MudText>
-                <MudText Typo="Typo.body2" Color="Color.Secondary">Board Temperature</MudText>
-            </MudItem>
-            <MudItem xs="12" md="3">
-                <MudText Typo="Typo.h6">@State.State</MudText>
-                <MudText Typo="Typo.body2" Color="Color.Secondary">Device State</MudText>
-            </MudItem>
-        </MudGrid>
-
-        <MudDivider Class="my-4" />
-
-        @* Outputs - PDM-Max has more outputs than standard PDM *@
-        <MudText Typo="Typo.h6" Class="mb-2">Outputs</MudText>
-        <MudGrid>
-            @foreach (var (output, index) in State.Outputs.Select((o, i) => (o, i)))
-            {
-                <MudItem xs="6" md="2">
-                    <MudCard Outlined="true" Class="pa-2">
-                        <MudCardContent Class="pa-2">
-                            <MudStack Spacing="1">
-                                <MudText Typo="Typo.body2">Out @(index + 1)</MudText>
-                                <MudChip T="string" Color="@GetOutputColor(output.State)" Size="Size.Small">
-                                    @GetOutputStateText(output.State)
-                                </MudChip>
-                                <MudText Typo="Typo.caption">@output.Current.ToString("F1")A</MudText>
-                            </MudStack>
-                        </MudCardContent>
-                    </MudCard>
-                </MudItem>
-            }
-        </MudGrid>
-
-        @* Digital Inputs *@
-        @if (State.Inputs.Any())
-        {
-            <MudDivider Class="my-4" />
-            <MudText Typo="Typo.h6" Class="mb-2">Digital Inputs</MudText>
-            <MudStack Row="true" Spacing="2">
-                @foreach (var (input, index) in State.Inputs.Select((i, idx) => (i, idx)))
-                {
-                    <MudChip T="string" Color="@(input.State ? Color.Success : Color.Default)" Size="Size.Small">
-                        In @(index + 1): @(input.State ? "ON" : "OFF")
-                    </MudChip>
-                }
-            </MudStack>
-        }
-
-    </MudCardContent>
-</MudCard>
+<BasePdmDeviceView TDto="PdmMaxDto"
+               TDevice="PdmMaxDevice"
+               State="@State"
+               DeviceName="dingoPDM-Max" />
 
 @code {
     [Parameter, EditorRequired]
     public PdmMaxDto State { get; set; } = null!;
-
-    private Color GetOutputColor(OutState state) => state switch
-    {
-        OutState.On => Color.Success,
-        OutState.Overcurrent => Color.Error,
-        OutState.Fault => Color.Warning,
-        _ => Color.Default
-    };
-
-    private string GetOutputStateText(OutState state) => state switch
-    {
-        OutState.On => "ON",
-        OutState.Overcurrent => "OC",
-        OutState.Fault => "RST",
-        _ => "OFF"
-    };
 }

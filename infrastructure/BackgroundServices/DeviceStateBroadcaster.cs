@@ -29,7 +29,7 @@ public class DeviceStateBroadcaster(
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         // Broadcast state at 20 Hz (every 50ms) as per CLAUDE.md
-        using var timer = new PeriodicTimer(TimeSpan.FromMilliseconds(50));
+        using var timer = new PeriodicTimer(TimeSpan.FromMilliseconds(500));
 
         logger.LogInformation("DeviceStateBroadcaster started - broadcasting at 20 Hz");
 

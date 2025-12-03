@@ -71,6 +71,7 @@ public class PdmDevice : IDevice
         Guid = Guid.NewGuid();
         
         InitializeCollections();
+        SetLimits();
     }
 
     protected virtual void InitializeCollections()
@@ -96,6 +97,20 @@ public class PdmDevice : IDevice
         for (var i = 0; i < NumConditions; i++)
             Conditions.Add(new Condition(i + 1, "condition" + i));
     }
+
+    protected virtual void SetLimits()
+    {
+        //Set limits
+        Outputs[0].NominalCurrentLimit = 13.0;
+        Outputs[1].NominalCurrentLimit = 13.0;
+        Outputs[2].NominalCurrentLimit = 8.0;
+        Outputs[3].NominalCurrentLimit = 8.0;
+        Outputs[4].NominalCurrentLimit = 8.0;
+        Outputs[5].NominalCurrentLimit = 8.0;
+        Outputs[6].NominalCurrentLimit = 8.0;
+        Outputs[7].NominalCurrentLimit = 8.0;
+    }
+    
     public void UpdateConnected()
     {
         TimeSpan timeSpan = DateTime.Now - LastRxTime;
