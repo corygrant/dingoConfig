@@ -15,6 +15,13 @@
     <PackageReference Include="Swashbuckle.AspNetCore.SwaggerUI" Version="9.0.6" />
   </ItemGroup>
 
+  <ItemGroup>
+    <_ContentIncludedByDefault Remove="ClientApp\package-lock.json" />
+    <_ContentIncludedByDefault Remove="ClientApp\package.json" />
+    <_ContentIncludedByDefault Remove="ClientApp\tsconfig.json" />
+    <_ContentIncludedByDefault Remove="ClientApp\tsconfig.node.json" />
+  </ItemGroup>
+
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
