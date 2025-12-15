@@ -29,15 +29,4 @@
     <BlazorDisableThrowNavigationException>true</BlazorDisableThrowNavigationException>
   </PropertyGroup>
 
-  <!-- React Flow Build Integration -->
-  <Target Name="NpmInstall" BeforeTargets="Build" Condition="!Exists('ClientApp/node_modules')">
-    <Message Importance="high" Text="Running npm install in ClientApp..." />
-    <Exec Command="npm install" WorkingDirectory="ClientApp" />
-  </Target>
-
-  <Target Name="NpmBuild" BeforeTargets="Build">
-    <Message Importance="high" Text="Building React Flow app..." />
-    <Exec Command="npm run build" WorkingDirectory="ClientApp" />
-  </Target>
-
 </Project>

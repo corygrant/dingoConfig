@@ -8,7 +8,7 @@
           Dot="true"
           Overlap="true"
           Bordered="true"
-          Visible="@(available?.Ports?.Length == 0)">
+          Visible="@(_available?.Ports?.Length == 0)">
     <MudChip T="string"
              Icon="@Icons.Material.Filled.Cable"
              Color="@GetAdapterChipColor()"
@@ -25,7 +25,7 @@
             TransformOrigin="Origin.TopRight"
             OverflowBehavior="OverflowBehavior.FlipAlways">
     <MudPaper Class="pa-4" Style="min-width: 400px;" Elevation="8">
-        @if (loading)
+        @if (_loading)
         {
             <MudProgressCircular Indeterminate="true" Size="Size.Small" />
         }
@@ -33,26 +33,26 @@
         {
             <MudText Typo="Typo.h6" Class="mb-3">
                 <MudIcon Icon="@Icons.Material.Filled.Cable" Class="mr-2" />
-                CAN Adapter
+                Adapter
             </MudText>
 
-            @if (status?.IsConnected == true)
+            @if (_status?.IsConnected == true)
             {
                 <!-- Connected State -->
                 <MudAlert Severity="Severity.Success" Class="mb-3" Dense="true">
                     <strong>Connected</strong>
                 </MudAlert>
 
-                <MudText Typo="Typo.body2" Class="mb-1"><strong>Adapter:</strong> @status.ActiveAdapter</MudText>
-                <MudText Typo="Typo.body2" Class="mb-3"><strong>Port:</strong> @status.ActivePort</MudText>
+                <MudText Typo="Typo.body2" Class="mb-1"><strong>Adapter:</strong> @_status.ActiveAdapter</MudText>
+                <MudText Typo="Typo.body2" Class="mb-3"><strong>Port:</strong> @_status.ActivePort</MudText>
 
                 <MudButton Variant="Variant.Filled"
                            Color="Color.Error"
                            StartIcon="@Icons.Material.Filled.LinkOff"
                            OnClick="@DisconnectAdapter"
-                           Disabled="@disconnecting"
+                           Disabled="@_disconnecting"
                            FullWidth="true">
-                    @(disconnecting ? "Disconnecting..." : "Disconnect")
+                    @(_disconnecting ? "Disconnecting..." : "Disconnect")
                 </MudButton>
             }
             else
@@ -62,15 +62,15 @@
                     <strong>Not Connected</strong>
                 </MudAlert>
 
-                <MudSelect @bind-Value="selectedAdapterType"
+                <MudSelect @bind-Value="_selectedAdapterType"
                            Label="Adapter Type"
                            Variant="Variant.Outlined"
                            Dense="true"
                            Class="mb-2"
                            T="string">
-                    @if (available?.Adapters != null)
+                    @if (_available?.Adapters != null)
                     {
-                        @foreach (var adapter in available.Adapters)
+                        @foreach (var adapter in _available.Adapters)
                         {
                             <MudSelectItem T="string" Value="@adapter">@adapter</MudSelectItem>
                         }
@@ -78,17 +78,17 @@
                 </MudSelect>
 
                 @* Show port selector for USB and SLCAN only (not PCAN or Sim) *@
-                @if (!string.IsNullOrEmpty(selectedAdapterType) && selectedAdapterType != "Sim" && selectedAdapterType != "PCAN")
+                @if (!string.IsNullOrEmpty(_selectedAdapterType) && _selectedAdapterType != "Sim" && _selectedAdapterType != "PCAN")
                 {
-                    <MudSelect @bind-Value="selectedPort"
+                    <MudSelect @bind-Value="_selectedPort"
                                Label="Port"
                                Variant="Variant.Outlined"
                                Dense="true"
                                Class="mb-2"
                                T="string">
-                        @if (available?.Ports != null)
+                        @if (_available?.Ports != null)
                         {
-                            @foreach (var port in available.Ports)
+                            @foreach (var port in _available.Ports)
                             {
                                 <MudSelectItem T="string" Value="@port">@port</MudSelectItem>
                             }
@@ -97,9 +97,9 @@
                 }
 
                 @* Show bitrate selector for SLCAN and PCAN (not USB or Sim) *@
-                @if (!string.IsNullOrEmpty(selectedAdapterType) && selectedAdapterType != "USB" && selectedAdapterType != "Sim")
+                @if (!string.IsNullOrEmpty(_selectedAdapterType) && _selectedAdapterType != "USB" && _selectedAdapterType != "Sim")
                 {
-                    <MudSelect @bind-Value="selectedBitrate"
+                    <MudSelect @bind-Value="_selectedBitrate"
                                Label="Bitrate"
                                Variant="Variant.Outlined"
                                Dense="true"
@@ -117,14 +117,14 @@
                     <div class="mb-3"></div>
                 }
 
-                @if (available?.Adapters?.Length == 0 || available?.Ports?.Length == 0)
+                @if (_available?.Adapters?.Length == 0 || _available?.Ports?.Length == 0)
                 {
                     <MudAlert Severity="Severity.Warning" Class="mb-3" Dense="true">
-                        @if (available?.Adapters?.Length == 0)
+                        @if (_available?.Adapters?.Length == 0)
                         {
                             <MudText Typo="Typo.caption">No adapters available</MudText>
                         }
-                        @if (available?.Ports?.Length == 0)
+                        @if (_available?.Ports?.Length == 0)
                         {
                             <MudText Typo="Typo.caption">No ports detected</MudText>
                         }
@@ -138,7 +138,7 @@
                                OnClick="@ConnectAdapter"
                                Disabled="@(!CanConnect())"
                                FullWidth="true">
-                        @(connecting ? "Connecting..." : "Connect")
+                        @(_connecting ? "Connecting..." : "Connect")
                     </MudButton>
                     <MudIconButton Icon="@Icons.Material.Filled.Refresh"
                                    OnClick="@RefreshAvailable"
@@ -152,16 +152,16 @@
 
 @code {
     private bool _isOpen;
-    private AdapterStatusResponse? status;
-    private AdapterAvailableResponse? available;
-    private bool loading = true;
-    private bool connecting = false;
-    private bool disconnecting = false;
+    private AdapterStatusResponse? _status;
+    private AdapterAvailableResponse? _available;
+    private bool _loading = true;
+    private bool _connecting = false;
+    private bool _disconnecting = false;
     private System.Threading.Timer? _refreshTimer;
 
-    private string selectedAdapterType = string.Empty;
-    private string selectedPort = string.Empty;
-    private string selectedBitrate = "500K";
+    private string _selectedAdapterType = string.Empty;
+    private string _selectedPort = string.Empty;
+    private string _selectedBitrate = "500K";
 
     protected override async Task OnInitializedAsync()
     {
@@ -185,7 +185,7 @@
 
     private async Task LoadData()
     {
-        loading = true;
+        _loading = true;
         try
         {
             var statusTask = Http.GetFromJsonAsync<AdapterStatusResponse>("api/adapter/status");
@@ -193,18 +193,18 @@
 
             await Task.WhenAll(statusTask, availableTask);
 
-            status = statusTask.Result;
-            available = availableTask.Result;
+            _status = statusTask.Result;
+            _available = availableTask.Result;
 
-            if (status?.IsConnected != true && available != null)
+            if (_status?.IsConnected != true && _available != null)
             {
-                if (string.IsNullOrEmpty(selectedAdapterType) && available.Adapters?.Length > 0)
+                if (string.IsNullOrEmpty(_selectedAdapterType) && _available.Adapters?.Length > 0)
                 {
-                    selectedAdapterType = available.Adapters[0];
+                    _selectedAdapterType = _available.Adapters[0];
                 }
-                if (string.IsNullOrEmpty(selectedPort) && available.Ports?.Length > 0)
+                if (string.IsNullOrEmpty(_selectedPort) && _available.Ports?.Length > 0)
                 {
-                    selectedPort = available.Ports[0];
+                    _selectedPort = _available.Ports[0];
                 }
             }
         }
@@ -214,7 +214,7 @@
         }
         finally
         {
-            loading = false;
+            _loading = false;
         }
     }
 
@@ -222,7 +222,7 @@
     {
         try
         {
-            available = await Http.GetFromJsonAsync<AdapterAvailableResponse>("api/adapter/available");
+            _available = await Http.GetFromJsonAsync<AdapterAvailableResponse>("api/adapter/available");
             Snackbar.Add("Adapter list refreshed", Severity.Info);
         }
         catch (Exception ex)
@@ -233,25 +233,25 @@
 
     private async Task ConnectAdapter()
     {
-        connecting = true;
+        _connecting = true;
         try
         {
             // Set port based on adapter type
-            string port = selectedAdapterType switch
+            string port = _selectedAdapterType switch
             {
                 "Sim" => "Simulated",
                 "PCAN" => "PCAN_USBBUS1", // Default PCAN port
-                _ => selectedPort
+                _ => _selectedPort
             };
 
             // Set bitrate based on adapter type
-            string bitrate = (selectedAdapterType == "Sim" || selectedAdapterType == "USB")
+            var bitrate = _selectedAdapterType is "Sim" or "USB"
                 ? "1000K"
-                : selectedBitrate;
+                : _selectedBitrate;
 
             var request = new ConnectAdapterRequest
             {
-                AdapterType = selectedAdapterType,
+                AdapterType = _selectedAdapterType,
                 Port = port,
                 Bitrate = bitrate
             };
@@ -260,7 +260,7 @@
 
             if (response.IsSuccessStatusCode)
             {
-                Snackbar.Add($"Connected to {selectedAdapterType}", Severity.Success);
+                Snackbar.Add($"Connected to {_selectedAdapterType}", Severity.Success);
                 await LoadData();
                 _isOpen = false; // Close popover on success
             }
@@ -276,13 +276,13 @@
         }
         finally
         {
-            connecting = false;
+            _connecting = false;
         }
     }
 
     private async Task DisconnectAdapter()
     {
-        disconnecting = true;
+        _disconnecting = true;
         try
         {
             var response = await Http.PostAsync("api/adapter/disconnect", null);
@@ -305,34 +305,34 @@
         }
         finally
         {
-            disconnecting = false;
+            _disconnecting = false;
         }
     }
 
     private bool CanConnect()
     {
-        if (connecting || string.IsNullOrWhiteSpace(selectedAdapterType))
+        if (_connecting || string.IsNullOrWhiteSpace(_selectedAdapterType))
             return false;
 
         // Sim adapter doesn't need port or bitrate
-        if (selectedAdapterType == "Sim")
+        if (_selectedAdapterType == "Sim")
             return true;
 
         // USB adapter needs port but not bitrate
-        if (selectedAdapterType == "USB")
-            return !string.IsNullOrWhiteSpace(selectedPort);
+        if (_selectedAdapterType == "USB")
+            return !string.IsNullOrWhiteSpace(_selectedPort);
 
         // PCAN needs bitrate but not port
-        if (selectedAdapterType == "PCAN")
-            return !string.IsNullOrWhiteSpace(selectedBitrate);
+        if (_selectedAdapterType == "PCAN")
+            return !string.IsNullOrWhiteSpace(_selectedBitrate);
 
         // SLCAN needs both port and bitrate
-        return !string.IsNullOrWhiteSpace(selectedPort) && !string.IsNullOrWhiteSpace(selectedBitrate);
+        return !string.IsNullOrWhiteSpace(_selectedPort) && !string.IsNullOrWhiteSpace(_selectedBitrate);
     }
 
     private Color GetAdapterChipColor()
     {
-        if (status?.IsConnected == true)
+        if (_status?.IsConnected == true)
         {
             return Color.Success; // Green when connected
         }
@@ -341,9 +341,9 @@
 
     private string GetAdapterText()
     {
-        if (status?.IsConnected == true)
+        if (_status?.IsConnected == true)
         {
-            return $"Adapter: {status.ActiveAdapter}";
+            return $"Adapter: {_status.ActiveAdapter}";
         }
         return "Adapter: Disconnected";
     }
