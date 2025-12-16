@@ -31,12 +31,8 @@ builder.Services.AddSingleton<ICommsAdapterManager, CommsAdapterManager>();
 builder.Services.AddSingleton<ConfigFileManager>();
 builder.Services.AddSingleton<DeviceManager>();
 
-// Add device state service for Blazor real-time updates
-builder.Services.AddSingleton<DeviceStateService>();
-
 // Add background services
 builder.Services.AddHostedService<CommsDataPipeline>();
-builder.Services.AddHostedService<DeviceStateBroadcaster>();
 
 builder.Services.AddControllers();
 builder.Services.AddSwaggerGen();

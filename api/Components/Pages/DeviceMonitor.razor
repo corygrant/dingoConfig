@@ -5,7 +5,7 @@
 @using domain.Devices.CanboardDevice
 @using application.Services
 @using api.Components.Shared
-@inject DeviceStateService StateService
+@inject DeviceManager DeviceManager
 @implements IDisposable
 
 <PageTitle>Device Monitor</PageTitle>
@@ -51,31 +51,26 @@
     public Guid DeviceId { get; set; }
 
     private IDevice? currentDevice;
+    private System.Threading.Timer? _refreshTimer;
 
     protected override void OnInitialized()
     {
-        // Subscribe to state changes
-        StateService.OnStateChanged += HandleStateChanged;
+        // Get initial device
+        currentDevice = DeviceManager.GetDevice(DeviceId);
 
-        // Get initial state
-        currentDevice = StateService.GetDeviceState(DeviceId);
-    }
-
-    private void HandleStateChanged(Guid deviceId, IDevice device)
-    {
-        if (deviceId == DeviceId)
+        // Refresh at 20 Hz (every 50ms) to update UI with latest device state
+        _refreshTimer = new System.Threading.Timer(_ =>
         {
-            currentDevice = device;
-
-            // Tell Blazor to re-render this component
-            // InvokeAsync is required because this is called from a background thread
-            InvokeAsync(StateHasChanged);
-        }
+            InvokeAsync(() =>
+            {
+                currentDevice = DeviceManager.GetDevice(DeviceId);
+                StateHasChanged();
+            });
+        }, null, TimeSpan.FromMilliseconds(50), TimeSpan.FromMilliseconds(50));
     }
 
     public void Dispose()
     {
-        // Unsubscribe when component is disposed to prevent memory leaks
-        StateService.OnStateChanged -= HandleStateChanged;
+        _refreshTimer?.Dispose();
     }
 }
