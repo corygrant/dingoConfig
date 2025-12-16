@@ -1,0 +1,77 @@
+@using contracts.Devices.Pdm.Functions
+@using domain.Devices.dingoPdm.Enums
+
+<MudDialog>
+    <DialogContent>
+        <EditForm Model="@_editModel" OnValidSubmit="HandleValidSubmit">
+            <DataAnnotationsValidator/>
+            <MudSwitch @bind-Value="_editModel.Enabled"
+                       Label="Enabled"
+                       Color="Color.Primary"/>
+            <MudTextField @bind-Value="_editModel.Name"
+                          Label="Name"
+                          Variant="Variant.Outlined"
+                          For="@(() => _editModel.Name)"
+                          Class="mt-3"/>
+            <MudNumericField @bind-Value="_editModel.Id"
+                             Label="Id"
+                             Variant="Variant.Outlined"
+                             For="@(() => _editModel.Id)"
+                             Class="mt-3"/>
+            <MudSelect @bind-Value="_editModel.Operator"
+                       Label="Operator"
+                       Variant="Variant.Outlined"
+                       For="@(() => _editModel.Operator)"
+                       Class="mt-3">
+                <MudSelectItem Value="@Operator.Equal">=</MudSelectItem>
+                <MudSelectItem Value="@Operator.NotEqual">!=</MudSelectItem>
+                <MudSelectItem Value="@Operator.GreaterThan">&gt;</MudSelectItem>
+                <MudSelectItem Value="@Operator.LessThan">&lt;</MudSelectItem>
+                <MudSelectItem Value="@Operator.GreaterThanOrEqual">&gt;=</MudSelectItem>
+                <MudSelectItem Value="@Operator.LessThanOrEqual">&lt;=</MudSelectItem>
+                <MudSelectItem Value="@Operator.BitwiseAnd">&</MudSelectItem>
+                <MudSelectItem Value="@Operator.BitwiseNand">!&</MudSelectItem>
+            </MudSelect>
+
+            <ValidationSummary/>
+        </EditForm>
+        </DialogContent>
+    <DialogActions>
+        
+        <MudButton OnClick="@Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary"
+                   Variant="Variant.Filled"
+                   OnClick="@Save">Save</MudButton>
+    </DialogActions>
+</MudDialog>
+@code {
+    [CascadingParameter] 
+    IMudDialogInstance MudDialog { get; set; } = null!;
+
+    [Parameter, EditorRequired] 
+    public CanInputDto Model { get; set; } = null!;
+
+    private CanInputDto _editModel = new(0);
+    
+    protected override void OnParametersSet()
+    {
+        _editModel = new CanInputDto(Model);
+    }
+    
+    private void Cancel()
+    {
+        MudDialog.Cancel();
+    }
+    
+    private async Task Save()
+    {
+        Model.CopyFrom(_editModel);
+
+        MudDialog.Close(DialogResult.Ok(true));
+    }
+    
+    private Task HandleValidSubmit()
+    {
+        return Save();
+    }
+}

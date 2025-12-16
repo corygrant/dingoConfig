@@ -184,7 +184,14 @@
                                        ExpandedChanged="@((bool expanded) => _canInputsExpanded = expanded)">
                         @if (_canInputsExpanded)
                         {
-                            <CanInputsGrid CanInputs="_device.CanInputs" />
+                            <MudGrid>
+                                @foreach (var canInput in State.CanInputs)
+                                {
+                                    <MudItem md="2">
+                                        <CanInputCard Item="canInput"/>
+                                    </MudItem>
+                                }
+                            </MudGrid>
                         }
                     </MudExpansionPanel>
                 }
