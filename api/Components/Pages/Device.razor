@@ -4,17 +4,16 @@
 @using domain.Devices.dingoPdmMax
 @using domain.Devices.CanboardDevice
 @using application.Services
-@using api.Components.Shared
 @inject DeviceManager DeviceManager
 @implements IDisposable
 
-<PageTitle>Device Monitor</PageTitle>
+<PageTitle>Device</PageTitle>
 
 <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
-    @if (currentDevice != null)
+    @if (_currentDevice != null)
     {
         @* Render appropriate view based on device type *@
-        @switch (currentDevice)
+        @switch (_currentDevice)
         {
             case PdmMaxDevice pdmMaxDevice:
                 <PdmMaxDeviceView Device="pdmMaxDevice"/>
@@ -30,7 +29,7 @@
 
             default:
                 <MudAlert Severity="Severity.Warning">
-                    Unknown device type: @currentDevice.GetType().Name
+                    Unknown device type: @_currentDevice.GetType().Name
                 </MudAlert>
                 break;
         }
@@ -50,20 +49,20 @@
     [Parameter]
     public Guid DeviceId { get; set; }
 
-    private IDevice? currentDevice;
-    private System.Threading.Timer? _refreshTimer;
+    private IDevice? _currentDevice;
+    private Timer? _refreshTimer;
 
     protected override void OnInitialized()
     {
         // Get initial device
-        currentDevice = DeviceManager.GetDevice(DeviceId);
+        _currentDevice = DeviceManager.GetDevice(DeviceId);
 
         // Refresh at 20 Hz (every 50ms) to update UI with latest device state
-        _refreshTimer = new System.Threading.Timer(_ =>
+        _refreshTimer = new Timer(_ =>
         {
             InvokeAsync(() =>
             {
-                currentDevice = DeviceManager.GetDevice(DeviceId);
+                _currentDevice = DeviceManager.GetDevice(DeviceId);
                 StateHasChanged();
             });
         }, null, TimeSpan.FromMilliseconds(50), TimeSpan.FromMilliseconds(50));

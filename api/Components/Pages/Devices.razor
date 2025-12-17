@@ -9,16 +9,16 @@
 
 <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
     <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="mb-4">
-        <MudText Typo="Typo.h3">Device Management</MudText>
-        <MudButton Variant="Variant.Filled"
+        <MudText Typo="Typo.h3">Devices</MudText>
+        <MudButton Variant="Variant.Outlined"
                    Color="Color.Primary"
-                   StartIcon="@Icons.Material.Filled.Add"
+                   StartIcon="@Icons.Material.Outlined.Add"
                    OnClick="@ToggleCreateForm">
-            @(showCreateForm ? "Cancel" : "Add Device")
+            @(_showCreateForm ? "Cancel" : "Add Device")
         </MudButton>
     </MudStack>
 
-    @if (showCreateForm)
+    @if (_showCreateForm)
     {
         <MudCard Class="mb-4">
             <MudCardHeader>
@@ -29,13 +29,13 @@
             <MudCardContent>
                 <MudGrid>
                     <MudItem xs="12" sm="4">
-                        <MudTextField @bind-Value="newDeviceName"
+                        <MudTextField @bind-Value="_newDeviceName"
                                       Label="Device Name"
                                       Required="true"
                                       Variant="Variant.Outlined" />
                     </MudItem>
                     <MudItem xs="12" sm="4">
-                        <MudSelect @bind-Value="newDeviceType"
+                        <MudSelect @bind-Value="_newDeviceType"
                                    Label="Device Type"
                                    Required="true"
                                    Variant="Variant.Outlined"
@@ -46,7 +46,7 @@
                         </MudSelect>
                     </MudItem>
                     <MudItem xs="12" sm="4">
-                        <MudNumericField @bind-Value="newDeviceBaseId"
+                        <MudNumericField @bind-Value="_newDeviceBaseId"
                                          Label="Base ID"
                                          Required="true"
                                          Variant="Variant.Outlined"
@@ -59,20 +59,20 @@
             <MudCardActions>
                 <MudButton OnClick="@ToggleCreateForm">Cancel</MudButton>
                 <MudButton Color="Color.Primary"
-                           Variant="Variant.Filled"
+                           Variant="Variant.Outlined"
                            OnClick="@CreateDevice"
-                           Disabled="@(string.IsNullOrWhiteSpace(newDeviceName) || string.IsNullOrWhiteSpace(newDeviceType))">
+                           Disabled="@(string.IsNullOrWhiteSpace(_newDeviceName) || string.IsNullOrWhiteSpace(_newDeviceType))">
                     Create
                 </MudButton>
             </MudCardActions>
         </MudCard>
     }
 
-    @if (loading)
+    @if (_loading)
     {
         <MudProgressCircular Indeterminate="true" />
     }
-    else if (!devices.Any())
+    else if (!_devices.Any())
     {
         <MudAlert Severity="Severity.Info">
             No devices configured. Click "Add Device" to create one.
@@ -81,9 +81,9 @@
     else
     {
         <MudGrid>
-            @foreach (var device in devices)
+            @foreach (var device in _devices)
             {
-                <MudItem xs="12" sm="6" md="4">
+                <MudItem md="2">
                     <MudCard>
                         <MudCardHeader>
                             <CardHeaderContent>
@@ -96,19 +96,16 @@
                             </CardHeaderActions>
                         </MudCardHeader>
                         <MudCardContent>
-                            <MudText Typo="Typo.body2" Color="Color.Secondary">
-                                Type: @device.GetType().Name
+                            <MudText Typo="Typo.body1">
+                                @device.Type
                             </MudText>
-                            <MudText Typo="Typo.body2" Color="Color.Secondary">
+                            <MudText Typo="Typo.body2">
                                 Base ID: @device.BaseId
-                            </MudText>
-                            <MudText Typo="Typo.caption" Color="Color.Secondary">
-                                GUID: @device.Guid
                             </MudText>
                         </MudCardContent>
                         <MudCardActions>
                             <MudButton Class="mx-2"
-                                       Variant="Variant.Filled"
+                                       Variant="Variant.Outlined"
                                        Color="Color.Primary"
                                        Size="Size.Small"
                                        OnClick="@(() => NavigateToDevice(device.Guid))">
@@ -130,14 +127,15 @@
 </MudContainer>
 
 @code {
-    private List<IDevice> devices = new();
-    private bool loading = true;
-    private bool showCreateForm = false;
+    private List<IDevice> _devices = [];
+    private bool _loading = true;
+    private bool _showCreateForm;
+    private string _typeString = string.Empty;
 
     // Form fields
-    private string newDeviceName = string.Empty;
-    private string newDeviceType = string.Empty;
-    private int newDeviceBaseId = 0;
+    private string _newDeviceName = string.Empty;
+    private string _newDeviceType = string.Empty;
+    private int _newDeviceBaseId;
 
     protected override void OnInitialized()
     {
@@ -146,42 +144,41 @@
 
     private void LoadDevices()
     {
-        loading = true;
+        _loading = true;
         try
         {
-            devices = DeviceManager.GetAllDevices().ToList();
+            _devices = DeviceManager.GetAllDevices().ToList();
         }
         catch (Exception ex)
         {
             Snackbar.Add($"Error loading devices: {ex.Message}", Severity.Error);
-            devices = new List<IDevice>();
+            _devices = [];
         }
         finally
         {
-            loading = false;
+            _loading = false;
         }
     }
 
     private void ToggleCreateForm()
     {
-        showCreateForm = !showCreateForm;
-        if (showCreateForm)
-        {
-            // Reset form fields
-            newDeviceName = string.Empty;
-            newDeviceType = string.Empty;
-            newDeviceBaseId = 0;
-        }
+        _showCreateForm = !_showCreateForm;
+        if (!_showCreateForm) return;
+        
+        // Reset form fields
+        _newDeviceName = string.Empty;
+        _newDeviceType = string.Empty;
+        _newDeviceBaseId = 0;
     }
 
     private void CreateDevice()
     {
         try
         {
-            var device = DeviceManager.AddDevice(newDeviceType, newDeviceName, newDeviceBaseId);
+            DeviceManager.AddDevice(_newDeviceType, _newDeviceName, _newDeviceBaseId);
 
-            Snackbar.Add($"Device '{newDeviceName}' created successfully", Severity.Success);
-            showCreateForm = false;
+            Snackbar.Add($"Device '{_newDeviceName}' created successfully", Severity.Success);
+            _showCreateForm = false;
             LoadDevices();
         }
         catch (Exception ex)

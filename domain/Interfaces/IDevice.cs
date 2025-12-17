@@ -6,6 +6,7 @@ namespace domain.Interfaces;
 public interface IDevice
 {
     Guid Guid { get; }
+    string Type { get; }
     string Name { get; set; }
     int BaseId {get; set;}
     bool Connected {get; set;}

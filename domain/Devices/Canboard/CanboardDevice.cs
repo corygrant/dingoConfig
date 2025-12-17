@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Text.Json.Serialization;
 using domain.Interfaces;
 using domain.Models;
 
@@ -7,6 +8,7 @@ namespace domain.Devices.CanboardDevice;
 public class CanboardDevice : IDevice
 {
     public Guid Guid { get; } = Guid.NewGuid();
+    [JsonIgnore] public string Type => "CANBoard";
     public string Name { get; set; } = "CANBoard";
     public int BaseId { get; set; }
     public DateTime LastRxTime { get; set; }
