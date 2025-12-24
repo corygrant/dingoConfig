@@ -2,6 +2,7 @@
 @using domain.Interfaces
 @using application.Services
 @inject DeviceManager DeviceManager
+@inject IDialogService DialogService
 @inject NavigationManager Navigation
 @inject ISnackbar Snackbar
 
@@ -128,6 +129,7 @@
 
 @code {
     private List<IDevice> _devices = [];
+    private Timer? _refreshTimer;
     private bool _loading = true;
     private bool _showCreateForm;
 
@@ -139,6 +141,16 @@
     protected override void OnInitialized()
     {
         LoadDevices();
+        
+        // Refresh at 20 Hz (every 50ms) to update UI with latest device state
+        _refreshTimer = new Timer(_ =>
+        {
+            InvokeAsync(() =>
+            {
+                LoadDevices();
+                StateHasChanged();
+            });
+        }, null, TimeSpan.FromMilliseconds(50), TimeSpan.FromMilliseconds(50));
     }
 
     private void LoadDevices()
@@ -186,8 +198,17 @@
         }
     }
 
-    private void DeleteDevice(IDevice device)
+    private async Task DeleteDevice(IDevice device)
     {
+        var result = await DialogService.ShowMessageBox(
+            $"Delete device?",
+            $"Delete {device.Name}?",
+            yesText: "Yes",
+            cancelText: "Cancel");
+
+        if (result != true)
+            return;
+        
         try
         {
             DeviceManager.RemoveDevice(device.Guid);
@@ -203,5 +224,10 @@
     private void NavigateToDevice(Guid deviceId)
     {
         Navigation.NavigateTo($"/device/{deviceId}");
+    }
+    
+    public void Dispose()
+    {
+        _refreshTimer?.Dispose();
     }
 }

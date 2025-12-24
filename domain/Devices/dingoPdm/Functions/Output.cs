@@ -15,7 +15,7 @@ public class Output(int number, string name) : IDeviceFunction
     [JsonPropertyName("currentLimit")] public double CurrentLimit { get; set; }
     [JsonPropertyName("resetCountLimit")] public int ResetCountLimit { get; set; }
     [JsonPropertyName("resetMode")] public ResetMode ResetMode { get; set; }
-    [JsonPropertyName("resetTime")] public int ResetTime { get; set; }
+    [JsonPropertyName("resetTime")] public int ResetTime { get; set; }  //seconds
     [JsonPropertyName("inrushCurrentLimit")] public double InrushCurrentLimit { get; set; }
     [JsonPropertyName("inrushTime")] public int InrushTime { get; set; }
     [JsonPropertyName("input")] public VarMap Input { get; set; }
@@ -133,9 +133,9 @@ public class Output(int number, string name) : IDeviceFunction
                 CurrentLimit = (int)ExtractSignalInt(data, 24, 8);
                 ResetMode = (ResetMode)ExtractSignalInt(data, 32, 4);
                 ResetCountLimit = (int)ExtractSignalInt(data, 36, 4);
-                ResetTime = (int)ExtractSignalInt(data, 40, 8, factor: 10);
+                ResetTime = (int)ExtractSignalInt(data, 40, 8, factor: 0.1);
                 InrushCurrentLimit = (int)ExtractSignalInt(data, 48, 8);
-                InrushTime = (int)ExtractSignalInt(data, 56, 8, factor: 10);
+                InrushTime = (int)ExtractSignalInt(data, 56, 8, factor: 0.1);
 
                 return true;
             case MessagePrefix.OutputsPwm when data.Length != 8:
@@ -166,28 +166,28 @@ public class Output(int number, string name) : IDeviceFunction
     private byte[] Write()
     {
         var data = new byte[8];
-        InsertSignalInt(data, (long)MessagePrefix.Outputs, 0, 8);
+        InsertSignalInt(data, (int)MessagePrefix.Outputs, 0, 8);
         InsertBool(data, Enabled, 8);
         InsertSignalInt(data, Number - 1, 12, 4);
-        InsertSignalInt(data, (long)Input, 16, 8);
+        InsertSignalInt(data, (int)Input, 16, 8);
         InsertSignal(data, CurrentLimit, 24, 8);
-        InsertSignalInt(data, (long)ResetMode, 32, 4);
+        InsertSignalInt(data, (int)ResetMode, 32, 4);
         InsertSignalInt(data, ResetCountLimit, 36, 4);
-        InsertSignal(data, ResetTime, 40, 8, factor: 0.1);
+        InsertSignal(data, ResetTime, 40, 8, factor: 10.0);
         InsertSignal(data, InrushCurrentLimit, 48, 8);
-        InsertSignal(data, InrushTime, 56, 8, factor: 0.1);
+        InsertSignal(data, InrushTime, 56, 8, factor: 10.0);
         return data;
     }
 
     private byte[] WritePwm()
     {
         var data = new byte[8];
-        InsertSignalInt(data, (long)MessagePrefix.OutputsPwm, 0, 8);
+        InsertSignalInt(data, (int)MessagePrefix.OutputsPwm, 0, 8);
         InsertBool(data, PwmEnabled, 8);
         InsertBool(data, SoftStartEnabled, 9);
         InsertBool(data, VariableDutyCycle, 10);
         InsertSignalInt(data, Number - 1, 12, 4);
-        InsertSignalInt(data, (long)DutyCycleInput, 16, 8);
+        InsertSignalInt(data, (int)DutyCycleInput, 16, 8);
 
         // Frequency is 9 bits with unusual encoding: upper 8 bits at byte 3, LSB at byte 4 bit 0
         InsertSignalInt(data, Frequency >> 1, 24, 8);

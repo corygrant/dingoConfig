@@ -12,7 +12,7 @@ public class PdmMaxDevice(string name, int baseId) : PdmDevice(name, baseId)
 
     protected override int NumOutputs { get; } = 4;
     
-    [JsonIgnore] public new string Type => "dingoPDM-Max";
+    [JsonIgnore] public override string Type => "dingoPDM-Max";
 
     protected override void SetLimits()
     {

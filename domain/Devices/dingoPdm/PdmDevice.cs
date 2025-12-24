@@ -26,7 +26,7 @@ public class PdmDevice : IDevice
     protected int PdmType;
     
     [JsonIgnore] public Guid Guid { get; }
-    [JsonIgnore] public string Type => "dingoPDM";
+    [JsonIgnore] public virtual string Type => "dingoPDM";
     [JsonPropertyName("name")] public string Name { get; set; }
     [JsonPropertyName("baseId")] public int BaseId { get; set; }
 

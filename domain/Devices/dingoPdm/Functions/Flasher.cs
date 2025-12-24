@@ -91,8 +91,8 @@ public class Flasher(int number, string name) : IDeviceFunction
         InsertBool(data, Single, 9);
         InsertSignalInt(data, Number - 1, 12, 4);
         InsertSignalInt(data, (long)Input, 16, 8);
-        InsertSignal(data, OnTime, 32, 8, factor: 0.1);
-        InsertSignal(data, OffTime, 40, 8, factor: 0.1);
+        InsertSignal(data, OnTime, 32, 8, factor: 10.0);
+        InsertSignal(data, OffTime, 40, 8, factor: 10.0);
         return data;
     }
 }

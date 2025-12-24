@@ -172,6 +172,17 @@
                 </MudExpansionPanel>
             }
 
+            @* Outputs PWM *@
+            @if (Device.Outputs.Any())
+            {
+                <MudExpansionPanel Text="@($"Outputs PWM ({Device.Outputs.Count})")"
+                                   ExpandedChanged="@((bool expanded) => _outputsPwmExpanded = expanded)">
+                    @if (_outputsPwmExpanded)
+                    {
+                        <OutputsPwmGrid Outputs="Device.Outputs" />
+                    }
+                </MudExpansionPanel>
+            }
             @* CAN Inputs *@
             @if (Device.CanInputs.Any())
             {
@@ -275,6 +286,7 @@
     // Expansion panel state tracking for lazy loading
     private bool _inputsExpanded = false;
     private bool _outputsExpanded = false;
+    private bool _outputsPwmExpanded = false;
     private bool _canInputsExpanded = false;
     private bool _virtualInputsExpanded = false;
     private bool _conditionsExpanded = false;

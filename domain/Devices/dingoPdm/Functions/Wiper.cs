@@ -231,12 +231,12 @@ public class Wiper(string name) : IDeviceFunction
     {
         var data = new byte[8];
         InsertSignalInt(data, (long)MessagePrefix.WiperDelays, 0, 8);
-        InsertSignal(data, IntermitTime[0], 8, 8, factor: 0.1);
-        InsertSignal(data, IntermitTime[1], 16, 8, factor: 0.1);
-        InsertSignal(data, IntermitTime[2], 24, 8, factor: 0.1);
-        InsertSignal(data, IntermitTime[3], 32, 8, factor: 0.1);
-        InsertSignal(data, IntermitTime[4], 40, 8, factor: 0.1);
-        InsertSignal(data, IntermitTime[5], 48, 8, factor: 0.1);
+        InsertSignal(data, IntermitTime[0], 8, 8, factor: 10.0);
+        InsertSignal(data, IntermitTime[1], 16, 8, factor: 10.0);
+        InsertSignal(data, IntermitTime[2], 24, 8, factor: 10.0);
+        InsertSignal(data, IntermitTime[3], 32, 8, factor: 10.0);
+        InsertSignal(data, IntermitTime[4], 40, 8, factor: 10.0);
+        InsertSignal(data, IntermitTime[5], 48, 8, factor: 10.0);
         return data;
     }
 }

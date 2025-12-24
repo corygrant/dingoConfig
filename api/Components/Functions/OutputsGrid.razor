@@ -61,18 +61,6 @@
         </PropertyColumn>
         <PropertyColumn Property="x => x.ResetCountLimit" Title="Reset Count" />
         <PropertyColumn Property="x => x.ResetTime" Title="Reset Time (s)" />
-        <PropertyColumn Property="x => x.SoftStartEnabled" Title="Soft Start">
-            <EditTemplate>
-                <MudCheckBox @bind-Value="context.Item.SoftStartEnabled" Dense="true" />
-            </EditTemplate>
-        </PropertyColumn>
-        <PropertyColumn Property="x => x.VariableDutyCycle" Title="Variable PWM">
-            <EditTemplate>
-                <MudCheckBox @bind-Value="context.Item.VariableDutyCycle" Dense="true" />
-            </EditTemplate>
-        </PropertyColumn>
-        <PropertyColumn Property="x => x.Frequency" Title="Freq (Hz)" />
-        <PropertyColumn Property="x => x.FixedDutyCycle" Title="Duty %" />
     </Columns>
 </MudDataGrid>
 

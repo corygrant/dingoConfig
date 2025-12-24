@@ -77,7 +77,7 @@ public class Input(int number, string name) : IDeviceFunction
         Enabled = ExtractSignalInt(data, 8, 1) == 1;
         Mode = (InputMode)ExtractSignalInt(data, 9, 2);
         Invert = ExtractSignalInt(data, 11, 1) == 1;
-        DebounceTime = (int)ExtractSignal(data, 16, 8, factor: 10.0);
+        DebounceTime = (int)ExtractSignal(data, 16, 8, factor: 10.0); // ms*10
         Pull = (InputPull)ExtractSignalInt(data, 24, 2);
 
         return true;
@@ -91,7 +91,7 @@ public class Input(int number, string name) : IDeviceFunction
         InsertSignalInt(data, (long)Mode, 9, 2);
         InsertBool(data, Invert, 11);
         InsertSignalInt(data, Number - 1, 12, 4);
-        InsertSignal(data, DebounceTime, 16, 8, factor: 10.0);
+        InsertSignal(data, DebounceTime, 16, 8, factor: 0.1); // ms/10
         InsertSignalInt(data, (long)Pull, 24, 2);
         return data;
     }

@@ -175,7 +175,7 @@ public class CanInput(int number, string name) : IDeviceFunction
         InsertSignalInt(data, StartingByte, 24, 4);
         InsertSignalInt(data, Dlc, 28, 4);
         InsertSignalInt(data, OnVal, 32, 16, ByteOrder.BigEndian);
-        InsertSignal(data, Timeout, 48, 8, factor: 0.1);
+        InsertSignal(data, Timeout, 48, 8, factor: 10.0);
         return data;
     }
 

@@ -1,0 +1,36 @@
+@using domain.Devices.dingoPdm.Functions
+@using domain.Devices.dingoPdm.Enums
+
+<MudDataGrid Items="@Outputs" Dense="true" Hover="true" Striped="false" EditMode="DataGridEditMode.Cell" ReadOnly="false" 
+             SortMode="SortMode.None" ColumnResizeMode="ResizeMode.Container" Virtualize="true">
+    <Columns>
+        <PropertyColumn Property="x => x.Number" Title="Num" Editable="false" />
+        <PropertyColumn Property="x => x.Name">
+            <EditTemplate>
+                <MudTextField @bind-Value="context.Item.Name" Variant="Variant.Outlined" Margin="Margin.Dense" />
+            </EditTemplate>
+        </PropertyColumn>
+        <PropertyColumn Property="x => x.PwmEnabled" Title="Enabled">
+            <EditTemplate>
+                <MudCheckBox @bind-Value="context.Item.PwmEnabled" Dense="true" />
+            </EditTemplate>
+        </PropertyColumn>
+        <PropertyColumn Property="x => x.SoftStartEnabled" Title="Soft Start">
+            <EditTemplate>
+                <MudCheckBox @bind-Value="context.Item.SoftStartEnabled" Dense="true" />
+            </EditTemplate>
+        </PropertyColumn>
+        <PropertyColumn Property="x => x.VariableDutyCycle" Title="Variable PWM">
+            <EditTemplate>
+                <MudCheckBox @bind-Value="context.Item.VariableDutyCycle" Dense="true" />
+            </EditTemplate>
+        </PropertyColumn>
+        <PropertyColumn Property="x => x.Frequency" Title="Freq (Hz)" />
+        <PropertyColumn Property="x => x.FixedDutyCycle" Title="Duty %" />
+    </Columns>
+</MudDataGrid>
+
+@code {
+    [Parameter, EditorRequired]
+    public List<Output> Outputs { get; set; } = null!;
+}
