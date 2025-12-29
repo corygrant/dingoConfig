@@ -2,6 +2,8 @@
 @using domain.Interfaces
 @using application.Services
 @inject DeviceManager DeviceManager
+@inject IHostApplicationLifetime AppLifetime
+@inject IDialogService DialogService
 @rendermode InteractiveServer
 @implements IDisposable
 
@@ -30,7 +32,16 @@
     }
 </MudNavMenu>
 
-<MudText Align="Align.Left" style="margin-top: auto; padding: 16px;">@GetVersion()</MudText>
+<MudStack Style="margin-top: auto; padding: 16px;" Spacing="2">
+    <MudText Align="Align.Left">@GetVersion()</MudText>
+    <MudButton StartIcon="@Icons.Material.Filled.PowerSettingsNew"
+               Color="Color.Error"
+               Variant="Variant.Text"
+               OnClick="ShutdownAsync"
+               FullWidth="true">
+        Shutdown
+    </MudButton>
+</MudStack>
 
 @code
 {
@@ -86,8 +97,24 @@
     private static string GetVersion()
     {
         var assembly = Assembly.GetExecutingAssembly();
+        //Pass a 3 in ToString() to get major.minor.build
         var version = assembly.GetName().Version?.ToString(3) ?? "Unknown";
         return $"v{version}";
+    }
+
+    private async Task ShutdownAsync()
+    {
+        var result = await DialogService.ShowMessageBox(
+            "Shutdown",
+            "Are you sure you want to shut down the application?",
+            yesText: "Shutdown",
+            cancelText: "Cancel");
+
+        if (result == true)
+        {
+            // Trigger graceful shutdown
+            AppLifetime.StopApplication();
+        }
     }
 
     public void Dispose()

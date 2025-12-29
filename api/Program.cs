@@ -7,8 +7,15 @@ using MudBlazor.Services;
 using domain.Interfaces;
 using Microsoft.AspNetCore.Components;
 using MudBlazor;
+using Microsoft.AspNetCore.Connections;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Configure host shutdown timeout
+builder.Host.ConfigureHostOptions(opts =>
+{
+    opts.ShutdownTimeout = TimeSpan.FromSeconds(5);
+});
 
 // Add Blazor services
 builder.Services.AddRazorComponents()
@@ -76,4 +83,50 @@ app.MapControllers();
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 
-app.Run();
+// Open browser on launch in non-Development environments (e.g., published Release builds)
+var isDevelopment = app.Environment.IsDevelopment();
+if (!isDevelopment)
+{
+    var lifetime = app.Services.GetRequiredService<IHostApplicationLifetime>();
+    lifetime.ApplicationStarted.Register(() => OpenBrowser("http://localhost:5000"));
+}
+
+try
+{
+    app.Run();
+}
+catch (IOException ex) when (ex.InnerException is AddressInUseException)
+{
+    // Port is already in use - app is already running, just open browser
+    if (!isDevelopment)
+    {
+        OpenBrowser("http://localhost:5000");
+    }
+}
+
+static void OpenBrowser(string url)
+{
+    try
+    {
+        if (OperatingSystem.IsWindows())
+        {
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+            {
+                FileName = url,
+                UseShellExecute = true
+            });
+        }
+        else if (OperatingSystem.IsLinux())
+        {
+            System.Diagnostics.Process.Start("xdg-open", url);
+        }
+        else if (OperatingSystem.IsMacOS())
+        {
+            System.Diagnostics.Process.Start("open", url);
+        }
+    }
+    catch
+    {
+        // Browser launch failed - app will still run
+    }
+}
