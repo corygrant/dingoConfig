@@ -1,4 +1,5 @@
-﻿@using MudBlazor.Utilities
+﻿@using api.Services
+@using MudBlazor.Utilities
 @inherits LayoutComponentBase
 
 @* Required *@
@@ -49,7 +50,7 @@
 @code {
     [Inject] private application.Services.ConfigFileManager FileManager { get; set; } = null!;
     [Inject] private application.Services.DeviceManager DeviceManager { get; set; } = null!;
-    [Inject] private ISnackbar Snackbar { get; set; } = null!;
+    [Inject] private NotificationService Notification { get; set; } = null!;
 
     private bool _drawerOpen = true;
 
@@ -74,7 +75,7 @@
     {
         DeviceManager.ClearDevices();
         FileManager.NewFile();
-        Snackbar.Add("New file created", Severity.Info);
+        Notification.NewInfo("New file created");
         await Task.CompletedTask;
     }
 
@@ -87,16 +88,19 @@
             {
                 DeviceManager.ClearDevices();
                 DeviceManager.AddDevices(devices);
-                Snackbar.Add($"Opened {fileName} - {devices.Count} device(s) loaded", Severity.Success);
+                Notification.NewSuccess($"Opened {fileName} - {devices.Count} device(s) loaded");
+                
+                foreach(var device in devices)
+                    Notification.NewSuccess($"Loaded device: {device.Name}, ID: {device.BaseId}");
             }
             else
             {
-                Snackbar.Add($"No devices found in {fileName}", Severity.Warning);
+                Notification.NewWarning($"No devices found in {fileName}");
             }
         }
         catch (Exception ex)
         {
-            Snackbar.Add($"Error opening file: {ex.Message}", Severity.Error);
+            Notification.NewError($"Error opening file: {fileName}", ex);
         }
     }
 
@@ -106,11 +110,11 @@
         {
             var devices = DeviceManager.GetDevices();
             await FileManager.SaveDevices(devices);
-            Snackbar.Add($"Saved {FileManager.CurrentFileName} - {devices.Count} device(s)", Severity.Success);
+            Notification.NewSuccess($"Saved {FileManager.CurrentFileName} - {devices.Count} device(s)");
         }
         catch (Exception ex)
         {
-            Snackbar.Add($"Error saving file: {ex.Message}", Severity.Error);
+            Notification.NewError($"Error saving file: {FileManager.CurrentFileName}", ex);
         }
     }
 
@@ -120,11 +124,11 @@
         {
             var devices = DeviceManager.GetDevices();
             await FileManager.SaveDevices(devices, fileName);
-            Snackbar.Add($"Saved as {fileName} - {devices.Count} device(s)", Severity.Success);
+            Notification.NewSuccess($"Saved as {fileName} - {devices.Count} device(s)");
         }
         catch (Exception ex)
         {
-            Snackbar.Add($"Error saving file: {ex.Message}", Severity.Error);
+            Notification.NewError($"Error saving file: {fileName}", ex);
         }
     }
 }

@@ -1,0 +1,194 @@
+@page "/global-log"
+@using application.Services
+@using application.Models
+@inject GlobalLogger Logger
+@rendermode InteractiveServer
+@implements IDisposable
+
+<PageTitle>Global Log</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.False" Style="padding: 16px;">
+    <MudText Typo="Typo.h5" Class="mb-4">Global Log</MudText>
+
+    @* Controls *@
+    <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="mb-4">
+        <MudStack Row="true" Spacing="2">
+            <MudSwitch @bind-Value="_autoRefresh" Color="Color.Primary" Label="Auto Refresh" />
+            <MudButton Variant="Variant.Outlined" Color="Color.Default" OnClick="LoadData" StartIcon="@Icons.Material.Filled.Refresh">
+                Refresh
+            </MudButton>
+            <MudButton Variant="Variant.Outlined" Color="Color.Default" OnClick="ClearLogs" StartIcon="@Icons.Material.Filled.Clear">
+                Clear
+            </MudButton>
+        </MudStack>
+
+        <MudStack Row="true" Spacing="2">
+            <MudSwitch @bind-Value="@Logger.LogToFile"
+                       @bind-Value:after="OnLogToFileChanged"
+                       Color="Color.Primary"
+                       Label="Log to File" />
+            <MudText Typo="Typo.body2" Color="Color.Secondary">
+                @_filteredLogs.Count / @_allLogs.Count logs
+            </MudText>
+        </MudStack>
+    </MudStack>
+
+    @* Filters *@
+    <MudStack Row="true" Spacing="2" Class="mb-3">
+        <MudSelect @bind-Value="_levelFilter"
+                   @bind-Value:after="LoadData"
+                   Label="Level"
+                   Dense="true"
+                   Variant="Variant.Outlined"
+                   Style="min-width: 150px;">
+            <MudSelectItem Value="@((LogLevel?)null)">All</MudSelectItem>
+            <MudSelectItem Value="@((LogLevel?)LogLevel.Debug)">Debug</MudSelectItem>
+            <MudSelectItem Value="@((LogLevel?)LogLevel.Info)">Info</MudSelectItem>
+            <MudSelectItem Value="@((LogLevel?)LogLevel.Warning)">Warning</MudSelectItem>
+            <MudSelectItem Value="@((LogLevel?)LogLevel.Error)">Error</MudSelectItem>
+        </MudSelect>
+
+        <MudSelect @bind-Value="_sourceFilter"
+                   @bind-Value:after="LoadData"
+                   Label="Source"
+                   Dense="true"
+                   Variant="Variant.Outlined"
+                   Style="min-width: 200px;">
+            <MudSelectItem Value="@((string?)null)">All</MudSelectItem>
+            @foreach (var source in _availableSources)
+            {
+                <MudSelectItem Value="@source">@source</MudSelectItem>
+            }
+        </MudSelect>
+
+        <MudCheckBox @bind-Value="_showDebug"
+                     @bind-Value:after="LoadData"
+                     Label="Show Debug"
+                     Dense="true" />
+    </MudStack>
+
+    @* Data Grid *@
+    <MudDataGrid T="LogEntry"
+                 Items="@_filteredLogs"
+                 Dense="true"
+                 Hover="true"
+                 Striped="false"
+                 FixedHeader="true"
+                 Height="calc(100vh - 300px)"
+                 Virtualize="true"
+                 SortMode="SortMode.None">
+        <Columns>
+            <PropertyColumn Property="x => x.Timestamp" Title="Timestamp" Format="HH:mm:ss.fff" />
+            <PropertyColumn Property="x => x.Level" Title="Level">
+                <CellTemplate>
+                    <MudChip Color="@GetLevelColor(context.Item.Level)" Size="Size.Small" Variant="Variant.Outlined">
+                        @context.Item.Level
+                    </MudChip>
+                </CellTemplate>
+            </PropertyColumn>
+            <PropertyColumn Property="x => x.Source" Title="Source" />
+            <PropertyColumn Property="x => x.Message" Title="Message" />
+            <PropertyColumn Property="x => x.Exception" Title="Exception">
+                <CellTemplate>
+                    @if (!string.IsNullOrEmpty(context.Item.Exception))
+                    {
+                        <MudIconButton Icon="@Icons.Material.Filled.ErrorOutline"
+                                       Size="Size.Small"
+                                       Color="Color.Error"
+                                       OnClick="@(() => ShowException(context.Item))" />
+                    }
+                </CellTemplate>
+            </PropertyColumn>
+        </Columns>
+    </MudDataGrid>
+</MudContainer>
+
+@code {
+    private List<LogEntry> _allLogs = new();
+    private List<LogEntry> _filteredLogs = new();
+    private List<string> _availableSources = new();
+    private Timer? _refreshTimer;
+    private bool _autoRefresh = true;
+    private LogLevel? _levelFilter = null;
+    private string? _sourceFilter = null;
+    private bool _showDebug = false;
+
+    protected override void OnInitialized()
+    {
+        LoadData();
+
+        // Auto-refresh at 10 Hz (100ms interval)
+        _refreshTimer = new Timer(_ =>
+        {
+            if (_autoRefresh)
+            {
+                InvokeAsync(() =>
+                {
+                    LoadData();
+                    StateHasChanged();
+                });
+            }
+        }, null, TimeSpan.FromMilliseconds(100), TimeSpan.FromMilliseconds(100));
+    }
+
+    private void LoadData()
+    {
+        // Get all logs
+        _allLogs = Logger.GetLogs(_levelFilter, _sourceFilter);
+
+        // Apply debug filter
+        if (!_showDebug)
+        {
+            _filteredLogs = _allLogs.Where(l => l.Level >= Logger.MinimumDisplayLevel).ToList();
+        }
+        else
+        {
+            _filteredLogs = _allLogs;
+        }
+
+        // Extract unique sources for dropdown
+        _availableSources = _allLogs
+            .Select(l => l.Source)
+            .Distinct()
+            .OrderBy(s => s)
+            .ToList();
+    }
+
+    private void ClearLogs()
+    {
+        Logger.Clear();
+        LoadData();
+    }
+
+    private void OnLogToFileChanged()
+    {
+        if (Logger.LogToFile)
+        {
+            Logger.CreateLogFile();
+        }
+    }
+
+    private Color GetLevelColor(LogLevel level)
+    {
+        return level switch
+        {
+            LogLevel.Debug => Color.Secondary,
+            LogLevel.Info => Color.Default,
+            LogLevel.Warning => Color.Warning,
+            LogLevel.Error => Color.Error,
+            _ => Color.Default
+        };
+    }
+
+    private void ShowException(LogEntry entry)
+    {
+        // TODO: Show exception in a dialog
+        // For now, just log to console
+        Console.WriteLine($"Exception: {entry.Exception}");
+    }
+
+    public void Dispose()
+    {
+        _refreshTimer?.Dispose();
+    }
+}

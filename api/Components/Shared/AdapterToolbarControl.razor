@@ -1,7 +1,8 @@
+@using api.Services
 @using domain.Interfaces
 @using domain.Enums
 @inject ICommsAdapterManager CommsAdapterManager
-@inject ISnackbar Snackbar
+@inject NotificationService Notification
 @rendermode InteractiveServer
 @implements IDisposable
 
@@ -219,11 +220,11 @@
         try
         {
             _available = CommsAdapterManager.GetAvailable();
-            Snackbar.Add("Adapter list refreshed", Severity.Info);
+            Notification.NewInfo("Adapter list refreshed");
         }
         catch (Exception ex)
         {
-            Snackbar.Add($"Error refreshing adapters: {ex.Message}", Severity.Error);
+            Notification.NewError("Error refreshing adapters", ex);
         }
     }
 
@@ -261,18 +262,18 @@
 
             if (success)
             {
-                Snackbar.Add($"Connected to {_selectedAdapterType}", Severity.Success);
+                Notification.NewSuccess($"Connected to {_selectedAdapterType}");
                 LoadData();
                 _isOpen = false; // Close popover on success
             }
             else
-            {
-                Snackbar.Add($"Failed to connect to {_selectedAdapterType}", Severity.Error);
+            {   
+                Notification.NewError($"Failed to connect to {_selectedAdapterType}");
             }
         }
         catch (Exception ex)
         {
-            Snackbar.Add($"Error connecting: {ex.Message}", Severity.Error);
+            Notification.NewError($"Error connecting: {_selectedAdapterType}", ex);
         }
         finally
         {
@@ -286,13 +287,13 @@
         try
         {
             await CommsAdapterManager.DisconnectAsync();
-            Snackbar.Add("Disconnected from adapter", Severity.Success);
+            Notification.NewSuccess("Disconnected from adapter");
             LoadData();
             _isOpen = false; // Close popover on success
         }
         catch (Exception ex)
         {
-            Snackbar.Add($"Error disconnecting: {ex.Message}", Severity.Error);
+            Notification.NewError("Error disconnecting", ex);
         }
         finally
         {

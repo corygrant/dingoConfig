@@ -1,7 +1,9 @@
 @page "/can-log"
+@using api.Services
 @using application.Services
 @using application.Models
 @inject CanMsgLogger MessageLogger
+@inject NotificationService Notification
 @rendermode InteractiveServer
 
 <PageTitle>CAN Log</PageTitle>
@@ -189,18 +191,23 @@
     private void OnLogToFileChanged()
     {
         MessageLogger.LogToFile = _logToFile;
-        if(MessageLogger.LogToFile)
+        if (MessageLogger.LogToFile)
+        {
             MessageLogger.CreateLogFile();
+            Notification.NewInfo($"New CAN log file", logOnly:true);
+        }
     }
 
     private void OnIdFormatChanged()
     {
         MessageLogger.IdFormat = _idFormat;
+        Notification.NewInfo($"Id format changed", logOnly:true);
     }
 
     private void OnPayloadFormatChanged()
     {
         MessageLogger.PayloadFormat = _payloadFormat;
+        Notification.NewInfo($"Payload format changed", logOnly:true);
     }
 
     private void ClearHistory()
@@ -208,6 +215,7 @@
         MessageLogger.Clear();
         LoadData();
         StateHasChanged();
+        Notification.NewInfo($"Clear CAN log history", logOnly:true);
     }
 
     private string GetIdString(int id)

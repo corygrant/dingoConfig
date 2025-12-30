@@ -2,8 +2,9 @@
 @using domain.Devices.dingoPdm
 @using application.Services
 @using api.Components.Functions
+@using api.Services
 @inject DeviceManager DeviceManager
-@inject ISnackbar Snackbar
+@inject NotificationService Notification
 @typeparam TDevice where TDevice : PdmDevice
 
 <MudContainer MaxWidth="MaxWidth.False" Style="display: flex; flex-direction: column; height: calc(100vh - 100px); width: 100%; padding: 0;">
@@ -103,7 +104,7 @@
                 @* Outputs *@
                 <MudText Typo="Typo.h6" Class="mb-2">Outputs</MudText>
                 <MudGrid>
-                    @foreach (var (output, index) in Device.GetOutputs().Select((o, i) => (o, i)))
+                    @foreach (var (output, _) in Device.GetOutputs().Select((o, i) => (o, i)))
                     {
                         <MudItem xs="6" md="3">
                             <MudCard Outlined="true" Class="pa-2">
@@ -289,16 +290,16 @@
     public bool AdapterConnected { get; set; }
 
     // Expansion panel state tracking for lazy loading
-    private bool _inputsExpanded = false;
-    private bool _outputsExpanded = false;
-    private bool _outputsPwmExpanded = false;
-    private bool _canInputsExpanded = false;
-    private bool _virtualInputsExpanded = false;
-    private bool _conditionsExpanded = false;
-    private bool _countersExpanded = false;
-    private bool _flashersExpanded = false;
-    private bool _wiperExpanded = false;
-    private bool _starterDisableExpanded = false;
+    private bool _inputsExpanded;
+    private bool _outputsExpanded;
+    private bool _outputsPwmExpanded;
+    private bool _canInputsExpanded;
+    private bool _virtualInputsExpanded;
+    private bool _conditionsExpanded;
+    private bool _countersExpanded;
+    private bool _flashersExpanded;
+    private bool _wiperExpanded;
+    private bool _starterDisableExpanded;
 
     private static Color GetOutputColor(OutState state) => state switch
     {
@@ -322,11 +323,11 @@
         try
         {
             DeviceManager.ReadDeviceConfig(Device.Guid);
-            Snackbar.Add("Device read initiated - configuration will be updated as responses arrive", Severity.Success);
+            Notification.NewInfo($"Device read initiated: {DeviceName}");
         }
         catch (Exception ex)
         {
-            Snackbar.Add($"Error reading device: {ex.Message}", Severity.Error);
+            Notification.NewError($"Error reading device: {DeviceName}", ex);
         }
     }
 
@@ -335,11 +336,11 @@
         try
         {
             DeviceManager.WriteDeviceConfig(Device.Guid);
-            Snackbar.Add("Device configuration write initiated", Severity.Success);
+            Notification.NewSuccess($"Device write initiated: {DeviceName}");
         }
         catch (Exception ex)
         {
-            Snackbar.Add($"Error writing device: {ex.Message}", Severity.Error);
+            Notification.NewError($"Error writing device: {DeviceName}",ex);
         }
     }
 
@@ -348,17 +349,13 @@
         try
         {
             if (DeviceManager.BurnSettings(Device.Guid))
-            {
-                Snackbar.Add("Burn settings command sent to device", Severity.Success);
-            }
+                Notification.NewSuccess($"Burn sent to device: {DeviceName}");
             else
-            {
-                Snackbar.Add("Failed to burn settings", Severity.Error);
-            }
+                Notification.NewError($"Failed to send burn: {DeviceName}");
         }
         catch (Exception ex)
         {
-            Snackbar.Add($"Error burning settings: {ex.Message}", Severity.Error);
+            Notification.NewError($"Error sending burn: {DeviceName}", ex);
         }
     }
 
@@ -367,17 +364,13 @@
         try
         {
             if (DeviceManager.RequestVersion(Device.Guid))
-            {
-                Snackbar.Add("Version request sent to device", Severity.Success);
-            }
+                Notification.NewSuccess($"Version request sent: {DeviceName}");
             else
-            {
-                Snackbar.Add("Failed to request version", Severity.Error);
-            }
+                Notification.NewError($"Failed to request version: {DeviceName}");
         }
         catch (Exception ex)
         {
-            Snackbar.Add($"Error requesting version: {ex.Message}", Severity.Error);
+            Notification.NewError($"Error requesting version: {DeviceName}", ex);
         }
     }
 
@@ -386,17 +379,13 @@
         try
         {
             if (DeviceManager.RequestSleep(Device.Guid))
-            {
-                Snackbar.Add("Sleep command sent to device", Severity.Success);
-            }
+                Notification.NewSuccess($"Sleep sent: {DeviceName}");
             else
-            {
-                Snackbar.Add("Failed to send sleep command", Severity.Error);
-            }
+                Notification.NewError($"Failed to send sleep: {DeviceName}");
         }
         catch (Exception ex)
         {
-            Snackbar.Add($"Error sending sleep command: {ex.Message}", Severity.Error);
+            Notification.NewError($"Error sending sleep: {DeviceName}", ex);
         }
     }
 
@@ -405,17 +394,13 @@
         try
         {
             if (DeviceManager.RequestWakeup(Device.Guid))
-            {
-                Snackbar.Add("Wakeup command sent to device", Severity.Success);
-            }
+                Notification.NewSuccess($"Wakeup command sent: {DeviceName}");
             else
-            {
-                Snackbar.Add("Failed to send wakeup command", Severity.Error);
-            }
+                Notification.NewError($"Failed to send wakeup: {DeviceName}");
         }
         catch (Exception ex)
         {
-            Snackbar.Add($"Error sending wakeup command: {ex.Message}", Severity.Error);
+            Notification.NewError($"Error sending wakeup: {DeviceName}", ex);
         }
     }
 
@@ -424,17 +409,13 @@
         try
         {
             if (DeviceManager.RequestBootloader(Device.Guid))
-            {
-                Snackbar.Add("Enter bootloader command sent to device", Severity.Success);
-            }
+                Notification.NewSuccess($"Bootloader command sent: {DeviceName}");
             else
-            {
-                Snackbar.Add("Failed to send bootloader command", Severity.Error);
-            }
+                Notification.NewError($"Failed to send bootloader command: {DeviceName}");
         }
         catch (Exception ex)
         {
-            Snackbar.Add($"Error sending bootloader command: {ex.Message}", Severity.Error);
+            Notification.NewError($"Error sending bootloader command: {DeviceName}",  ex);
         }
     }
 }

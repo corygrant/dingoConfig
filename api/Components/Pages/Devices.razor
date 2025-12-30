@@ -1,10 +1,11 @@
 @page "/devices"
+@using api.Services
 @using domain.Interfaces
 @using application.Services
 @inject DeviceManager DeviceManager
+@inject NotificationService Notification
 @inject IDialogService DialogService
 @inject NavigationManager Navigation
-@inject ISnackbar Snackbar
 
 <PageTitle>Devices</PageTitle>
 
@@ -211,7 +212,7 @@
         }
         catch (Exception ex)
         {
-            Snackbar.Add($"Error loading devices: {ex.Message}", Severity.Error);
+            Notification.NewError("Error loading devices",ex);
             _devices = [];
         }
         finally
@@ -253,13 +254,13 @@
         {
             DeviceManager.AddDevice(_newDeviceType, _newDeviceName, _newDeviceBaseId);
 
-            Snackbar.Add($"Device '{_newDeviceName}' created successfully", Severity.Success);
+            Notification.NewSuccess($"Device '{_newDeviceName}' created successfully");
             _showCreateForm = false;
             LoadDevices();
         }
         catch (Exception ex)
         {
-            Snackbar.Add($"Error creating device: {ex.Message}", Severity.Error);
+            Notification.NewError($"Error creating device: {_newDeviceName}", ex);
         }
     }
 
@@ -269,19 +270,19 @@
         {
             if (_modifyDevice == null)
             {
-                Snackbar.Add($"Device '{_newDeviceName}' could not be modified", Severity.Error);
+                Notification.NewError($"Device '{_newDeviceName}' could not be modified");
                 return;
             }
 
             DeviceManager.ModifyDeviceConfig(_modifyDevice.Guid, _newDeviceName, _newDeviceBaseId);
 
-            Snackbar.Add($"Device '{_newDeviceName}' modified successfully", Severity.Success);
+            Notification.NewSuccess($"Device '{_newDeviceName}' modified successfully");
             _showModifyForm = false;
             
         }
         catch (Exception ex)
         {
-            Snackbar.Add($"Error modifying device: {ex.Message}", Severity.Error);
+            Notification.NewError($"Error modifying device {_newDeviceName}", ex);
         }
     }
 
@@ -299,12 +300,12 @@
         try
         {
             DeviceManager.RemoveDevice(device.Guid);
-            Snackbar.Add($"Device '{device.Name}' deleted successfully", Severity.Success);
+            Notification.NewSuccess($"Device '{device.Name}' deleted successfully");
             LoadDevices();
         }
         catch (Exception ex)
         {
-            Snackbar.Add($"Error deleting device: {ex.Message}", Severity.Error);
+            Notification.NewError($"Error deleting device {device.Name}", ex);
         }
     }
 

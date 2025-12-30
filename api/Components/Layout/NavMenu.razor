@@ -1,9 +1,11 @@
 @using System.Reflection
+@using api.Services
 @using domain.Interfaces
 @using application.Services
 @inject DeviceManager DeviceManager
 @inject IHostApplicationLifetime AppLifetime
 @inject IDialogService DialogService
+@inject NotificationService Notification
 @rendermode InteractiveServer
 @implements IDisposable
 
@@ -16,6 +18,10 @@
 
     <MudNavLink Href="can-log" Icon="@Icons.Material.Filled.Article">
         CAN Log
+    </MudNavLink>
+
+    <MudNavLink Href="global-log" Icon="@Icons.Material.Filled.Receipt">
+        Global Log
     </MudNavLink>
 
     <MudNavLink Href="devices" Icon="@Icons.Material.Filled.Memory">
@@ -42,7 +48,7 @@
     <MudButton StartIcon="@Icons.Material.Filled.PowerSettingsNew"
                Color="Color.Error"
                Variant="Variant.Text"
-               OnClick="ShutdownAsync"
+               OnClick="@ShutdownAsync"
                FullWidth="true">
         Shutdown
     </MudButton>
@@ -117,6 +123,7 @@
 
         if (result == true)
         {
+            Notification.NewInfo($"Shutdown");
             // Trigger graceful shutdown
             AppLifetime.StopApplication();
         }

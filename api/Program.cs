@@ -2,7 +2,9 @@ using application.Services;
 using infrastructure.Adapters;
 using infrastructure.BackgroundServices;
 using infrastructure.Comms;
+using infrastructure.Logging;
 using api.Components;
+using api.Services;
 using MudBlazor.Services;
 using domain.Interfaces;
 using Microsoft.AspNetCore.Components;
@@ -37,6 +39,9 @@ builder.Services.AddScoped(sp =>
     return new HttpClient { BaseAddress = new Uri(navigationManager.BaseUri) };
 });
 
+// Add NotificationService for combined Snackbar + GlobalLogger calls
+builder.Services.AddScoped<NotificationService>();
+
 // Add API services
 builder.Services.AddTransient<UsbAdapter>();
 builder.Services.AddTransient<SlcanAdapter>();
@@ -47,9 +52,15 @@ builder.Services.AddSingleton<ICommsAdapterManager, CommsAdapterManager>();
 builder.Services.AddSingleton<ConfigFileManager>();
 builder.Services.AddSingleton<DeviceManager>();
 builder.Services.AddSingleton<CanMsgLogger>();
+builder.Services.AddSingleton<GlobalLogger>();
 
 // Add background services
 builder.Services.AddHostedService<CommsDataPipeline>();
+
+// Add GlobalLogger to logging pipeline
+var serviceProvider = builder.Services.BuildServiceProvider();
+var globalLogger = serviceProvider.GetRequiredService<GlobalLogger>();
+builder.Logging.AddProvider(new GlobalLoggerProvider(globalLogger));
 
 builder.Services.AddControllers();
 builder.Services.AddSwaggerGen();
