@@ -12,4 +12,8 @@
     </Reference>
   </ItemGroup>
 
+  <ItemGroup>
+    <PackageReference Include="Peak.PCANBasic.NET" Version="5.0.0.1115-beta" />
+  </ItemGroup>
+
 </Project>

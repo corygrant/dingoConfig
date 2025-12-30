@@ -18,7 +18,7 @@ public class SlcanAdapter : ICommsAdapter
     
     public event DataReceivedHandler? DataReceived;
 
-    public bool IsConnected { get; private set; }
+    public bool IsConnected => RxTimeDelta < TimeSpan.FromMilliseconds(500);
 
     public Task<bool> InitAsync(string port, CanBitRate bitRate, CancellationToken ct)
     {
@@ -33,8 +33,9 @@ public class SlcanAdapter : ICommsAdapter
 
             _rxStopwatch = Stopwatch.StartNew();
         }
-        catch
+        catch(Exception e)
         {
+            Console.WriteLine(e.ToString());
             return Task.FromResult(false);
         }
 
@@ -67,7 +68,6 @@ public class SlcanAdapter : ICommsAdapter
             return Task.FromResult(false);
         }
 
-        IsConnected = true;
         return Task.FromResult(true);
     }
 
