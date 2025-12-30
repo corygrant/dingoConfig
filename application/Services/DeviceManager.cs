@@ -259,6 +259,33 @@ public class DeviceManager(ILogger<DeviceManager> logger)
         logger.LogInformation("Write started for {DeviceName} (Guid: {Guid})", device.Name, deviceId);
         return true;
     }
+    
+    /// <summary>
+    /// Modify device, name and base ID
+    /// Sends modify message to device
+    /// </summary>
+    /// <returns>
+    /// Send modify success
+    /// </returns>
+    public bool ModifyDeviceConfig(Guid deviceId, string newName, int newId)
+    {
+        var device = GetDevice(deviceId);
+        if (device == null)
+            return false;
+        
+        var modifyMsgs = device.GetModifyMsgs(newId);
+        foreach (var msg in modifyMsgs)
+        {
+            QueueMessage(msg);
+        }
+
+        logger.LogInformation("Modify started for {DeviceName} (Guid: {Guid})", device.Name, deviceId);
+        
+        device.Name = newName;
+        device.BaseId =  newId;
+        
+        return true;
+    }
 
     /// <summary>
     /// Burn settings to device flash memory

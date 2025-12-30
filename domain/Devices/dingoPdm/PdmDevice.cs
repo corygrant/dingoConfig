@@ -911,7 +911,7 @@ public class PdmDevice : IDevice
 		return msgs;
     }
 
-    public List<DeviceCanFrame> GetUpdateMsgs(int newId)
+    public List<DeviceCanFrame> GetModifyMsgs(int newId)
     {
         var id = BaseId;
 
@@ -1044,6 +1044,8 @@ public class PdmDevice : IDevice
             MsgDescription = "Bootloader"
         };
     }
+    
+    public void UpdateName(string newName) =>  Name = newName;
 
     // Collection accessors
     public IReadOnlyList<Input> GetInputs() => Inputs.AsReadOnly();

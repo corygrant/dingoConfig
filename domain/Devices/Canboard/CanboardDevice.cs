@@ -118,7 +118,7 @@ public class CanboardDevice : IDevice
         };
     }
 
-    public List<DeviceCanFrame> GetUpdateMsgs(int newId)
+    public List<DeviceCanFrame> GetModifyMsgs(int newId)
     {
         // TODO: Implement CANBoard update messages
         return [];

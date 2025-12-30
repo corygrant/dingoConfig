@@ -7,8 +7,8 @@ public interface IDevice
 {
     Guid Guid { get; }
     string Type { get; }
-    string Name { get; }
-    int BaseId {get;}
+    string Name { get; set; }
+    int BaseId {get; set; }
     bool Connected {get;}
     DateTime LastRxTime {get; set;}
     
@@ -16,7 +16,7 @@ public interface IDevice
     bool InIdRange(int id);
     List<DeviceCanFrame> GetReadMsgs();
     List<DeviceCanFrame> GetWriteMsgs();
-    List<DeviceCanFrame> GetUpdateMsgs(int newId);
+    List<DeviceCanFrame> GetModifyMsgs(int newId);
     DeviceCanFrame GetBurnMsg();
     DeviceCanFrame GetSleepMsg();
     DeviceCanFrame GetVersionMsg();

@@ -68,6 +68,45 @@
             </MudCardActions>
         </MudCard>
     }
+    
+    @if (_showModifyForm)
+    {
+        <MudCard Class="mb-4">
+            <MudCardHeader>
+                <CardHeaderContent>
+                    <MudText Typo="Typo.h6">Modify Device</MudText>
+                </CardHeaderContent>
+            </MudCardHeader>
+            <MudCardContent>
+                <MudGrid>
+                    <MudItem xs="12" sm="4">
+                        <MudTextField @bind-Value="_newDeviceName"
+                                      Label="Device Name"
+                                      Required="true"
+                                      Variant="Variant.Outlined" />
+                    </MudItem>
+                    <MudItem xs="12" sm="4">
+                        <MudNumericField @bind-Value="_newDeviceBaseId"
+                                         Label="Base ID"
+                                         Required="true"
+                                         Variant="Variant.Outlined"
+                                         Min="0"
+                                         Max="2047"
+                                         T="int" />
+                    </MudItem>
+                </MudGrid>
+            </MudCardContent>
+            <MudCardActions>
+                <MudButton OnClick="@CloseModifyForm">Cancel</MudButton>
+                <MudButton Color="Color.Primary"
+                           Variant="Variant.Outlined"
+                           OnClick="@ModifyDevice"
+                           Disabled="@(string.IsNullOrWhiteSpace(_newDeviceName) || string.IsNullOrWhiteSpace(_newDeviceType))">
+                    Modify
+                </MudButton>
+            </MudCardActions>
+        </MudCard>
+    }
 
     @if (_loading)
     {
@@ -110,7 +149,14 @@
                                        Color="Color.Primary"
                                        Size="Size.Small"
                                        OnClick="@(() => NavigateToDevice(device.Guid))">
-                                Monitor
+                                Open
+                            </MudButton>
+                            <MudButton Class="mx-2"
+                                       Variant="Variant.Outlined"
+                                       Color="Color.Tertiary"
+                                       Size="Size.Small"
+                                       OnClick="@(() => ShowModifyForm(device))">
+                                Modify
                             </MudButton>
                             <MudButton Class="mx-2"
                                        Variant="Variant.Outlined"
@@ -132,11 +178,14 @@
     private Timer? _refreshTimer;
     private bool _loading = true;
     private bool _showCreateForm;
+    private bool _showModifyForm;
 
     // Form fields
     private string _newDeviceName = string.Empty;
     private string _newDeviceType = string.Empty;
     private int _newDeviceBaseId;
+
+    private IDevice _modifyDevice;
 
     protected override void OnInitialized()
     {
@@ -179,7 +228,23 @@
         // Reset form fields
         _newDeviceName = string.Empty;
         _newDeviceType = string.Empty;
-        _newDeviceBaseId = 0;
+        _newDeviceBaseId = 2000;
+    }
+
+    private void ShowModifyForm(IDevice device)
+    {
+        _showModifyForm = true;
+
+        _modifyDevice = device;
+        
+        _newDeviceName = device.Name;
+        _newDeviceBaseId = device.BaseId;
+        _newDeviceType = device.Type;
+    }
+
+    private void CloseModifyForm()
+    {
+        _showModifyForm = false;
     }
 
     private void CreateDevice()
@@ -195,6 +260,22 @@
         catch (Exception ex)
         {
             Snackbar.Add($"Error creating device: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private void ModifyDevice()
+    {
+        try
+        {
+            DeviceManager.ModifyDeviceConfig(_modifyDevice.Guid, _newDeviceName, _newDeviceBaseId);
+
+            Snackbar.Add($"Device '{_newDeviceName}' modified successfully", Severity.Success);
+            _showModifyForm = false;
+            
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error modifying device: {ex.Message}", Severity.Error);
         }
     }
 
