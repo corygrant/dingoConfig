@@ -145,6 +145,11 @@
 
     protected override void OnInitialized()
     {
+        // Initialize UI state from MessageLogger's current state
+        _logToFile = MessageLogger.LogToFile;
+        _idFormat = MessageLogger.IdFormat;
+        _payloadFormat = MessageLogger.PayloadFormat;
+
         LoadData();
 
         // Auto-refresh every 100ms (10 Hz)
