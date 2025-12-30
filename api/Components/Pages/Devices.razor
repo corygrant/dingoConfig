@@ -185,7 +185,7 @@
     private string _newDeviceType = string.Empty;
     private int _newDeviceBaseId;
 
-    private IDevice _modifyDevice;
+    private IDevice? _modifyDevice;
 
     protected override void OnInitialized()
     {
@@ -267,6 +267,12 @@
     {
         try
         {
+            if (_modifyDevice == null)
+            {
+                Snackbar.Add($"Device '{_newDeviceName}' could not be modified", Severity.Error);
+                return;
+            }
+
             DeviceManager.ModifyDeviceConfig(_modifyDevice.Guid, _newDeviceName, _newDeviceBaseId);
 
             Snackbar.Add($"Device '{_newDeviceName}' modified successfully", Severity.Success);
