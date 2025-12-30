@@ -10,7 +10,6 @@
 
 <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
     <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="mb-4">
-        <MudText Typo="Typo.h3">Devices</MudText>
         <MudButton Variant="Variant.Outlined"
                    Color="Color.Primary"
                    StartIcon="@Icons.Material.Outlined.Add"
@@ -18,6 +17,7 @@
             @(_showCreateForm ? "Cancel" : "Add Device")
         </MudButton>
     </MudStack>
+    
 
     @if (_showCreateForm)
     {
@@ -98,7 +98,7 @@
             </MudCardContent>
             <MudCardActions>
                 <MudButton OnClick="@CloseModifyForm">Cancel</MudButton>
-                <MudButton Color="Color.Primary"
+                <MudButton Color="Color.Tertiary"
                            Variant="Variant.Outlined"
                            OnClick="@ModifyDevice"
                            Disabled="@(string.IsNullOrWhiteSpace(_newDeviceName) || string.IsNullOrWhiteSpace(_newDeviceType))">
@@ -153,7 +153,7 @@
                             </MudButton>
                             <MudButton Class="mx-2"
                                        Variant="Variant.Outlined"
-                                       Color="Color.Tertiary"
+                                       Color="Color.Info"
                                        Size="Size.Small"
                                        OnClick="@(() => ShowModifyForm(device))">
                                 Modify

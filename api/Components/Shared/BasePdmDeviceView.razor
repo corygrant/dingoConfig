@@ -6,21 +6,7 @@
 @inject ISnackbar Snackbar
 @typeparam TDevice where TDevice : PdmDevice
 
-<MudCard>
-    <MudCardHeader>
-        <CardHeaderContent>
-            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                <MudText Typo="Typo.h5">@DeviceName - @Device.Name</MudText>
-                <MudChip T="string" Variant="Variant.Outlined" Color="@(Device.Connected ? Color.Success : Color.Error)" Size="Size.Small">
-                    @(Device.Connected ? "Connected" : "Disconnected")
-                </MudChip>
-            </MudStack>
-        </CardHeaderContent>
-        <CardHeaderActions>
-            <MudText Typo="Typo.caption">GUID: @Device.Guid</MudText>
-        </CardHeaderActions>
-    </MudCardHeader>
-
+<MudCard Style="display: flex; flex-direction: column; height: calc(100vh - 100px);">
     @* Device Control Buttons *@
     <div class="pa-3">
         <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center">
@@ -80,11 +66,18 @@
                        OnClick="@OnEnterBootloaderAsync">
                 Bootloader
             </MudButton>
+            <MudSpacer/>
+            <MudChip T="string" Variant="Variant.Outlined" 
+                     Color="@(Device.Connected ? Color.Success : Color.Error)" Size="Size.Small"
+                     >
+                @(Device.Connected ? "Connected" : "Disconnected")
+            </MudChip>
         </MudStack>
         <MudDivider Class="my-2" />
     </div>
 
-    <MudCardContent>
+    @* Scrollable Content Section *@
+    <MudCardContent Style="flex: 1; overflow-y: auto;">
         @* Device-level metrics *@
         <MudGrid>
             <MudItem xs="12" md="3">
