@@ -75,11 +75,18 @@ public class PcanAdapter  : ICommsAdapter
             _rxStopwatch.Restart();
         }
 
+        if (msg.DLC <= 0) return;
+
+        // Only copy the actual number of bytes specified by DLC, not the full 8-byte buffer
+        // The length of the payload array is checked by receiving devices
+        var payload = new byte[msg.DLC];
+        Array.Copy(msg.Data, payload, msg.DLC);
+
         var frame = new CanFrame
         (
             Id: Convert.ToInt16(msg.ID),
             Len: Convert.ToInt16(msg.DLC),
-            Payload: msg.Data
+            Payload: payload
         );
         DataReceived?.Invoke(this, new CanFrameEventArgs(frame));
 
