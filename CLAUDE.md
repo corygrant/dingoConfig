@@ -4,7 +4,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-dingoConfig is a .NET 9.0 web application for managing dingo CAN devices (dingoPDM, dingoPDM-Max, CANBoard) through various communication adapters (USB, SLCAN, PCAN, Simulated). The system handles real-time CAN data at 1,000-3,000 messages/second, provides device configuration management (~100 parameters per device), and offers web-based monitoring with SignalR real-time updates.
+dingoConfig is a .NET 10.0 Blazor Server application for managing dingo CAN devices (dingoPDM, dingoPDM-Max, CANBoard) through various communication adapters (USB, SLCAN, PCAN, Simulated). The system handles real-time CAN data at 1,000-3,000 messages/second, provides device configuration management (~100 parameters per device), and offers web-based monitoring with timer-based UI updates at 20 Hz.
+
+**Important**: This is a **pure Blazor Server application** using interactive server-side rendering. There are NO REST API controllers - all interactions happen through Blazor components with direct service injection.
 
 ## Build and Development Commands
 
@@ -13,9 +15,16 @@ dingoConfig is a .NET 9.0 web application for managing dingo CAN devices (dingoP
 dotnet build dingoConfig.sln
 ```
 
-### Run the API (web application)
+### Run the application
 ```bash
 dotnet run --project api/api.csproj
+```
+
+### Publish self-contained executables
+```bash
+# Windows/Linux/macOS builds
+./publish.sh    # Linux/macOS
+./publish.ps1   # Windows
 ```
 
 ### Build specific projects
@@ -24,12 +33,6 @@ dotnet build api/api.csproj
 dotnet build domain/domain.csproj
 dotnet build infrastructure/infrastructure.csproj
 dotnet build application/application.csproj
-dotnet build contracts/contracts.csproj
-```
-
-### Run tests (when test projects are added)
-```bash
-dotnet test
 ```
 
 ### Clean build artifacts
@@ -39,48 +42,81 @@ dotnet clean
 
 ## Architecture
 
-This project follows **Clean Architecture** with clear separation of concerns across five layers:
+This project follows **Clean Architecture** with clear separation of concerns across four active layers (contracts layer is currently empty):
 
 ### Layer Structure and Dependencies
 
 ```
-api (Presentation)
-├── depends on: application, contracts, infrastructure
-├── Controllers for device-specific endpoints
-├── Realtime/Hubs/ for SignalR real-time updates
-├── Middleware and health checks
-└── Web UI (wwwroot/)
+api (Presentation - Blazor Server)
+├── depends on: application, infrastructure
+├── Components/
+│   ├── Pages/ - 7 pages (Home, Devices, Device, CanLog, GlobalLog, Error, NotFound)
+│   ├── Shared/ - Device views (BasePdmDeviceView, PdmDeviceView, PdmMaxDeviceView, CanboardDeviceView)
+│   ├── Shared/ - Toolbars (AdapterToolbarControl, FileToolbar)
+│   ├── Dialogs/ - 3 dialogs (OpenFileDialog, SaveAsDialog, SettingsDialog)
+│   ├── Functions/ - 14 configuration grids for device functions
+│   └── Layout/ - MainLayout, NavMenu, ReconnectModal
+├── Services/
+│   └── NotificationService - Combines Snackbar + GlobalLogger
+└── Program.cs - DI setup, middleware configuration
 
 application (Business Logic)
-├── depends on: domain, contracts
-├── MediatR commands/queries (when implemented)
-├── Business services (DeviceManager, ConfigurationService)
-├── FluentValidation validators (when implemented)
-└── AutoMapper profiles (when implemented)
-
-contracts (DTOs)
-├── no dependencies
-└── Pure data structures for API requests/responses
+├── depends on: domain
+├── Services/
+│   ├── DeviceManager - Device lifecycle, request/response tracking
+│   ├── ConfigFileManager - JSON persistence, file state management
+│   ├── CanMsgLogger - CAN message logging with CSV output
+│   └── GlobalLogger - Application-wide logging system
+└── Models/
+    ├── LogEntry, LogLevel - Global logging models
+    ├── CanLogEntry, DataDirection - CAN logging models
+    ├── ConfigFile - JSON configuration structure
+    └── NumberFormat - Display formatting options
 
 domain (Core Domain)
 ├── no dependencies
-├── Core interfaces (ICommsAdapter, IDevice, ICommsAdapterManager)
-├── Domain models (CanData, DeviceResponse)
-├── Device implementations (when added)
-├── Domain events and exceptions
-└── Enums (CanBitRate, etc.)
+├── Interfaces/
+│   ├── IDevice - Device abstraction (Guid-based identity)
+│   ├── ICommsAdapter - Communication adapter interface
+│   ├── ICommsAdapterManager - Adapter selection/lifecycle
+│   └── IDeviceFunction - Function interface
+├── Devices/
+│   ├── dingoPdm/PdmDevice - FULLY IMPLEMENTED (1,073 lines)
+│   ├── dingoPdmMax/PdmMaxDevice - FULLY IMPLEMENTED (inherits PdmDevice)
+│   ├── Canboard/CanboardDevice - STUB ONLY
+│   └── dingoPdm/Functions/ - 9 function types
+├── Models/
+│   ├── CanFrame - CAN message (Id, Len, Payload)
+│   ├── DeviceCanFrame - Request tracking wrapper
+│   └── CanFrameEventArgs - Event args
+├── Common/
+│   └── DbcSignalCodec - DBC signal encoding/decoding
+└── Enums/ - 17 total enums for CAN protocol
 
 infrastructure (Implementation)
 ├── depends on: domain, application
-├── Communication adapter implementations (USB, SLCAN, PCAN, Simulated)
-├── CommsAdapterManager (runtime adapter selection)
-├── CommsDataPipeline (bidirectional TX/RX with Channels)
-├── JSON configuration persistence (when implemented)
-├── CSV logging (when implemented)
-└── Background services
+├── Adapters/
+│   ├── UsbAdapter - Serial SLCAN adapter (FULL)
+│   ├── SlcanAdapter - SLCAN protocol (FULL)
+│   ├── PcanAdapter - Peak PCAN hardware (FULL)
+│   └── SimAdapter - Simulation adapter (STUB)
+├── Comms/
+│   └── CommsAdapterManager - Runtime adapter selection
+├── BackgroundServices/
+│   └── CommsDataPipeline - Bidirectional TX/RX with Channels
+└── Logging/
+    └── GlobalLoggerProvider - ILoggerProvider bridge to GlobalLogger
+
+contracts (DTOs)
+└── EMPTY - No DTOs currently used (Blazor uses domain models directly)
 ```
 
-**Key Rule**: Domain layer has NO dependencies. It defines interfaces that infrastructure implements.
+**Key Principles**:
+- Domain layer has NO dependencies
+- No REST API - pure Blazor Server architecture
+- Direct service injection in components (no controller layer)
+- Timer-based UI updates (20 Hz polling)
+- JSON-based configuration persistence
 
 ## Core Components
 
@@ -88,90 +124,215 @@ infrastructure (Implementation)
 
 **Location**: `infrastructure/Comms/CommsAdapterManager.cs`
 
-The CommsAdapterManager allows users to select and connect to communication adapters at runtime (not compile-time). It manages the active adapter lifecycle, forwards DataReceived events, and enables hot-swapping between different adapter types.
+Allows runtime selection and hot-swapping of communication adapters without recompiling. Manages adapter lifecycle and forwards DataReceived events to subscribers.
 
 **Key Methods**:
-- `ConnectAsync(ICommsAdapter, string port, CanBitRate, CancellationToken)`: Initialize and start an adapter
-- `DisconnectAsync()`: Stop and clean up the current adapter
-- `DataReceived` event: Fired when data arrives from the active adapter
+- `ConnectAsync(ICommsAdapter, string port, CanBitRate, CancellationToken)`: Initialize and start adapter
+- `DisconnectAsync()`: Stop and cleanup current adapter
+- `GetAvailablePorts()`: Enumerate serial ports for USB/SLCAN
+- Events: `DataReceived`, `Connected`
+
+**Available Adapters**:
+- UsbAdapter - Serial port (115200 baud, SLCAN protocol)
+- SlcanAdapter - SLCAN protocol
+- PcanAdapter - Peak PCAN hardware (Peak.PCANBasic.NET v4.10.0.964)
+- SimAdapter - Simulation (stub only)
 
 **Usage Pattern**:
-1. User selects adapter type in UI
-2. Frontend calls API endpoint with adapter type
-3. Controller resolves specific adapter from DI (UsbAdapter, SlcanAdapter, etc.)
-4. Controller calls `CommsAdapterManager.ConnectAsync()` with the adapter instance
-5. CommsDataPipeline receives data via manager's DataReceived event
+```csharp
+// In Blazor component
+@inject ICommsAdapterManager AdapterManager
+@inject UsbAdapter UsbAdapter
+
+private async Task ConnectAsync()
+{
+    var (success, error) = await AdapterManager.ConnectAsync(
+        UsbAdapter,
+        selectedPort,
+        CanBitRate.BitRate500K,
+        CancellationToken.None
+    );
+}
+```
 
 ### 2. CommsDataPipeline (Bidirectional TX/RX)
 
 **Location**: `infrastructure/BackgroundServices/CommsDataPipeline.cs`
 
-Processes all CAN bus communication using System.Threading.Channels for high-performance async message processing at 3000 msg/s.
+Processes all CAN communication using System.Threading.Channels for high-performance async processing at 3000 msg/s.
 
 **Architecture**:
-- **RX Channel**: 50,000 capacity, drops oldest on full, routes incoming CAN data to devices
-- **TX Channel**: 10,000 capacity, queues outgoing CAN data for transmission
-- Background service that runs both pipelines concurrently
-
-**Key Features**:
+- **RX Channel**: 10,000 capacity, drops oldest on full
+- **TX Channel**: 10,000 capacity, drops oldest on full
+- Runs as IHostedService (background service)
 - Non-blocking channel-based architecture
-- Subscribes to CommsAdapterManager.DataReceived (not directly to adapter)
-- Separate RX and TX processing pipelines
-- `QueueTransmit(CanData)` method for fire-and-forget transmission
 
-**Important**: The pipeline subscribes to `ICommsAdapterManager.DataReceived`, NOT directly to individual adapters, because adapters are selected at runtime.
+**Data Flow**:
+1. Subscribes to `ICommsAdapterManager.DataReceived`
+2. Writes incoming frames to RX channel
+3. Reads from RX channel and routes to `DeviceManager.OnCanDataReceived()`
+4. DeviceManager queues TX messages via `SetTransmitCallback()`
+5. TX channel feeds messages to adapter via `WriteAsync()`
 
-### 3. Communication Adapters
-
-**Location**: `infrastructure/Comms/Adapters/`
-
-All adapters implement `ICommsAdapter`:
+**Integration with DeviceManager**:
 ```csharp
-public delegate void DataReceivedHandler(object sender, CanDataEventArgs e);
-
-public interface ICommsAdapter
-{
-    Task<(bool success, string? error)> InitAsync(string port, CanBitRate bitRate, CancellationToken ct);
-    Task<(bool success, string? error)> StartAsync(CancellationToken ct);
-    Task<(bool success, string? error)> StopAsync();
-    Task<(bool success, string? error)> WriteAsync(CanData data, CancellationToken ct);
-    DataReceivedHandler DataReceived { get; set; }
-    TimeSpan RxTimeDelta();
-    bool IsConnected { get; }
-}
+// In CommsDataPipeline.StartAsync()
+_deviceManager.SetTransmitCallback(frame =>
+    _txChannel.Writer.TryWrite(frame)
+);
 ```
 
-Available adapters: `UsbAdapter`, `SlcanAdapter`, `PcanAdapter`, `SimAdapter`
+**Important**: Pipeline subscribes to `ICommsAdapterManager.DataReceived`, NOT directly to adapters (adapters are selected at runtime).
 
-### 4. DeviceManager (Device Lifecycle & Request/Response Tracking)
+### 3. DeviceManager (Device Lifecycle & Request/Response Tracking)
 
 **Location**: `application/Services/DeviceManager.cs`
 
-Central service for managing all devices and coordinating CAN communication. Handles device creation, request/response tracking with timeouts and retries, and device operations.
+Central service for device management and CAN communication coordination. Handles device creation, polymorphic operations, and request/response tracking with timeout/retry logic.
 
 **Key Responsibilities**:
 - **Device Registry**: `Dictionary<Guid, IDevice>` - all devices keyed by Guid
-- **Request Queue**: `ConcurrentDictionary<(BaseId, Prefix, Index), DeviceCanFrame>` - tracks pending messages
-- **Timeout Management**: Automatically retries failed messages (max 3 attempts, 500ms timeout)
-- **Polymorphic Operations**: Calls interface methods on all device types uniformly
+- **Request Queue**: `ConcurrentDictionary<(BaseId, Prefix, Index), DeviceCanFrame>` - pending messages
+- **Timeout Management**: 500ms timeout, max 20 retries
+- **Polymorphic Operations**: Calls interface methods uniformly (no type checking)
 
 **Key Methods**:
-- `AddDevice(string deviceType, string name, int baseId)`: Create and register a new device
+- `AddDevice(string deviceType, string name, int baseId)`: Create and register device
+- `RemoveDevice(Guid id)`: Remove device from registry
 - `GetDevice(Guid id)` / `GetDevice<T>(Guid id)`: Retrieve devices
-- `OnCanDataReceived(CanFrame frame)`: Called by CommsDataPipeline - routes data to devices
-- `SetTransmitCallback(Action<CanFrame> callback)`: Sets up TX channel connection
-- Device operations: `UploadDeviceConfig()`, `DownloadDeviceConfig()`, `BurnDeviceSettings()`, `SleepDevice()`, `RequestDeviceVersion()`, `DownloadUpdatedConfig()`
+- `GetAllDevices()`: Get all devices (for UI display)
+- `OnCanDataReceived(CanFrame frame)`: Route incoming CAN data to devices
+- `SetTransmitCallback(Action<CanFrame>)`: Connect to TX channel
+- Device operations: `UploadConfig()`, `DownloadConfig()`, `BurnSettings()`, `Sleep()`, `RequestVersion()`
+
+**Request/Response Tracking**:
+- **Queue Key**: `(BaseId, Prefix, Index)` uniquely identifies pending messages
+- **Timeout**: 500ms per attempt
+- **Retries**: Max 20 attempts (not 3 as originally planned)
+- **Response Handling**: Devices call `queue.TryRemove()` in their `Read()` method
+- **Concurrency**: Thread-safe via ConcurrentDictionary
 
 **Design Pattern**:
-- All devices implement `IDevice` interface with all methods (even if no-op)
-- DeviceManager calls interface methods without type checking
-- Device-specific functionality handled uniformly through polymorphism
+All devices implement the full `IDevice` interface. DeviceManager calls methods polymorphically without runtime type checks. Devices provide no-op implementations for unused functionality.
 
-### 5. Dependency Injection Setup
+### 4. ConfigFileManager (JSON Persistence)
+
+**Location**: `application/Services/ConfigFileManager.cs`
+
+Manages configuration persistence to JSON files with type-safe device serialization.
+
+**Features**:
+- **Working Directory**: Default `~/Documents/dingoConfig` (configurable)
+- **File Format**: JSON with separate lists per device type
+- **State Tracking**: Current filename, unsaved changes flag
+- **Event System**: `StateChanged` event for UI updates
+
+**JSON Structure**:
+```json
+{
+  "PdmDevices": [...],
+  "PdmMaxDevices": [...],
+  "CanboardDevices": [...]
+}
+```
+
+**Why Separate Lists**: Preserves polymorphic properties during serialization (e.g., PdmMaxDevice has 4 outputs vs PdmDevice's 8).
+
+**File Operations**:
+- `NewFile()`: Clear all devices
+- `OpenFile(string path)`: Load from JSON
+- `SaveFile(string path)`: Save to JSON
+- `Initialize()`: Create working directory
+
+### 5. GlobalLogger (Application-Wide Logging)
+
+**Location**: `application/Services/GlobalLogger.cs`
+
+**NEW FEATURE** - Comprehensive logging system integrated with ASP.NET Core logging pipeline.
+
+**Features**:
+- **In-Memory Buffer**: 50,000 entries (drop-oldest policy)
+- **CSV File Output**: Optional, single file per session
+- **Log Levels**: Debug, Info, Warning, Error
+- **Filtering**: By level, source, and category
+- **UI Viewer**: `/global-log` page with MudDataGrid
+
+**Integration**:
+```csharp
+// In Program.cs
+builder.Services.AddSingleton<GlobalLogger>();
+builder.Logging.Services.AddSingleton<ILoggerProvider>(sp =>
+    new GlobalLoggerProvider(sp.GetRequiredService<GlobalLogger>()));
+```
+
+**Captures Logs From**:
+- ASP.NET Core framework (via ILoggerProvider)
+- DeviceManager, ConfigFileManager, CanMsgLogger (via ILogger)
+- UI components (via direct GlobalLogger injection)
+
+**CSV Format**: `Timestamp,Level,Source,Category,Message,Exception`
+
+### 6. NotificationService (Unified Snackbar + Logging)
+
+**Location**: `api/Services/NotificationService.cs`
+
+**NEW FEATURE** - Convenience service that combines MudBlazor Snackbar notifications with GlobalLogger logging in a single call.
+
+**Usage**:
+```csharp
+@inject NotificationService Notification
+
+Notification.NewSuccess("Configuration saved!");
+Notification.NewError("Failed to connect", exception);
+Notification.NewWarning("Connection lost");
+Notification.NewInfo("Processing...", logOnly: true); // Log without snackbar
+```
+
+**Methods**:
+- `NewInfo(string message, bool logOnly = false)`
+- `NewSuccess(string message, bool logOnly = false)`
+- `NewWarning(string message, bool logOnly = false)`
+- `NewError(string message, Exception? exception = null, bool logOnly = false)`
+
+**Benefits**:
+- Single method call for both UI feedback and logging
+- All user-facing messages automatically logged
+- Consistent source ("UI") and category ("Notification") in logs
+
+### 7. CanMsgLogger (CAN Message Logging)
+
+**Location**: `application/Services/CanMsgLogger.cs`
+
+Tracks and logs CAN messages with summary and full history modes.
+
+**Features**:
+- **Message Summary**: One entry per CAN ID (O(1) lookups via ConcurrentDictionary)
+- **Full History**: Last 100,000 messages
+- **CSV Output**: Configurable format (hex/decimal)
+- **Direction Tracking**: RX/TX
+- **Auto-Refresh UI**: 20 Hz timer-based updates
+
+**Number Formats**:
+- CAN ID: Hex or Decimal
+- Payload: Hex or Decimal
+- Configurable via UI dropdown
+
+## Dependency Injection Setup
 
 **Location**: `api/Program.cs`
 
-Adapters are registered as Transient (new instance per request):
+### Service Lifetimes
+
+**Singleton** (one instance for app lifetime):
+```csharp
+builder.Services.AddSingleton<ICommsAdapterManager, CommsAdapterManager>();
+builder.Services.AddSingleton<DeviceManager>();
+builder.Services.AddSingleton<ConfigFileManager>();
+builder.Services.AddSingleton<CanMsgLogger>();
+builder.Services.AddSingleton<GlobalLogger>();
+```
+
+**Transient** (new instance per resolution):
 ```csharp
 builder.Services.AddTransient<UsbAdapter>();
 builder.Services.AddTransient<SlcanAdapter>();
@@ -179,222 +340,447 @@ builder.Services.AddTransient<PcanAdapter>();
 builder.Services.AddTransient<SimAdapter>();
 ```
 
-DeviceManager is Singleton (one instance for the lifetime of the app):
+**Scoped** (one instance per circuit/user):
 ```csharp
-builder.Services.AddSingleton<DeviceManager>();
+builder.Services.AddScoped<NotificationService>();
+builder.Services.AddScoped<HttpClient>(...);
 ```
 
-CommsAdapterManager is Singleton (one instance for the lifetime of the app):
-```csharp
-builder.Services.AddSingleton<ICommsAdapterManager, CommsAdapterManager>();
-```
-
-CommsDataPipeline runs as a hosted background service:
+**Hosted Service** (background service):
 ```csharp
 builder.Services.AddHostedService<CommsDataPipeline>();
 ```
 
+**Logging Provider** (factory pattern):
+```csharp
+builder.Logging.Services.AddSingleton<ILoggerProvider>(sp =>
+    new GlobalLoggerProvider(sp.GetRequiredService<GlobalLogger>()));
+```
+
+### Why Transient Adapters?
+
+Adapters are transient because only ONE is active at a time (selected via CommsAdapterManager). Each connection resolves a fresh adapter instance, preventing state leakage between connections.
+
 ## Data Flow Patterns
 
-### RX Pipeline (Receive Cyclic Data)
+### RX Pipeline (Receive CAN Data)
 ```
 CAN Adapter (3000 msg/s)
     ↓
 CommsAdapterManager.DataReceived event
     ↓
-CommsDataPipeline.OnDataReceived() writes to RX Channel
+CommsDataPipeline.OnDataReceived() writes to RX Channel (10K capacity)
     ↓
 ProcessRxPipelineAsync() reads from channel
     ↓
-DeviceManager.OnCanDataReceived(frame) routes to devices
+CanMsgLogger.LogMessage() (summary + history)
     ↓
-Device.Read() parses data and updates properties
+DeviceManager.OnCanDataReceived(frame)
+    ↓
+Find device by BaseId range
+    ↓
+Device.Read(frame, ref queue) - parses data, updates state
     ↓
 If response message: removes from _requestQueue
     ↓
-Device updates state/config properties and circular buffers
+Device updates cyclic/config properties
     ↓
-SignalR broadcasts to web clients at 20 Hz
+UI components poll device state at 20 Hz via Timer
+    ↓
+StateHasChanged() triggers Blazor re-render
 ```
 
-### TX Pipeline (Request/Response Tracking)
+### TX Pipeline (Send CAN Messages)
 ```
-Controller receives request (e.g., /api/pdm-devices/{id}/burn)
+Component calls DeviceManager operation (e.g., BurnSettings)
     ↓
-Controller calls DeviceManager.BurnDeviceSettings(deviceId)
-    ↓
-DeviceManager.QueueMessage(DeviceCanFrame)
+DeviceManager creates DeviceCanFrame(s) with timer
     ↓
 Message added to _requestQueue with key (BaseId, Prefix, Index)
     ↓
-Timer starts (500ms timeout)
+Timer.Start() - 500ms timeout
     ↓
-Message queued to TX Channel via SetTransmitCallback()
+_transmitCallback(frame) writes to TX Channel
     ↓
-CommsDataPipeline.ProcessTxPipelineAsync() sends to adapter
+CommsDataPipeline.ProcessTxPipelineAsync() reads from channel
     ↓
-Adapter.WriteAsync() transmits over CAN bus
+Adapter.WriteAsync(frame) transmits over CAN
     ↓
 Device responds with matching Prefix
     ↓
-Response arrives → RX Pipeline → Device.Read() removes from queue
+Response arrives → RX Pipeline → Device.Read() calls queue.TryRemove()
     ↓
 Timer cancelled, message complete
     ↓
-[If timeout] HandleMessageTimeout() → retries (max 3 attempts) or logs error
+[If timeout] Retry (max 20 attempts) or log error
 ```
 
-### Runtime Adapter Selection Flow
+### Runtime Adapter Connection Flow
 ```
-User selects "PCAN" in UI
+User selects "USB" in AdapterToolbarControl
     ↓
-Frontend: POST /api/adapter/connect { adapterType: "PCAN" }
+Component calls AdapterManager.ConnectAsync(usbAdapter, port, bitRate)
     ↓
-AdapterController.Connect()
+Manager calls adapter.InitAsync() (configure port/bitrate)
     ↓
-Resolve PcanAdapter from DI
-    ↓
-CommsAdapterManager.ConnectAsync(pcanAdapter, port, bitRate)
+Manager calls adapter.StartAsync() (begin reading)
     ↓
 Manager subscribes to adapter.DataReceived
     ↓
-Manager calls adapter.InitAsync() then adapter.StartAsync()
+Manager raises Connected event
     ↓
-CommsDataPipeline starts receiving data via manager
+CommsDataPipeline receives data via manager.DataReceived
+    ↓
+UI polls manager.IsConnected at 20 Hz
 ```
 
-## Implementation Approach
+### UI Update Pattern (Timer-based Polling)
 
-### Current State (Phase 3)
-- ✅ Foundation and folder structure complete
-- ✅ Core interfaces defined in domain/ (ICommsAdapter, IDevice, ICommsAdapterManager)
-- ✅ CommsAdapterManager fully implemented in infrastructure/Comms/
-- ✅ CommsDataPipeline with bidirectional channels and RX/TX pipelines implemented
-- ✅ Adapter stubs created (UsbAdapter, SlcanAdapter, PcanAdapter, SimAdapter)
-- ✅ DeviceManager fully implemented with:
-  - Device creation and registry
-  - Request/response tracking with timeout/retry logic
-  - Polymorphic device operations (no type checking needed)
-  - TX callback integration with CommsDataPipeline
-- ✅ Device implementations for PdmDevice and PdmMaxDevice (with all IDevice methods)
-- ✅ CreateDeviceRequest DTO in contracts/
-- ✅ DI setup in api/Program.cs
-- ⚠️ Controllers for device operations not yet created
-- ⚠️ SignalR real-time updates not yet implemented
-- ⚠️ AutoMapper profiles for DTO mapping not yet created
+**NOT using SignalR** - Uses Blazor Server's built-in circuit with timer-based polling:
 
-### Next Steps
-1. **Build Controllers**: Device-specific API endpoints (DeviceController, PdmDeviceController, etc.)
-2. **Add AutoMapper Profiles**: DTO mapping for State/Config DTOs
-3. **Add SignalR**: Real-time web updates to clients
-4. **Implement CSV Logging**: Message logging with rotation
-5. **Add MediatR**: Commands/queries/handlers for business operations (optional optimization)
-6. **Unit Tests**: Test DeviceManager, device operations, timeout/retry logic
-7. **Integration Tests**: End-to-end CAN communication testing
+```csharp
+// In component
+private Timer? _refreshTimer;
 
-### When Adding New Features
-
-**Device Classes**:
-- Place concrete implementations in `domain/Devices/`
-- Implement the complete `IDevice` interface (provide no-op implementations for unused methods)
-- Include cyclic properties (real-time values), configuration properties, and circular buffers for charting
-- Parse incoming CAN data and update device state via `Read()` method
-- Remove completed messages from request queue via the ref `queue` parameter
-
-**Controllers**:
-- Create device-specific controllers in `api/Controllers/`
-- Call `DeviceManager` methods for device operations (upload, download, burn, etc.)
-- Map DTOs to device properties before calling `DownloadUpdatedConfig()`
-- Use AutoMapper for DTO ↔ domain model mapping
-- Return DTOs from `contracts/` layer
-
-**DTOs** (State vs Config):
-- **State DTOs**: Real-time data, sent via SignalR, updated frequently from device cyclic messages
-  - Properties: Connected, LastRxTime, Version, BatteryVoltage, TotalCurrent, temperature, input/output states, etc.
-  - Location: `contracts/Devices/{DeviceType}/[DeviceName]StateDto.cs`
-  - Base: `DeviceStateDto` (contains Guid, Name, BaseId, Connected, LastRxTime, Version, voltage, current, temps)
-
-- **Config DTOs**: Persistent settings, modified via REST API, downloaded to device via CAN
-  - Properties: SleepEnabled, CanFiltersEnabled, BitRate, input/output configurations, etc.
-  - Location: `contracts/Devices/{DeviceType}/[DeviceName]ConfigDto.cs`
-  - Base: `DeviceConfigDto` (contains Guid, Name, BaseId, SleepEnabled, CanFiltersEnabled, BitRate)
-
-- **Request DTOs**: Data sent TO the server for creating/updating resources
-  - `CreateDeviceRequest`: Device creation (DeviceType, Name, BaseId)
-  - `Update[Device]ConfigRequest`: Config updates (same fields as ConfigDto minus Guid/BaseId which are immutable)
-  - Location: `contracts/Devices/{DeviceType}/Requests/`
-
-**Background Services**:
-- Implement as IHostedService
-- Register in `api/Program.cs` with `AddHostedService<T>()`
-- For startup tasks, register as factory service if dependency on other singletons needed
-
-## Key Design Decisions
-
-### Why Channel-based Pipeline?
-System.Threading.Channels provides high-performance async message processing needed for 3000 msg/s without blocking. The bounded channels with DropOldest policy ensure the system never blocks the CAN adapter.
-
-### Why Runtime Adapter Selection?
-Users need to choose their CAN adapter type at runtime based on available hardware. The CommsAdapterManager abstraction allows hot-swapping adapters without recompiling or restarting the application.
-
-### Why No Database for MVP?
-The MVP uses JSON for configuration persistence, in-memory circular buffers for charting (last 1 hour), and CSV files for message logging. This is sufficient for real-time monitoring and avoids database complexity.
-
-### Why Clean Architecture?
-Clear separation of concerns makes the codebase maintainable and testable. The domain layer defines interfaces without dependencies, while infrastructure provides implementations. This allows swapping implementations (e.g., different adapters) without changing business logic.
-
-## Configuration
-
-Key settings that will be needed in `appsettings.json` (to be added during implementation):
-
-```json
+protected override void OnInitialized()
 {
-  "CanPipeline": {
-    "RxChannelCapacity": 50000,
-    "TxChannelCapacity": 10000,
-    "DefaultTimeoutMs": 500,
-    "DefaultMaxRetries": 3
-  },
-  "SignalR": {
-    "BroadcastIntervalMs": 50,
-    "KeepAliveIntervalSeconds": 15
-  },
-  "MessageLogging": {
-    "Directory": "./logs",
-    "RetentionDays": 7,
-    "BatchSize": 1000
-  }
+    _refreshTimer = new Timer(_ =>
+    {
+        InvokeAsync(() =>
+        {
+            LoadData();  // Poll service state
+            StateHasChanged();  // Trigger re-render
+        });
+    }, null, TimeSpan.FromMilliseconds(50), TimeSpan.FromMilliseconds(50));
 }
 ```
 
-## Important Notes
+**Update Frequencies**:
+- Device views: 20 Hz (50ms)
+- CAN Log: 10 Hz (100ms)
+- Global Log: 10 Hz (100ms)
+- NavMenu device list: 1 Hz (1000ms)
 
-1. **CommsDataPipeline subscribes to ICommsAdapterManager, not individual adapters**, because adapters are selected at runtime.
+## Device Implementation
 
-2. **CanFrame Model**: The codebase uses `CanFrame` as the core model (with Id, Len, Payload properties) for all CAN bus communication. `DeviceCanFrame` wraps CanFrame with metadata for request/response tracking.
+### Implemented Devices
 
-3. **Device Polymorphism**: All devices implement the complete `IDevice` interface. DeviceManager calls interface methods uniformly without type checking. Devices that don't need certain functionality can provide no-op implementations (e.g., returning empty DeviceCanFrame lists).
+**PdmDevice** (dingoPDM) - FULLY IMPLEMENTED
+- 2 digital inputs
+- 8 outputs (5A-26A configurable current limits)
+- 32 CAN inputs
+- 16 virtual inputs
+- 4 flashers
+- 4 counters
+- 32 conditions
+- 1 wiper function
+- 1 starter disable function
+- Complete CAN message parsing (1,073 lines)
 
-4. **Request/Response Tracking**:
-   - **Key**: Tuple of `(BaseId, Prefix, Index)` uniquely identifies each pending message
-   - **Timeout**: 500ms by default, configurable via constants in DeviceManager
-   - **Retries**: Maximum 3 attempts (configurable), automatic backoff on timeout
-   - **Response Handling**: Devices remove completed messages from queue in their `Read()` method via ref parameter
-   - **Concurrency**: Uses ConcurrentDictionary for thread-safe access from RX and TX paths
+**PdmMaxDevice** (dingoPDM-Max) - FULLY IMPLEMENTED
+- Inherits from PdmDevice
+- 4 outputs (26A fixed current limits)
+- All other features same as PdmDevice
+- Custom message parsing for Max-specific frames
 
-5. **Circular Buffer Throttling**: When implemented, devices should throttle circular buffer updates to ~10 Hz (not every CAN message) to save memory.
+**CanboardDevice** (CANBoard) - STUB ONLY
+- Interface implemented with no-op methods
+- Placeholder for future implementation
 
-6. **SignalR Throttling**: SignalR broadcasts should be throttled to 20 Hz to avoid overwhelming browsers while internal processing runs at full speed.
+### Device Functions
 
-7. **No MediatR in RX Path**: Don't use MediatR for cyclic data processing (too slow for 3000 msg/s). Use events and direct method calls instead.
+**Location**: `domain/Devices/dingoPdm/Functions/`
 
-8. **Channel Capacity Tuning**: The 50K RX and 10K TX capacities are starting points. Monitor BoundedChannelFullMode.DropOldest behavior and adjust if messages are being dropped.
+All functions implement `IDeviceFunction` interface:
+- **Input**: Digital input configuration (mode, pull, edge)
+- **Output**: Output configuration (current limit, reset mode, flash)
+- **CanInput**: CAN input mapping (ID, byte, bit)
+- **VirtualInput**: Software-defined inputs
+- **Flasher**: Blink pattern configuration
+- **Counter**: Event counting with reset
+- **Condition**: Conditional logic (operators, conditionals)
+- **Wiper**: Wiper control (mode, speed, intervals)
+- **StarterDisable**: Starter lockout configuration
 
-9. **Realtime Folder**: The actual codebase uses `api/Realtime/` for SignalR components, not `api/SignalR/` as might be expected.
+### Device Enums
 
-10. **SetTransmitCallback**: DeviceManager requires CommsDataPipeline to call `SetTransmitCallback()` during startup to establish the TX path. This decouples DeviceManager from the pipeline infrastructure.
+**Location**: `domain/Devices/dingoPdm/Enums/`
 
-11. **Device Identity**: Each device has a unique `Guid` assigned at creation time. Use this for all API endpoints and SignalR subscriptions. `BaseId` is the CAN identifier range, not the unique device key.
+**CAN Protocol**:
+- MessagePrefix: Config, State, CANIN, etc.
+- MessageType: Request, Response
+- MessageSrc: Normal, Bootloader
+
+**Device State**:
+- DeviceState: Sleep, Awake, Error, etc.
+- OutState: Off, On, ShortCircuit, OpenLoad, Overcurrent
+
+**Input Configuration**:
+- InputMode: Digital, Frequency, AnalogVoltage, AnalogResistive
+- InputEdge: Rising, Falling, Both
+- InputPull: None, Pullup, Pulldown
+
+**Wiper Control**:
+- WiperMode: Off, Low, High, Int
+- WiperState: Park, Moving, Delay
+- WiperSpeed: Slow, Fast
+
+**Condition Logic**:
+- Operator: Equal, NotEqual, GreaterThan, LessThan, etc.
+- Conditional: And, Or
+- VarMap: Maps variables to indices
+
+**Output Control**:
+- ResetMode: None, Latch, AutoReset
+
+### Adding New Device Types
+
+1. **Create Device Class** in `domain/Devices/{DeviceType}/`
+   - Inherit from base or implement `IDevice` directly
+   - Implement all interface methods (use no-ops for unused)
+   - Parse incoming CAN messages in `Read()` method
+   - Create outgoing messages in operation methods
+
+2. **Add to ConfigFile Model** in `application/Models/ConfigFile.cs`
+   ```csharp
+   public List<NewDeviceType> NewDevices { get; set; } = new();
+   ```
+
+3. **Update ConfigFileManager** serialization logic
+
+4. **Create Device View** in `api/Components/Shared/{DeviceName}DeviceView.razor`
+
+5. **Register in DeviceManager** `AddDevice()` switch statement
+
+## UI Component Patterns
+
+### Component Structure
+
+All device views follow this pattern:
+```razor
+@inject DeviceManager DeviceManager
+@inject NotificationService Notification
+@rendermode InteractiveServer
+@implements IDisposable
+
+<MudContainer>
+    <!-- UI elements -->
+</MudContainer>
+
+@code {
+    [Parameter] public Guid DeviceId { get; set; }
+    private IDevice? _device;
+    private Timer? _refreshTimer;
+
+    protected override void OnInitialized()
+    {
+        _device = DeviceManager.GetDevice(DeviceId);
+        _refreshTimer = new Timer(_ => {
+            InvokeAsync(() => {
+                _device = DeviceManager.GetDevice(DeviceId);
+                StateHasChanged();
+            });
+        }, null, TimeSpan.FromMilliseconds(50), TimeSpan.FromMilliseconds(50));
+    }
+
+    public void Dispose() => _refreshTimer?.Dispose();
+}
+```
+
+### Key Patterns
+
+**Timer-based Polling**: Use `Timer` with `InvokeAsync` and `StateHasChanged()`
+
+**Service Injection**: Inject services directly (no controller layer)
+
+**MudBlazor Components**: Use MudDataGrid, MudButton, MudTextField, etc.
+
+**Notifications**: Use `NotificationService` for user feedback + logging
+
+**Dialogs**: Use `IDialogService` for modals
+
+**File Operations**: Use `ConfigFileManager` with UI event handling
+
+## Important Implementation Notes
+
+### 1. Blazor Server Architecture
+
+This is a **pure Blazor Server application** with NO REST API:
+- All user interactions via Blazor components
+- Direct service injection (no controller layer)
+- Timer-based UI updates (not SignalR)
+- Contracts layer is empty (no DTOs needed)
+
+### 2. PCAN Adapter DLC Handling
+
+**Critical**: PCAN library's `msg.Data` always returns 8 bytes regardless of DLC. Must slice payload:
+```csharp
+var payload = new byte[msg.DLC];
+Array.Copy(msg.Data, payload, msg.DLC);
+```
+
+This prevents length mismatches when parsing CAN messages with fewer than 8 bytes.
+
+### 3. Request/Response Tracking
+
+**Queue Key**: `(BaseId, Prefix, Index)` uniquely identifies messages
+**Timeout**: 500ms per attempt
+**Max Retries**: 20 attempts (configurable in DeviceManager)
+**Response Handling**: Device `Read()` method calls `queue.TryRemove(key, out _)`
+
+### 4. Device Polymorphism
+
+DeviceManager calls `IDevice` methods uniformly without type checking:
+```csharp
+// No type checking needed
+foreach (var device in _devices.Values)
+{
+    device.Read(frame, ref _requestQueue);
+}
+```
+
+Devices implement full interface, provide no-ops for unused methods.
+
+### 5. Channel Capacity
+
+Both RX and TX channels use **10,000 capacity** with `BoundedChannelFullMode.DropOldest`. Monitor for dropped messages if CAN traffic exceeds capacity.
+
+### 6. Circular Buffer Updates
+
+NOT YET IMPLEMENTED - When added, throttle to ~10 Hz (not every message) to conserve memory.
+
+### 7. Configuration Persistence
+
+**Format**: JSON with separate device type lists
+**Location**: `~/Documents/dingoConfig/*.json`
+**Structure**: `{ "PdmDevices": [...], "PdmMaxDevices": [...] }`
+**Why Separate Lists**: Preserves polymorphic properties during serialization
+
+### 8. Logging Architecture
+
+**Two-Tier System**:
+1. **Global Application Log**: ASP.NET Core + custom logs → GlobalLogger → UI + CSV
+2. **CAN Message Log**: CAN frames → CanMsgLogger → UI + CSV
+
+Both use same UI pattern: MudDataGrid with filters, auto-refresh, CSV export.
+
+### 9. Graceful Shutdown
+
+NavMenu includes shutdown button that calls `IHostApplicationLifetime.StopApplication()` with confirmation dialog. Configured for 5-second shutdown timeout.
+
+### 10. Auto Browser Launch
+
+Non-development builds automatically open browser on startup (localhost:5000). Handles port-in-use errors gracefully by opening browser to existing instance.
+
+### 11. Working Directory
+
+Default: `~/Documents/dingoConfig`
+- Auto-created on startup
+- Configurable via SettingsDialog
+- Stores configuration JSON files
+- Stores log CSV files
+
+### 12. DbcSignalCodec Usage
+
+Use for CAN signal encoding/decoding:
+```csharp
+// Extract signal from payload
+var value = DbcSignalCodec.ExtractSignal(
+    payload,
+    startBit: 0,
+    length: 16,
+    byteOrder: ByteOrder.LittleEndian,
+    isSigned: false,
+    factor: 0.1,
+    offset: 0
+);
+
+// Insert signal into payload
+DbcSignalCodec.InsertSignal(
+    payload,
+    value,
+    startBit: 0,
+    length: 16,
+    byteOrder: ByteOrder.LittleEndian,
+    factor: 0.1,
+    offset: 0
+);
+```
+
+## Common Tasks
+
+### Adding a New UI Page
+
+1. Create `api/Components/Pages/PageName.razor`
+2. Add `@page "/route"` directive
+3. Add navigation link to `NavMenu.razor`
+4. Use `@rendermode InteractiveServer` for stateful components
+5. Inject required services via `@inject`
+
+### Adding a New Service
+
+1. Create service class in `application/Services/` or `api/Services/`
+2. Register in `api/Program.cs` with appropriate lifetime
+3. Inject where needed via DI
+4. Use `ILogger<T>` for logging (auto-captured by GlobalLogger)
+
+### Adding a New Device Operation
+
+1. Add method to `IDevice` interface
+2. Implement in all device classes (use no-op for unsupported)
+3. Add operation call to `DeviceManager`
+4. Create UI button/handler in device view component
+5. Use `NotificationService` for user feedback
+
+### Adding CAN Message Parsing
+
+1. Define message in device class
+2. Add parsing logic to `Read()` method
+3. Update device properties based on message content
+4. Remove from `_requestQueue` if response message:
+   ```csharp
+   queue.TryRemove((BaseId, prefix, index), out _);
+   ```
+
+### Debugging CAN Communication
+
+1. Check Global Log (`/global-log`) for connection/adapter errors
+2. Check CAN Log (`/can-log`) for message traffic
+3. Monitor Queue count in NavMenu (should return to 0)
+4. Check DeviceManager logging for timeout/retry messages
+5. Verify adapter RxTimeDelta < 500ms (connection health)
+
+## Key Design Decisions
+
+### Why Blazor Server Instead of REST API?
+
+- Simpler architecture (no DTO mapping layer)
+- Direct service access in components
+- Real-time updates via timer polling (adequate for 20 Hz refresh)
+- Reduced complexity (no API versioning, no AutoMapper, no controllers)
+
+### Why Timer Polling Instead of SignalR?
+
+- Adequate performance for 20 Hz updates
+- Simpler code (no hub infrastructure)
+- Blazor Server circuit already maintains WebSocket connection
+- Fewer moving parts, easier debugging
+
+### Why Channel-based Pipeline?
+
+System.Threading.Channels provides high-performance async processing for 3000 msg/s without blocking. Bounded channels with DropOldest prevent backpressure from blocking CAN adapter.
+
+### Why Runtime Adapter Selection?
+
+Users need hardware flexibility. CommsAdapterManager allows hot-swapping between USB, SLCAN, PCAN, and Sim without recompiling or restarting.
+
+### Why No Database?
+
+JSON files provide adequate persistence for configuration. In-memory state for real-time data. CSV files for message logging. Avoids database complexity for MVP.
+
+### Why Clean Architecture?
+
+Clear separation of concerns. Domain layer has no dependencies. Infrastructure implements domain interfaces. Easy to swap implementations (e.g., different adapters) without changing business logic.
 
 ## Reference Documentation
 
