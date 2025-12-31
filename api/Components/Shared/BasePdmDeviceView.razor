@@ -38,14 +38,6 @@
             <MudButton Variant="Variant.Outlined"
                        Color="Color.Default"
                        Size="Size.Small"
-                       StartIcon="@Icons.Material.Filled.Info"
-                       Disabled="@(!Device.Connected || !AdapterConnected)"
-                       OnClick="@OnRequestVersionAsync">
-                Version
-            </MudButton>
-            <MudButton Variant="Variant.Outlined"
-                       Color="Color.Default"
-                       Size="Size.Small"
                        StartIcon="@Icons.Material.Filled.Bedtime"
                        Disabled="@(!Device.Connected || !AdapterConnected)"
                        OnClick="@OnSleepAsync">
@@ -78,7 +70,7 @@
     </div>
 
     <MudTabs Elevation="2" Rounded="true" ApplyEffectsToContainer="true">
-        <MudTabPanel Text="Status" Icon="@Icons.Material.Filled.ViewList">
+        <MudTabPanel Text="Dashboard" Icon="@Icons.Material.Filled.Dashboard">
             <div style="overflow-y: auto; height: calc(100vh - 250px); padding: 24px; scrollbar-width: auto; scrollbar-color: #888 transparent;">
             <MudGrid>
                     <MudItem xs="12" md="3">
@@ -103,18 +95,24 @@
 
                 @* Outputs *@
                 <MudText Typo="Typo.h6" Class="mb-2">Outputs</MudText>
-                <MudGrid>
+                <MudGrid Spacing="2">
                     @foreach (var (output, _) in Device.GetOutputs().Select((o, i) => (o, i)))
                     {
-                        <MudItem xs="6" md="3">
-                            <MudCard Outlined="true" Class="pa-2">
-                                <MudCardContent Class="pa-2">
-                                    <MudStack Spacing="1">
+                        <MudItem>
+                            <MudCard Class="@(output.Enabled ? "" : "card-disabled")">
+                                <MudCardContent>
+                                    <MudStack AlignItems="AlignItems.Center" Spacing="1">
                                         <MudText Typo="Typo.body1">@output.Name</MudText>
-                                        <MudChip T="string" Variant="Variant.Outlined" Color="@GetOutputColor(output.State)" Size="Size.Small">
+                                        <MudChip T="string" Variant="Variant.Outlined" 
+                                                 Color="@GetOutputColor(output.State)" 
+                                                 Size="Size.Small" Style="min-width: 100px;">
                                             @GetOutputStateText(output.State)
                                         </MudChip>
                                         <MudText Typo="Typo.body2">@output.Current.ToString("F1") A</MudText>
+                                        @if (output.PwmEnabled)
+                                        {
+                                            <MudText Typo="Typo.body2">@output.CurrentDutyCycle.ToString("F1") %</MudText>
+                                        }
                                     </MudStack>
                                 </MudCardContent>
                             </MudCard>
@@ -127,33 +125,184 @@
                 {
                     <MudDivider Class="my-4"/>
                     <MudText Typo="Typo.h6" Class="mb-2">Digital Inputs</MudText>
-                    <MudStack Row="true" Spacing="2">
+                    <MudGrid Spacing="2">
                         @foreach (var (input, index) in Device.GetInputs().Select((i, idx) => (i, idx)))
                         {
-                            <MudChip T="string" Variant="Variant.Outlined" Color="@(input.State ? Color.Success : Color.Default)" Size="Size.Small">
-                                Input @(index + 1): @(input.State ? "ON" : "OFF")
-                            </MudChip>
+                            <MudItem>
+                                <MudCard Class="@(input.Enabled ? "" : "card-disabled")">
+                                    <MudCardContent>
+                                        <MudStack  AlignItems="AlignItems.Center" Spacing="1">
+                                        <MudText Typo="Typo.body1">@input.Name</MudText>
+                                        <MudChip T="string" Variant="Variant.Outlined" 
+                                                 Color="@(input.State ? Color.Success : Color.Default)" 
+                                                 Size="Size.Small" Style="min-width: 100px;">
+                                            @(input.State ? "ON" : "OFF")
+                                        </MudChip>
+                                        </MudStack>
+                                    </MudCardContent>
+                                </MudCard>
+                            </MudItem>
                         }
-                    </MudStack>
+                    </MudGrid>
                 }
+                
+                @* CAN Inputs *@
+                @if (Device.GetCanInputs().Any())
+                {
+                    <MudDivider Class="my-4"/>
+                    <MudText Typo="Typo.h6" Class="mb-2">CAN Inputs</MudText>
+                    <MudGrid Spacing="2">
+                        @foreach (var (input, index) in Device.GetCanInputs().Select((i, idx) => (i, idx)))
+                        {
+                            <MudItem>
+                                <MudCard Class="@(input.Enabled ? "" : "card-disabled")">
+                                    <MudCardContent>
+                                        <MudStack  AlignItems="AlignItems.Center" Spacing="1">
+                                            <MudText Typo="Typo.body1">@input.Name</MudText>
+                                            <MudChip T="string" Variant="Variant.Outlined" 
+                                                     Color="@(input.Output ? Color.Success : Color.Default)" 
+                                                     Size="Size.Small" Style="min-width: 100px;">
+                                                @input.Value
+                                            </MudChip>
+                                        </MudStack>
+                                    </MudCardContent>
+                                </MudCard>
+                            </MudItem>
+                        }
+                    </MudGrid>
+                }
+                
+                @* Virtual Inputs *@
+                @if (Device.GetVirtualInputs().Any())
+                {
+                    <MudDivider Class="my-4"/>
+                    <MudText Typo="Typo.h6" Class="mb-2">Virtual Inputs</MudText>
+                    <MudGrid Spacing="2">
+                        @foreach (var (input, index) in Device.GetVirtualInputs().Select((i, idx) => (i, idx)))
+                        {
+                            <MudItem>
+                                <MudCard Class="@(input.Enabled ? "" : "card-disabled")">
+                                    <MudCardContent>
+                                        <MudStack  AlignItems="AlignItems.Center" Spacing="1">
+                                            <MudText Typo="Typo.body1">@input.Name</MudText>
+                                            <MudChip T="string" Variant="Variant.Outlined" 
+                                                     Color="@(input.Value ? Color.Success : Color.Default)" 
+                                                     Size="Size.Small" Style="min-width: 100px;">
+                                                @(input.Value ? "ON" : "OFF")
+                                            </MudChip>
+                                        </MudStack>
+                                    </MudCardContent>
+                                </MudCard>
+                            </MudItem>
+                        }
+                    </MudGrid>
+                }
+                
+                @* Condition *@
+                @if (Device.GetConditions().Any())
+                {
+                    <MudDivider Class="my-4"/>
+                    <MudText Typo="Typo.h6" Class="mb-2">Conditions</MudText>
+                    <MudGrid Spacing="2">
+                        @foreach (var (condition, index) in Device.GetConditions().Select((i, idx) => (i, idx)))
+                        {
+                            <MudItem>
+                                <MudCard Class="@(condition.Enabled ? "" : "card-disabled")">
+                                    <MudCardContent>
+                                        <MudStack  AlignItems="AlignItems.Center" Spacing="1">
+                                            <MudText Typo="Typo.body1">@condition.Name</MudText>
+                                            <MudChip T="string" Variant="Variant.Outlined" 
+                                                     Color="@(condition.Value > 0 ? Color.Success : Color.Default)" 
+                                                     Size="Size.Small" Style="min-width: 100px;">
+                                                @condition.Value
+                                            </MudChip>
+                                        </MudStack>
+                                    </MudCardContent>
+                                </MudCard>
+                            </MudItem>
+                        }
+                    </MudGrid>
+                }
+                
+                @* Counter *@
+                @if (Device.GetCounters().Any())
+                {
+                    <MudDivider Class="my-4"/>
+                    <MudText Typo="Typo.h6" Class="mb-2">Conditions</MudText>
+                    <MudGrid Spacing="2">
+                        @foreach (var (counter, index) in Device.GetCounters().Select((i, idx) => (i, idx)))
+                        {
+                            <MudItem>
+                                <MudCard Class="@(counter.Enabled ? "" : "card-disabled")">
+                                    <MudCardContent>
+                                        <MudStack  AlignItems="AlignItems.Center" Spacing="1">
+                                            <MudText Typo="Typo.body1">@counter.Name</MudText>
+                                            <MudChip T="string" Variant="Variant.Outlined" 
+                                                     Color="@(counter.Value > 0 ? Color.Success : Color.Default)" 
+                                                     Size="Size.Small" Style="min-width: 100px;">
+                                                @counter.Value
+                                            </MudChip>
+                                        </MudStack>
+                                    </MudCardContent>
+                                </MudCard>
+                            </MudItem>
+                        }
+                    </MudGrid>
+                }
+                
+                @* Flasher *@
+                @if (Device.GetFlashers().Any())
+                {
+                    <MudDivider Class="my-4"/>
+                    <MudText Typo="Typo.h6" Class="mb-2">Flashers</MudText>
+                    <MudGrid Spacing="2">
+                        @foreach (var (flasher, index) in Device.GetFlashers().Select((i, idx) => (i, idx)))
+                        {
+                            <MudItem>
+                                <MudCard Class="@(flasher.Enabled ? "" : "card-disabled")">
+                                    <MudCardContent>
+                                        <MudStack  AlignItems="AlignItems.Center" Spacing="1">
+                                            <MudText Typo="Typo.body1">@flasher.Name</MudText>
+                                            <MudChip T="string" Variant="Variant.Outlined" 
+                                                     Color="@(flasher.Value ? Color.Success : Color.Default)" 
+                                                     Size="Size.Small" Style="min-width: 100px;">
+                                                @(flasher.Value ? "ON" : "OFF")
+                                            </MudChip>
+                                        </MudStack>
+                                    </MudCardContent>
+                                </MudCard>
+                            </MudItem>
+                        }
+                    </MudGrid>
+                }
+                
+                @* Wiper *@
+                <MudDivider Class="my-4"/>
+                <MudText Typo="Typo.h6" Class="mb-2">Wiper</MudText>
+                <MudCard Class="@(Device.Wipers.Enabled ? "" : "card-disabled")" Style="max-width: 200px">
+                    <MudCardContent>
+                        <MudStack  AlignItems="AlignItems.Center" Spacing="1">
+                            <MudText Typo="Typo.body1">@Device.Wipers.Name</MudText>
+                            <MudChip T="string" Variant="Variant.Outlined" 
+                                     Color="@(Device.Wipers.SlowState ? Color.Success : Color.Default)" 
+                                     Size="Size.Small" Style="min-width: 100px;">
+                                Slow
+                            </MudChip>
+                            <MudChip T="string" Variant="Variant.Outlined" 
+                                     Color="@(Device.Wipers.FastState ? Color.Success : Color.Default)" 
+                                     Size="Size.Small" Style="min-width: 100px;">
+                                Fast
+                            </MudChip>
+                            <MudText Typo="Typo.body2">Mode: @Device.Wipers.Mode.ToString()</MudText>
+                        </MudStack>
+                    </MudCardContent>
+                </MudCard>
             </div>
         </MudTabPanel>
 
         <MudTabPanel Text="Configuration" Icon="@Icons.Material.Filled.Settings">
             <div style="overflow-y: auto; height: calc(100vh - 250px); padding: 24px; scrollbar-width: auto; scrollbar-color: #888 transparent;">
                 <MudExpansionPanels MultiExpansion="true">
-                    @* Inputs *@
-                    @if (Device.Inputs.Any())
-                    {
-                        <MudExpansionPanel Text="@($"Inputs ({Device.Inputs.Count})")"
-                                           ExpandedChanged="@((bool expanded) => _inputsExpanded = expanded)">
-                            @if (_inputsExpanded)
-                            {
-                                <InputsGrid Inputs="Device.Inputs"/>
-                            }
-                        </MudExpansionPanel>
-                    }
-
                     @* Outputs *@
                     @if (Device.Outputs.Any())
                     {
@@ -177,6 +326,19 @@
                             }
                         </MudExpansionPanel>
                     }
+                    
+                    @* Inputs *@
+                    @if (Device.Inputs.Any())
+                    {
+                        <MudExpansionPanel Text="@($"Inputs ({Device.Inputs.Count})")"
+                                           ExpandedChanged="@((bool expanded) => _inputsExpanded = expanded)">
+                            @if (_inputsExpanded)
+                            {
+                                <InputsGrid Inputs="Device.Inputs"/>
+                            }
+                        </MudExpansionPanel>
+                    }
+                    
                     @* CAN Inputs *@
                     @if (Device.CanInputs.Any())
                     {
@@ -304,8 +466,8 @@
     private static Color GetOutputColor(OutState state) => state switch
     {
         OutState.On => Color.Success,
-        OutState.Overcurrent => Color.Error,
-        OutState.Fault => Color.Warning,
+        OutState.Overcurrent => Color.Warning,
+        OutState.Fault => Color.Error,
         _ => Color.Default      // Off
     };
 
@@ -356,21 +518,6 @@
         catch (Exception ex)
         {
             Notification.NewError($"Error sending burn: {DeviceName}", ex);
-        }
-    }
-
-    private void OnRequestVersionAsync()
-    {
-        try
-        {
-            if (DeviceManager.RequestVersion(Device.Guid))
-                Notification.NewSuccess($"Version request sent: {DeviceName}");
-            else
-                Notification.NewError($"Failed to request version: {DeviceName}");
-        }
-        catch (Exception ex)
-        {
-            Notification.NewError($"Error requesting version: {DeviceName}", ex);
         }
     }
 

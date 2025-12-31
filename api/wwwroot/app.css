@@ -62,3 +62,9 @@ h1:focus {
 .mud-nav-link.active {
     color: inherit !important;
 }
+
+.card-disabled {
+    opacity: 0.4 !important;
+    pointer-events: none !important;
+    cursor: not-allowed !important;
+}
