@@ -13,7 +13,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Peak.PCANBasic.NET" Version="5.0.0.1115-beta" />
+    <PackageReference Include="Peak.PCANBasic.NET" Version="4.10.0.964" />
   </ItemGroup>
 
 </Project>
