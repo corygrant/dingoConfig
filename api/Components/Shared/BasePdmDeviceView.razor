@@ -351,6 +351,18 @@
                         </MudStack>
                     </MudCardContent>
                 </MudCard>
+                
+                @* Starter Disable *@
+                <MudDivider Class="my-4"/>
+                <MudText Typo="Typo.h6" Class="mb-2">Starter Disable</MudText>
+                <MudCard Class="@(Device.StarterDisable.Enabled ? "" : "card-disabled")" Style="max-width: 200px">
+                    <MudCardContent>
+                        <MudStack AlignItems="AlignItems.Center" Spacing="1">
+                            <MudText Typo="Typo.body1">@Device.StarterDisable.Name</MudText>
+                            
+                        </MudStack>
+                    </MudCardContent>
+                </MudCard>
             </div>
         </MudTabPanel>
 

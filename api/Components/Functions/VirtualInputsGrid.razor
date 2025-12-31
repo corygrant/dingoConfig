@@ -2,7 +2,7 @@
 @using domain.Devices.dingoPdm.Enums
 @using domain.Enums
 
-<MudDataGrid Items="@VirtualInputs" Dense="true" Hover="true" Striped="true" EditMode="DataGridEditMode.Cell" ReadOnly="false"
+<MudDataGrid Items="@VirtualInputs" Dense="true" Hover="true" Striped="false" EditMode="DataGridEditMode.Cell" ReadOnly="false"
              SortMode="SortMode.None" ColumnResizeMode="ResizeMode.Container" Virtualize="true">
     <Columns>
         <PropertyColumn Property="x => x.Number" Title="No." Editable="false"/>
