@@ -5,15 +5,25 @@
              SortMode="SortMode.None" ColumnResizeMode="ResizeMode.Container" Virtualize="true">
     <Columns>
         <PropertyColumn Property="x => x.Number" Title="Num" Editable="false" />
+        <PropertyColumn Property="x => x.PwmEnabled" Title="Enabled">
+            <EditTemplate>
+                <MudCheckBox @bind-Value="context.Item.PwmEnabled" Dense="true" />
+            </EditTemplate>
+        </PropertyColumn>
         <PropertyColumn Property="x => x.Name">
             <EditTemplate>
                 <MudTextField @bind-Value="context.Item.Name" Variant="Variant.Outlined" Margin="Margin.Dense" />
             </EditTemplate>
         </PropertyColumn>
-        <PropertyColumn Property="x => x.PwmEnabled" Title="Enabled">
-            <EditTemplate>
-                <MudCheckBox @bind-Value="context.Item.PwmEnabled" Dense="true" />
-            </EditTemplate>
+        <PropertyColumn Property="x => x.CurrentDutyCycle" Title="Duty Cycle" Editable="false">
+            <CellTemplate>
+                <MudChip T="string"
+                         Variant="Variant.Outlined"
+                         Color="@(context.Item.CurrentDutyCycle > 0.0 ? Color.Success : Color.Default)"
+                         Size="Size.Small" Style="min-width: 50px;">
+                    @context.Item.CurrentDutyCycle
+                </MudChip>
+            </CellTemplate>
         </PropertyColumn>
         <PropertyColumn Property="x => x.SoftStartEnabled" Title="Soft Start">
             <EditTemplate>

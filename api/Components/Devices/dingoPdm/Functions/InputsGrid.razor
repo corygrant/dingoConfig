@@ -5,15 +5,25 @@
              SortMode="SortMode.None" ColumnResizeMode="ResizeMode.Container" Virtualize="true">
     <Columns>
         <PropertyColumn Property="x => x.Number" Title="No." Editable="false"/>
+        <PropertyColumn Property="x => x.Enabled">
+            <EditTemplate>
+                <MudCheckBox @bind-Value="context.Item.Enabled" Dense="true" />
+            </EditTemplate>
+        </PropertyColumn>
         <PropertyColumn Property="x => x.Name">
             <EditTemplate>
                 <MudTextField @bind-Value="context.Item.Name" Variant="Variant.Outlined" Margin="Margin.Dense" />
             </EditTemplate>
         </PropertyColumn>
-        <PropertyColumn Property="x => x.Enabled">
-            <EditTemplate>
-                <MudCheckBox @bind-Value="context.Item.Enabled" Dense="true" />
-            </EditTemplate>
+        <PropertyColumn Property="x => x.State" Title="State" Editable="false">
+            <CellTemplate>
+                <MudChip T="string"
+                         Variant="Variant.Outlined"
+                         Color="@(context.Item.State ? Color.Success : Color.Default)"
+                         Size="Size.Small" Style="min-width: 50px;">
+                    @(context.Item.State ? "ON" : "OFF")
+                </MudChip>
+            </CellTemplate>
         </PropertyColumn>
         <PropertyColumn Property="x => x.Mode">
             <EditTemplate>

@@ -1,20 +1,29 @@
 @using domain.Devices.dingoPdm.Functions
 @using domain.Devices.dingoPdm.Enums
-@using domain.Enums
 
 <MudDataGrid Items="@CanInputs" Dense="true" Hover="true" Striped="false" EditMode="DataGridEditMode.Cell" ReadOnly="false"
              SortMode="SortMode.None" ColumnResizeMode="ResizeMode.Container" Virtualize="true">
     <Columns>
         <PropertyColumn Property="x => x.Number" Title="No." Editable="false"/>
+        <PropertyColumn Property="x => x.Enabled">
+            <EditTemplate>
+                <MudCheckBox @bind-Value="context.Item.Enabled" Dense="true" />
+            </EditTemplate>
+        </PropertyColumn>
         <PropertyColumn Property="x => x.Name">
             <EditTemplate>
                 <MudTextField @bind-Value="context.Item.Name" Variant="Variant.Outlined" Margin="Margin.Dense" />
             </EditTemplate>
         </PropertyColumn>
-        <PropertyColumn Property="x => x.Enabled">
-            <EditTemplate>
-                <MudCheckBox @bind-Value="context.Item.Enabled" Dense="true" />
-            </EditTemplate>
+        <PropertyColumn Property="x => x.Output" Title="Value" Editable="false">
+            <CellTemplate>
+                <MudChip T="string"
+                         Variant="Variant.Outlined"
+                         Color="@(context.Item.Output ? Color.Success : Color.Default)"
+                         Size="Size.Small" Style="min-width: 50px;">
+                    @context.Item.Value
+                </MudChip>
+            </CellTemplate>
         </PropertyColumn>
         <PropertyColumn Property="x => x.Id" Title="CAN ID" />
         <PropertyColumn Property="x => x.Ide" Title="Extended">
@@ -26,10 +35,10 @@
         <PropertyColumn Property="x => x.StartingByte" Title="Start Byte" />
         <PropertyColumn Property="x => x.Operator">
             <EditTemplate>
-                <MudSelect T="domain.Devices.dingoPdm.Enums.Operator" @bind-Value="context.Item.Operator" Variant="Variant.Outlined" Dense="true">
-                    @foreach (domain.Devices.dingoPdm.Enums.Operator op in Enum.GetValues(typeof(domain.Devices.dingoPdm.Enums.Operator)))
+                <MudSelect T="Operator" @bind-Value="context.Item.Operator" Variant="Variant.Outlined" Dense="true">
+                    @foreach (Operator op in Enum.GetValues(typeof(Operator)))
                     {
-                        <MudSelectItem T="domain.Devices.dingoPdm.Enums.Operator" Value="@op">@op</MudSelectItem>
+                        <MudSelectItem T="Operator" Value="@op">@op</MudSelectItem>
                     }
                 </MudSelect>
             </EditTemplate>

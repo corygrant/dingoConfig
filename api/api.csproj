@@ -24,8 +24,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <AdditionalFiles Include="Components\Devices\dingoPdm\Functions\CanInputCard.razor" />
-    <AdditionalFiles Include="Components\Devices\dingoPdm\Functions\CanInputDialog.razor" />
     <AdditionalFiles Include="Components\Devices\dingoPdm\Functions\CanInputsGrid.razor" />
     <AdditionalFiles Include="Components\Devices\dingoPdm\Functions\ConditionsGrid.razor" />
     <AdditionalFiles Include="Components\Devices\dingoPdm\Functions\CountersGrid.razor" />
