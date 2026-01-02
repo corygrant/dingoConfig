@@ -7,17 +7,16 @@ namespace application.Services;
 
 public enum PlaybackState { Idle, Playing, Paused, Stopped }
 
-public class SimPlayback
+public class SimPlayback(ILogger<SimPlayback> logger)
 {
-    private readonly ILogger<SimPlayback> _logger;
-    private PlaybackState _state = PlaybackState.Idle;
-    private List<PlaybackMessage> _messages = new();
-    private int _currentIndex = 0;
+    private List<PlaybackMessage> _messages = [];
     private CancellationTokenSource? _playCts;
-    private readonly object _stateLock = new();
+    private readonly Lock _stateLock = new();
 
-    public PlaybackState State => _state;
-    public int CurrentMessageIndex => _currentIndex;
+    public PlaybackState State { get; private set; } = PlaybackState.Idle;
+
+    public int CurrentMessageIndex { get; private set; }
+
     public int TotalMessages => _messages.Count;
     public TimeSpan CurrentTime { get; private set; }
     public bool Loop { get; set; }
@@ -25,11 +24,6 @@ public class SimPlayback
     public string? CurrentFileName { get; private set; }
 
     public event Action<CanFrame, DataDirection>? MessageReady;
-
-    public SimPlayback(ILogger<SimPlayback> logger)
-    {
-        _logger = logger;
-    }
 
     public async Task<(bool success, string? error)> LoadFile(string filePath)
     {
@@ -69,8 +63,7 @@ public class SimPlayback
                         CultureInfo.InvariantCulture
                     );
 
-                    if (!firstTimestamp.HasValue)
-                        firstTimestamp = timestamp;
+                    firstTimestamp ??= timestamp;
 
                     // Parse direction
                     var direction = parts[1].Trim().Equals("Rx", StringComparison.OrdinalIgnoreCase)
@@ -119,8 +112,7 @@ public class SimPlayback
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogWarning("Skipping invalid line {LineNumber}: {Error}", i + 1, ex.Message);
-                    continue;
+                    logger.LogWarning("Skipping invalid line {LineNumber}: {Error}", i + 1, ex.Message);
                 }
             }
 
@@ -132,18 +124,18 @@ public class SimPlayback
             lock (_stateLock)
             {
                 _messages = messages;
-                _currentIndex = 0;
-                _state = PlaybackState.Idle;
+                CurrentMessageIndex = 0;
+                State = PlaybackState.Idle;
                 CurrentTime = TimeSpan.Zero;
                 CurrentFileName = Path.GetFileName(filePath);
             }
 
-            _logger.LogInformation("Loaded {Count} CAN messages from {FileName}", messages.Count, CurrentFileName);
+            logger.LogInformation("Loaded {Count} CAN messages from {FileName}", messages.Count, CurrentFileName);
             return (true, null);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to load CAN log file: {FilePath}", filePath);
+            logger.LogError(ex, "Failed to load CAN log file: {FilePath}", filePath);
             return (false, ex.Message);
         }
     }
@@ -152,22 +144,22 @@ public class SimPlayback
     {
         lock (_stateLock)
         {
-            if (_state == PlaybackState.Playing || _messages.Count == 0)
+            if (State == PlaybackState.Playing || _messages.Count == 0)
                 return Task.CompletedTask;
 
             // If stopped or at end, reset to beginning
-            if (_state == PlaybackState.Stopped || _currentIndex >= _messages.Count)
+            if (State == PlaybackState.Stopped || CurrentMessageIndex >= _messages.Count)
             {
-                _currentIndex = 0;
+                CurrentMessageIndex = 0;
                 CurrentTime = TimeSpan.Zero;
             }
 
-            _state = PlaybackState.Playing;
+            State = PlaybackState.Playing;
             _playCts?.Cancel();
             _playCts = new CancellationTokenSource();
         }
 
-        _logger.LogInformation("Starting playback from index {Index}", _currentIndex);
+        logger.LogInformation("Starting playback from index {Index}", CurrentMessageIndex);
         _ = PlaybackLoop(_playCts.Token);
         return Task.CompletedTask;
     }
@@ -176,14 +168,14 @@ public class SimPlayback
     {
         lock (_stateLock)
         {
-            if (_state != PlaybackState.Playing)
+            if (State != PlaybackState.Playing)
                 return Task.CompletedTask;
 
             _playCts?.Cancel();
-            _state = PlaybackState.Paused;
+            State = PlaybackState.Paused;
         }
 
-        _logger.LogInformation("Playback paused at index {Index}", _currentIndex);
+        logger.LogInformation("Playback paused at index {Index}", CurrentMessageIndex);
         return Task.CompletedTask;
     }
 
@@ -192,31 +184,31 @@ public class SimPlayback
         lock (_stateLock)
         {
             _playCts?.Cancel();
-            _currentIndex = 0;
+            CurrentMessageIndex = 0;
             CurrentTime = TimeSpan.Zero;
-            _state = PlaybackState.Idle;
+            State = PlaybackState.Idle;
         }
 
-        _logger.LogInformation("Playback reset");
+        logger.LogInformation("Playback reset");
         return Task.CompletedTask;
     }
 
     private async Task PlaybackLoop(CancellationToken ct)
     {
         var startTime = DateTime.UtcNow;
-        var startIndex = _currentIndex;
+        var startIndex = CurrentMessageIndex;
 
         // Adjust start time to account for current position
         if (startIndex > 0 && startIndex < _messages.Count)
         {
-            startTime = startTime - _messages[startIndex].RelativeTime;
+            startTime -= _messages[startIndex].RelativeTime;
         }
 
         try
         {
-            while (_currentIndex < _messages.Count && !ct.IsCancellationRequested)
+            while (CurrentMessageIndex < _messages.Count && !ct.IsCancellationRequested)
             {
-                var msg = _messages[_currentIndex];
+                var msg = _messages[CurrentMessageIndex];
                 var elapsedTime = DateTime.UtcNow - startTime;
                 var delay = msg.RelativeTime - elapsedTime;
 
@@ -227,7 +219,7 @@ public class SimPlayback
 
                 MessageReady?.Invoke(msg.Frame, msg.Direction);
                 CurrentTime = msg.RelativeTime;
-                _currentIndex++;
+                CurrentMessageIndex++;
             }
 
             // Handle completion
@@ -238,15 +230,15 @@ public class SimPlayback
 
                 if (Loop && _messages.Count > 0)
                 {
-                    _currentIndex = 0;
+                    CurrentMessageIndex = 0;
                     CurrentTime = TimeSpan.Zero;
-                    _logger.LogInformation("Looping playback");
+                    logger.LogInformation("Looping playback");
                     _ = PlaybackLoop(ct);
                 }
                 else
                 {
-                    _state = PlaybackState.Stopped;
-                    _logger.LogInformation("Playback completed");
+                    State = PlaybackState.Stopped;
+                    logger.LogInformation("Playback completed");
                 }
             }
         }
@@ -256,10 +248,10 @@ public class SimPlayback
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error during playback");
+            logger.LogError(ex, "Error during playback");
             lock (_stateLock)
             {
-                _state = PlaybackState.Stopped;
+                State = PlaybackState.Stopped;
             }
         }
     }
