@@ -5,38 +5,43 @@ using domain.Devices.dingoPdm.Functions;
 using domain.Enums;
 using domain.Interfaces;
 using domain.Models;
+using Microsoft.Extensions.Logging;
 using static domain.Common.DbcSignalCodec;
+// ReSharper disable MemberCanBePrivate.Global
 
 namespace domain.Devices.dingoPdm;
 
 public class PdmDevice : IDevice
 {
-    protected virtual int MinMajorVersion { get; } = 0;
-    protected virtual int MinMinorVersion { get; } = 4;
-    protected virtual int MinBuildVersion { get; } = 18;
+    [JsonIgnore] protected readonly ILogger Logger;
 
-    protected virtual int NumDigitalInputs { get; } = 2;
-    protected virtual int NumOutputs { get; } = 8;
-    protected virtual int NumCanInputs { get; } = 32;
-    protected virtual int NumVirtualInputs { get; } = 16;
-    protected virtual int NumFlashers { get; } = 4;
-    protected virtual int NumCounters { get; } = 4;
-    protected virtual int NumConditions { get; } = 32;
+    [JsonIgnore] protected virtual int MinMajorVersion { get; } = 0;
+    [JsonIgnore] protected virtual int MinMinorVersion { get; } = 4;
+    [JsonIgnore] protected virtual int MinBuildVersion { get; } = 28;
+
+    [JsonIgnore] protected virtual int NumDigitalInputs { get; } = 2;
+    [JsonIgnore] protected virtual int NumOutputs { get; } = 8;
+    [JsonIgnore] protected virtual int NumCanInputs { get; } = 32;
+    [JsonIgnore] protected virtual int NumVirtualInputs { get; } = 16;
+    [JsonIgnore] protected virtual int NumFlashers { get; } = 4;
+    [JsonIgnore] protected virtual int NumCounters { get; } = 4;
+    [JsonIgnore] protected virtual int NumConditions { get; } = 32;
     
-    protected int PdmType;
+    [JsonIgnore] protected virtual int PdmType { get; } = 0; //0=dingoPDM, 1=dingoPDM-Max
+    [JsonIgnore] protected bool PdmTypeOk;
     
     [JsonIgnore] public Guid Guid { get; }
     [JsonIgnore] public virtual string Type => "dingoPDM";
     [JsonPropertyName("name")] public string Name { get; set; }
     [JsonPropertyName("baseId")] public int BaseId { get; set; }
 
-    [JsonIgnore] public DateTime LastRxTime { get; set; }
-    [JsonIgnore] public DeviceState DeviceState { get; set; }
-    [JsonIgnore] public double TotalCurrent { get; set; }
-    [JsonIgnore] public double BatteryVoltage { get; set; }
-    [JsonIgnore] public double BoardTempC { get; set; }
-    [JsonIgnore] public double BoardTempF { get; set; }
-    [JsonIgnore] public string Version { get; set; } = "v0.0.0";
+    
+    [JsonIgnore] public DeviceState DeviceState { get; private set; }
+    [JsonIgnore] public double TotalCurrent { get; private set; }
+    [JsonIgnore] public double BatteryVoltage { get; private set; }
+    [JsonIgnore] public double BoardTempC { get; private set; }
+    [JsonIgnore] public string Version { get; private set; } = "v0.0.0";
+    
     [JsonIgnore] public bool SleepEnabled { get; set; }
     [JsonIgnore] public bool CanFiltersEnabled { get; set; }
     [JsonIgnore] public CanBitRate BitRate { get; set; }
@@ -47,10 +52,13 @@ public class PdmDevice : IDevice
     [JsonPropertyName("virtualInputs")] public List<VirtualInput> VirtualInputs { get; } = [];
     [JsonPropertyName("wipers")] public Wiper Wipers { get; } = new Wiper("wiper");
     [JsonPropertyName("flashers")] public List<Flasher> Flashers { get; } = [];
-    [JsonPropertyName("starterDisable")] public StarterDisable StarterDisable { get; } = new StarterDisable("starterDisable");
+    [JsonPropertyName("starterDisable")] public StarterDisable StarterDisable { get; } = new("starterDisable");
     [JsonPropertyName("counters")] public List<Counter> Counters { get; } = [];
     [JsonPropertyName("conditions")] public List<Condition> Conditions { get; } = [];
     
+    [JsonIgnore] private DateTime LastRxTime { get; set; }
+    
+    [JsonIgnore]
     public bool Connected
     {
         get;
@@ -60,19 +68,23 @@ public class PdmDevice : IDevice
             {
                 Clear();
             }
-            
+
             field = value;
         }
     }
     
-    public PdmDevice(string name, int baseId)
+    public PdmDevice(ILogger logger, string name, int baseId)
     {
+        Logger = logger;
         Name = name;
         BaseId = baseId;
         Guid = Guid.NewGuid();
-        
+
+        // ReSharper disable VirtualMemberCallInConstructor
         InitializeCollections();
         SetLimits();
+
+        Logger.LogDebug("PDM {Name} created", Name);
     }
 
     protected virtual void InitializeCollections()
@@ -111,14 +123,8 @@ public class PdmDevice : IDevice
         Outputs[6].NominalCurrentLimit = 8.0;
         Outputs[7].NominalCurrentLimit = 8.0;
     }
-    
-    public void UpdateConnected()
-    {
-        TimeSpan timeSpan = DateTime.Now - LastRxTime;
-        Connected = timeSpan.TotalMilliseconds < 500;
-    }
 
-    public void Clear()
+    private void Clear()
     {
         foreach(var input in Inputs)
             input.State = false;
@@ -134,9 +140,11 @@ public class PdmDevice : IDevice
 
         foreach(var canInput in CanInputs)
             canInput.Output = false;
+        
+        Logger.LogDebug("PDM {Name} cleared", Name);
     }
 
-    private void UpdateIsConnected()
+    public void UpdateIsConnected()
     {
         TimeSpan timeSpan = DateTime.Now - LastRxTime;
         Connected = timeSpan.TotalMilliseconds < 500;
@@ -147,12 +155,9 @@ public class PdmDevice : IDevice
         return (id >= BaseId - 1) && (id <= BaseId + 31);
     }
     
-    public bool Read(int id, byte[] data, ref ConcurrentDictionary<(int BaseId, int Prefix, int Index), DeviceCanFrame> queue)
+    public void Read(int id, byte[] data, ref ConcurrentDictionary<(int BaseId, int Prefix, int Index), DeviceCanFrame> queue)
     {
-        if (!InIdRange(id)) 
-            return false;
-
-        int offset = id - BaseId;
+        var offset = id - BaseId;
         switch (offset)
         {
             case 0: ReadMessage0(data); break;
@@ -176,8 +181,6 @@ public class PdmDevice : IDevice
         }
 
         LastRxTime = DateTime.Now;
-        UpdateIsConnected();
-        return true;
     }
 
     protected void ReadMessage0(byte[] data)
@@ -186,12 +189,11 @@ public class PdmDevice : IDevice
         Inputs[1].State = ExtractSignalInt(data, 1, 1) == 1;
 
         DeviceState = (DeviceState)ExtractSignalInt(data, 8, 4);
-        PdmType = (int)ExtractSignalInt(data, 12, 4);
+        PdmTypeOk = PdmType == (int)ExtractSignalInt(data, 12, 4);
 
         TotalCurrent = ExtractSignal(data, 16, 16, factor: 0.1);
         BatteryVoltage = ExtractSignal(data, 32, 16, factor: 0.1);
         BoardTempC = Math.Round(ExtractSignal(data, 48, 16, factor: 0.1), 1);
-        BoardTempF = Math.Round(BoardTempC * 1.8 + 32);
     }
 
     protected void ReadMessage1(byte[] data)
@@ -354,7 +356,7 @@ public class PdmDevice : IDevice
             
         var prefix = (MessagePrefix)(data[0] - 128);
 
-        var index = 0;
+        int index;
 
         //Vars used below
         (int BaseId, int, int) key;
@@ -363,13 +365,20 @@ public class PdmDevice : IDevice
         switch (prefix)
         {
             case MessagePrefix.Version:
-                Version = $"V{data[1]}.{data[2]}.{(data[3] << 8) + (data[4])}";
+                Version = $"v{data[1]}.{data[2]}.{(data[3] << 8) + (data[4])}";
 
                 key = (BaseId, (int)MessagePrefix.Version, 0);
                 if (queue.TryGetValue(key, out canFrame!))
                 {
                     canFrame.TimeSentTimer?.Dispose();
                     queue.TryRemove(key, out _);
+                }
+                
+                Logger.LogInformation("{Name} FW version received: {Version}", Name, Version);
+                
+                if (!CheckVersion(data[1], data[2], (data[3] << 8) + (data[4])))
+                {
+                    Logger.LogError("{Name} ID: {BaseId}, Firmware needs to be updated. V{MinMajorVersion}.{MinMinorVersion}.{MinBuildVersion} or greater", Name, BaseId, MinMajorVersion, MinMinorVersion, MinBuildVersion);
                 }
 
                 break;
@@ -602,7 +611,7 @@ public class PdmDevice : IDevice
 			case MessagePrefix.BurnSettings:
                 if (data[1] == 1) //Successful burn
                 {
-                    //_logger.LogInformation($"{Name} ID: {BaseId}, Burn Successful");
+                    Logger.LogInformation("{Name} ID: {BaseId}, Burn Successful", Name, BaseId);
 
                     key = (BaseId, (int)MessagePrefix.BurnSettings, 0);
                     if (queue.TryGetValue(key, out canFrame!))
@@ -612,15 +621,15 @@ public class PdmDevice : IDevice
                     }
                 }
 
-                //if (data[1] == 0) //Unsuccessful burn
-                    //_logger.LogError($"{Name} ID: {BaseId}, Burn Failed");
+                if (data[1] == 0) //Unsuccessful burn
+                    Logger.LogError("{Name} ID: {BaseId}, Burn Failed", Name, BaseId);
                 
                 break;
 
             case MessagePrefix.Sleep:
                 if (data[1] == 1) //Successful sleep
                 {
-                    //_logger.LogInformation($"{Name} ID: {BaseId}, Sleep Successful");
+                    Logger.LogInformation("{Name} ID: {BaseId}, Sleep Successful", Name, BaseId);
 
                     key = (BaseId, (int)MessagePrefix.Sleep, 0);
                     if (queue.TryGetValue(key, out canFrame!))
@@ -630,12 +639,9 @@ public class PdmDevice : IDevice
                     }
                 }
 
-                //if (data[1] == 0) //Unsuccessful sleep
-                    //_logger.LogError($"{Name} ID: {BaseId}, Sleep Failed");
+                if (data[1] == 0) //Unsuccessful sleep
+                    Logger.LogError("{Name} ID: {BaseId}, Sleep Failed", Name, BaseId);
                 
-                break;
-
-            default:
                 break;
         }
     }
@@ -649,13 +655,13 @@ public class PdmDevice : IDevice
         switch (type)
         {
             case MessageType.Info:
-                //_logger.LogInformation($"{Name} ID: {BaseId}, Src: {src} {((data[3] << 8) + data[2])} {((data[5] << 8) + data[4])} {((data[7] << 8) + data[6])}");
+                Logger.LogInformation("{Name} ID: {BaseId}, Src: {MessageSrc} {I} {I1} {I2}", Name, BaseId, src, (data[3] << 8) + data[2], (data[5] << 8) + data[4], (data[7] << 8) + data[6]);
                 break;
             case MessageType.Warning:
-                //_logger.LogWarning($"{Name} ID: {BaseId}, Src: {src} {((data[3] << 8) + data[2])} {((data[5] << 8) + data[4])} {((data[7] << 8) + data[6])}");
+                Logger.LogWarning("{Name} ID: {BaseId}, Src: {MessageSrc} {I} {I1} {I2}", Name, BaseId, src, (data[3] << 8) + data[2], (data[5] << 8) + data[4], (data[7] << 8) + data[6]);
                 break;
             case MessageType.Error:
-                //_logger.LogError($"{Name} ID: {BaseId}, Src: {src} {((data[3] << 8) + data[2])} {((data[5] << 8) + data[4])} {((data[7] << 8) + data[6])}");
+                Logger.LogError("{Name} ID: {BaseId}, Src: {MessageSrc} {I} {I1} {I2}", Name, BaseId, src, (data[3] << 8) + data[2], (data[5] << 8) + data[4], (data[7] << 8) + data[6]);
                 break;
         }
     }

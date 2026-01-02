@@ -10,9 +10,8 @@ public interface IDevice
     string Name { get; set; }
     int BaseId {get; set; }
     bool Connected {get;}
-    DateTime LastRxTime {get; set;}
-    
-    bool Read(int id, byte[] data, ref ConcurrentDictionary<(int BaseId, int Prefix, int Index), DeviceCanFrame> queue);
+    public void UpdateIsConnected();
+    void Read(int id, byte[] data, ref ConcurrentDictionary<(int BaseId, int Prefix, int Index), DeviceCanFrame> queue);
     bool InIdRange(int id);
     List<DeviceCanFrame> GetReadMsgs();
     List<DeviceCanFrame> GetWriteMsgs();

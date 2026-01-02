@@ -3,6 +3,7 @@
 @using application.Services
 @using api.Components.Functions
 @using api.Services
+@using domain.Enums
 @inject DeviceManager DeviceManager
 @inject NotificationService Notification
 @typeparam TDevice where TDevice : PdmDevice
@@ -13,11 +14,12 @@
     <div class="pa-3">
         <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center">
             <MudButton Variant="Variant.Outlined"
-                       Color="Color.Default"
+                       Color="@(DeviceManager.GetDeviceUiState(Device.Guid).NeedsRead && Device.Connected ? Color.Warning : Color.Default)"
                        Size="Size.Small"
                        StartIcon="@Icons.Material.Filled.Download"
                        Disabled="@(!Device.Connected || !AdapterConnected)"
-                       OnClick="@OnReadDeviceAsync">
+                       OnClick="@OnReadDeviceAsync"
+                       Class="@(DeviceManager.GetDeviceUiState(Device.Guid).NeedsRead && Device.Connected ? "flash-button" : "")">
                 Read
             </MudButton>
             <MudButton Variant="Variant.Outlined"
@@ -117,6 +119,15 @@
                             </MudCardContent>
                         </MudCard>
                     </MudItem>
+                    
+                    <MudItem>
+                        <MudCard Style="height: 100%">
+                            <MudCardContent>
+                                <MudText Typo="Typo.h6">@GetBitRateDisplay(Device.BitRate)</MudText>
+                                <MudText Typo="Typo.body2">Bitrate</MudText>
+                            </MudCardContent>
+                        </MudCard>
+                    </MudItem>
 
                     <MudItem>
                         <MudCard Style="height: 100%">
@@ -180,7 +191,7 @@
                     <MudDivider Class="my-4"/>
                     <MudText Typo="Typo.h6" Class="mb-2">Digital Inputs</MudText>
                     <MudGrid Spacing="2">
-                        @foreach (var (input, index) in Device.GetInputs().Select((i, idx) => (i, idx)))
+                        @foreach (var (input, _) in Device.GetInputs().Select((i, idx) => (i, idx)))
                         {
                             <MudItem>
                                 <MudCard Class="@(input.Enabled ? "" : "card-disabled")">
@@ -206,7 +217,7 @@
                     <MudDivider Class="my-4"/>
                     <MudText Typo="Typo.h6" Class="mb-2">CAN Inputs</MudText>
                     <MudGrid Spacing="2">
-                        @foreach (var (input, index) in Device.GetCanInputs().Select((i, idx) => (i, idx)))
+                        @foreach (var (input, _) in Device.GetCanInputs().Select((i, idx) => (i, idx)))
                         {
                             <MudItem>
                                 <MudCard Class="@(input.Enabled ? "" : "card-disabled")">
@@ -232,7 +243,7 @@
                     <MudDivider Class="my-4"/>
                     <MudText Typo="Typo.h6" Class="mb-2">Virtual Inputs</MudText>
                     <MudGrid Spacing="2">
-                        @foreach (var (input, index) in Device.GetVirtualInputs().Select((i, idx) => (i, idx)))
+                        @foreach (var (input, _) in Device.GetVirtualInputs().Select((i, idx) => (i, idx)))
                         {
                             <MudItem>
                                 <MudCard Class="@(input.Enabled ? "" : "card-disabled")">
@@ -258,7 +269,7 @@
                     <MudDivider Class="my-4"/>
                     <MudText Typo="Typo.h6" Class="mb-2">Conditions</MudText>
                     <MudGrid Spacing="2">
-                        @foreach (var (condition, index) in Device.GetConditions().Select((i, idx) => (i, idx)))
+                        @foreach (var (condition, _) in Device.GetConditions().Select((i, idx) => (i, idx)))
                         {
                             <MudItem>
                                 <MudCard Class="@(condition.Enabled ? "" : "card-disabled")">
@@ -284,7 +295,7 @@
                     <MudDivider Class="my-4"/>
                     <MudText Typo="Typo.h6" Class="mb-2">Conditions</MudText>
                     <MudGrid Spacing="2">
-                        @foreach (var (counter, index) in Device.GetCounters().Select((i, idx) => (i, idx)))
+                        @foreach (var (counter, _) in Device.GetCounters().Select((i, idx) => (i, idx)))
                         {
                             <MudItem>
                                 <MudCard Class="@(counter.Enabled ? "" : "card-disabled")">
@@ -310,7 +321,7 @@
                     <MudDivider Class="my-4"/>
                     <MudText Typo="Typo.h6" Class="mb-2">Flashers</MudText>
                     <MudGrid Spacing="2">
-                        @foreach (var (flasher, index) in Device.GetFlashers().Select((i, idx) => (i, idx)))
+                        @foreach (var (flasher, _) in Device.GetFlashers().Select((i, idx) => (i, idx)))
                         {
                             <MudItem>
                                 <MudCard Class="@(flasher.Enabled ? "" : "card-disabled")">
@@ -373,6 +384,18 @@
 
                     <MudExpansionPanel Text="Device">
                         <MudStack>
+                            <MudSelect @bind-Value="@Device.BitRate"
+                                       Label="Bitrate"
+                                       Variant="Variant.Outlined"
+                                       Dense="true"
+                                       Class="mb-3"
+                                       T="CanBitRate"
+                                       Style="max-width: 50%">
+                                <MudSelectItem T="CanBitRate" Value="@(CanBitRate.BitRate1000K)">1000K</MudSelectItem>
+                                <MudSelectItem T="CanBitRate" Value="@(CanBitRate.BitRate500K)">500K</MudSelectItem>
+                                <MudSelectItem T="CanBitRate" Value="@(CanBitRate.BitRate250K)">250K</MudSelectItem>
+                                <MudSelectItem T="CanBitRate" Value="@(CanBitRate.BitRate125K)">125K</MudSelectItem>
+                            </MudSelect>
                             <MudSwitch @bind-Value="@Device.SleepEnabled"
                                        Color="Color.Success"
                                        Label="Sleep Enabled"/>
@@ -555,6 +578,15 @@
         OutState.Overcurrent => "OVERCURRENT",
         OutState.Fault => "RESETTING",
         _ => "OFF"
+    };
+    
+    private string GetBitRateDisplay(CanBitRate bitRate) => bitRate switch
+    {
+        CanBitRate.BitRate1000K => "1000K",
+        CanBitRate.BitRate500K => "500K",
+        CanBitRate.BitRate250K => "250K",
+        CanBitRate.BitRate125K => "125K",
+        _ => "Unknown"
     };
 
     // Device operation methods - Direct service calls (no HTTP)

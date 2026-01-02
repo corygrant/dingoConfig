@@ -2,21 +2,32 @@ using System.Collections.Concurrent;
 using System.Text.Json.Serialization;
 using domain.Interfaces;
 using domain.Models;
+using Microsoft.Extensions.Logging;
 
 namespace domain.Devices.CanboardDevice;
 
 public class CanboardDevice : IDevice
 {
-    public Guid Guid { get; } = Guid.NewGuid();
+    private readonly ILogger<CanboardDevice> _logger;
+
+    public Guid Guid { get; }
     [JsonIgnore] public string Type => "CANBoard";
-    public string Name { get; set; } = "CANBoard";
+    public string Name { get; set; }
     public int BaseId { get; set; }
     public DateTime LastRxTime { get; set; }
     public bool Connected { get; set; }
 
-    public void UpdateConnected()
+    public CanboardDevice(ILogger<CanboardDevice> logger, string name, int baseId)
     {
-        // TODO: Implement connection status update
+        _logger = logger;
+        Guid = Guid.NewGuid();
+        Name = name;
+        BaseId = baseId;
+    }
+
+    public void UpdateIsConnected()
+    {
+        throw new NotImplementedException();
     }
 
     public void Clear()
@@ -30,10 +41,9 @@ public class CanboardDevice : IDevice
         return false;
     }
 
-    public bool Read(int id, byte[] data, ref ConcurrentDictionary<(int BaseId, int Prefix, int Index), DeviceCanFrame> queue)
+    public void Read(int id, byte[] data, ref ConcurrentDictionary<(int BaseId, int Prefix, int Index), DeviceCanFrame> queue)
     {
         // TODO: Implement CANBoard message parsing
-        return false;
     }
 
     public List<DeviceCanFrame> GetReadMsgs()

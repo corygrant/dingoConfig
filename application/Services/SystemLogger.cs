@@ -14,6 +14,11 @@ public class SystemLogger : IDisposable
     public bool LogToFile { get; set; }
     public LogLevel MinimumDisplayLevel { get; set; } = LogLevel.Info;
 
+    /// <summary>
+    /// Event fired when an error or critical log is recorded
+    /// </summary>
+    public event Action<LogEntry>? OnError;
+
     public SystemLogger(string logDirectory = "./logs")
     {
         _logDirectory = logDirectory;
@@ -43,6 +48,12 @@ public class SystemLogger : IDisposable
         if (LogToFile)
         {
             WriteToFile(entry);
+        }
+
+        // Fire event for errors (so they can be shown in snackbar)
+        if (level == LogLevel.Error)
+        {
+            OnError?.Invoke(entry);
         }
     }
 

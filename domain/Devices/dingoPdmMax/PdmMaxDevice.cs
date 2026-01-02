@@ -1,17 +1,20 @@
 using System.Text.Json.Serialization;
 using domain.Devices.dingoPdm;
 using domain.Devices.dingoPdm.Enums;
+using Microsoft.Extensions.Logging;
 
 namespace domain.Devices.dingoPdmMax;
 
-public class PdmMaxDevice(string name, int baseId) : PdmDevice(name, baseId)
+public class PdmMaxDevice(ILogger<PdmMaxDevice> logger, string name, int baseId) : PdmDevice(logger, name, baseId)
 {
-    protected override int MinMajorVersion { get; } = 0;
-    protected override int MinMinorVersion { get; } = 4;
-    protected override int MinBuildVersion { get; } = 7;
+    [JsonIgnore] protected override int MinMajorVersion { get; } = 0;
+    [JsonIgnore] protected override int MinMinorVersion { get; } = 4;
+    [JsonIgnore] protected override int MinBuildVersion { get; } = 7;
 
-    protected override int NumOutputs { get; } = 4;
-    
+    [JsonIgnore] protected override int NumOutputs { get; } = 4;
+
+    [JsonIgnore] protected override int PdmType { get; } = 1; //0=dingoPDM, 1=dingoPDM-Max
+
     [JsonIgnore] public override string Type => "dingoPDM-Max";
 
     protected override void SetLimits()

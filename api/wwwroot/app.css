@@ -68,3 +68,16 @@ h1:focus {
     pointer-events: none !important;
     cursor: not-allowed !important;
 }
+
+@keyframes flash-frames {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.4;
+    }
+}
+
+.flash-button {
+    animation: flash-frames 1.5s ease-in-out infinite;
+}

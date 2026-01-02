@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using application.Models;
 using domain.Devices.CanboardDevice;
 using domain.Devices.dingoPdm;
 using domain.Devices.dingoPdmMax;
@@ -8,15 +9,16 @@ using Microsoft.Extensions.Logging;
 
 namespace application.Services;
 
-public class DeviceManager(ILogger<DeviceManager> logger)
+public class DeviceManager(ILogger<DeviceManager> logger, ILoggerFactory loggerFactory)
 {
     private readonly Dictionary<Guid, IDevice> _devices = new();
     private ConcurrentDictionary<(int BaseId, int Prefix, int Index), DeviceCanFrame> _requestQueue = new();
     private Action<CanFrame>? _transmitCallback;
+    private readonly Dictionary<Guid, DeviceUiState> _deviceUiState = new();
 
     public int QueueCount => _requestQueue.Count;
-    
-    private const int MaxRetries = 20;
+
+    private const int MaxRetries = 10;
     private const int TimeoutMs = 500;
 
     /// <summary>
@@ -28,18 +30,33 @@ public class DeviceManager(ILogger<DeviceManager> logger)
     }
 
     /// <summary>
+    /// Get UI state for a device (creates if doesn't exist)
+    /// </summary>
+    public DeviceUiState GetDeviceUiState(Guid deviceId)
+    {
+        if (!_deviceUiState.TryGetValue(deviceId, out var state))
+        {
+            state = new DeviceUiState();
+            _deviceUiState[deviceId] = state;
+        }
+        return state;
+    }
+
+    /// <summary>
     /// Create and add a device of the specified type
     /// </summary>
     public IDevice AddDevice(string deviceType, string name, int baseId)
     {
         IDevice device = deviceType.ToLower() switch
         {
-            "pdm" => new PdmDevice(name, baseId),
-            "pdmmax" => new PdmMaxDevice(name, baseId),
+            "pdm" => new PdmDevice(loggerFactory.CreateLogger<PdmDevice>(), name, baseId),
+            "pdmmax" => new PdmMaxDevice(loggerFactory.CreateLogger<PdmMaxDevice>(), name, baseId),
+            "canboard" => new CanboardDevice(loggerFactory.CreateLogger<CanboardDevice>(), name, baseId),
             _ => throw new ArgumentException($"Unknown device type: {deviceType}")
         };
 
         _devices[device.Guid] = device;
+        GetDeviceUiState(device.Guid).NeedsRead = true;
         logger.LogInformation("Device added: {DeviceType} '{Name}' (ID: {BaseId}, Guid: {Guid})",
             deviceType, name, baseId, device.Guid);
 
@@ -52,6 +69,7 @@ public class DeviceManager(ILogger<DeviceManager> logger)
     public IDevice? GetDevice(Guid id)
     {
         _devices.TryGetValue(id, out var device);
+        device?.UpdateIsConnected();
         return device;
     }
 
@@ -74,14 +92,26 @@ public class DeviceManager(ILogger<DeviceManager> logger)
     /// <summary>
     /// Get all devices
     /// </summary>
-    public IEnumerable<IDevice> GetAllDevices() => _devices.Values;
+    public IEnumerable<IDevice> GetAllDevices()
+    {
+        foreach (var device in _devices.Values)
+        {
+            device.UpdateIsConnected();
+        }
+        return _devices.Values;
+    }
 
     /// <summary>
     /// Get all devices of a specific type
     /// </summary>
     public IEnumerable<T> GetDevicesByType<T>() where T : class, IDevice
     {
-        return _devices.Values.OfType<T>();
+        var devices = _devices.Values.OfType<T>().ToList();
+        foreach (var device in devices)
+        {
+            device.UpdateIsConnected();
+        }
+        return devices;
     }
 
     /// <summary>
@@ -120,7 +150,15 @@ public class DeviceManager(ILogger<DeviceManager> logger)
     /// <summary>
     /// Get all devices
     /// </summary>
-    public List<IDevice> GetDevices() => _devices.Values.ToList();
+    public List<IDevice> GetDevices()
+    {
+        var devices = _devices.Values.ToList();
+        foreach (var device in devices)
+        {
+            device.UpdateIsConnected();
+        }
+        return devices;
+    }
 
     /// <summary>
     /// Called by CommsDataPipeline when CAN data is received
@@ -228,6 +266,8 @@ public class DeviceManager(ILogger<DeviceManager> logger)
         var device = GetDevice(deviceId);
         if (device == null)
             return;
+
+        GetDeviceUiState(deviceId).NeedsRead = false;
 
         var readMsgs = device.GetReadMsgs();
         foreach (var msg in readMsgs)
