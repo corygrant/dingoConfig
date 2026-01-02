@@ -51,10 +51,18 @@ api (Presentation - Blazor Server)
 ├── depends on: application, infrastructure
 ├── Components/
 │   ├── Pages/ - 7 pages (Home, Devices, Device, CanLog, GlobalLog, Error, NotFound)
-│   ├── Shared/ - Device views (BasePdmDeviceView, PdmDeviceView, PdmMaxDeviceView, CanboardDeviceView)
+│   ├── Devices/ - Device views and tabs
+│   │   ├── BaseDeviceView.razor - Shared device button header + tab routing
+│   │   ├── Device.razor - Main device page with timer, routes to BaseDeviceView
+│   │   ├── Devices.razor - Device list page
+│   │   ├── dingoPdm/ - PDM device components
+│   │   │   ├── PdmDeviceTabs.razor - PDM tab container
+│   │   │   ├── Tabs/ - DashboardTab, ConfigurationTab, PlotTab, FlowTab
+│   │   │   └── Functions/ - 14 configuration grids (OutputsGrid, InputsGrid, etc.)
+│   │   └── CANBoard/ - CANBoard device components
+│   │       └── Tabs/ - CanboardDashboardTab, CanboardConfigurationTab
 │   ├── Shared/ - Toolbars (AdapterToolbarControl, FileToolbar)
 │   ├── Dialogs/ - 3 dialogs (OpenFileDialog, SaveAsDialog, SettingsDialog)
-│   ├── Functions/ - 14 configuration grids for device functions
 │   └── Layout/ - MainLayout, NavMenu, ReconnectModal
 ├── Services/
 │   └── NotificationService - Combines Snackbar + GlobalLogger
@@ -527,9 +535,13 @@ protected override void OnInitialized()
 - All other features same as PdmDevice
 - Custom message parsing for Max-specific frames
 
-**CanboardDevice** (CANBoard) - STUB ONLY
-- Interface implemented with no-op methods
-- Placeholder for future implementation
+**CanboardDevice** (CANBoard) - PARTIALLY IMPLEMENTED
+- 5 analog inputs (voltage, rotary switch position, digital input state)
+- 8 digital inputs
+- 4 digital outputs
+- Board temperature and heartbeat monitoring
+- CAN message parsing uses DbcSignalCodec for signal extraction
+- Configuration read/write methods are stubs (TODO)
 
 ### Device Logging
 
@@ -629,7 +641,7 @@ All functions implement `IDeviceFunction` interface:
 1. **Create Device Class** in `domain/Devices/{DeviceType}/`
    - Inherit from base or implement `IDevice` directly
    - Implement all interface methods (use no-ops for unused)
-   - Parse incoming CAN messages in `Read()` method
+   - Parse incoming CAN messages in `Read()` method using `DbcSignalCodec`
    - Create outgoing messages in operation methods
 
 2. **Add to ConfigFile Model** in `application/Models/ConfigFile.cs`
@@ -639,44 +651,76 @@ All functions implement `IDeviceFunction` interface:
 
 3. **Update ConfigFileManager** serialization logic
 
-4. **Create Device View** in `api/Components/Shared/{DeviceName}DeviceView.razor`
+4. **Create UI Components** in `api/Components/Devices/{DeviceType}/`
+   - Create `{DeviceType}DeviceTabs.razor` - Tab container
+   - Create `Tabs/` folder with tab components (Dashboard, Configuration, etc.)
+   - Add pattern matching case in `Device.razor` and `BaseDeviceView.razor`
 
 5. **Register in DeviceManager** `AddDevice()` switch statement
 
+6. **Update BaseDeviceView** `DeviceName` switch expression to include new device type
+
 ## UI Component Patterns
 
-### Component Structure
+### Device View Architecture
 
-All device views follow this pattern:
+The device UI follows a simplified two-layer architecture:
+
+```
+Device.razor (page, route: /device/{DeviceId:guid})
+  ↓ (pattern match on device type, 20 Hz timer)
+BaseDeviceView<TDevice> (buttons + computed DeviceName)
+  ↓ (pattern match on device type)
+{DeviceType}DeviceTabs (tab container)
+  ↓
+Individual tab components (Dashboard, Configuration, Plot, Flow)
+```
+
+**Device.razor** - Main page with timer and routing:
 ```razor
+@page "/device/{DeviceId:guid}"
 @inject DeviceManager DeviceManager
-@inject NotificationService Notification
-@rendermode InteractiveServer
+@inject ICommsAdapterManager AdapterManager
 @implements IDisposable
 
-<MudContainer>
-    <!-- UI elements -->
-</MudContainer>
+@switch (_currentDevice)
+{
+    case PdmMaxDevice pdmMaxDevice:
+        <BaseDeviceView TDevice="PdmMaxDevice"
+                       Device="pdmMaxDevice"
+                       AdapterConnected="@AdapterManager.IsConnected" />
+        break;
+    // ... other cases
+}
 
 @code {
-    [Parameter] public Guid DeviceId { get; set; }
-    private IDevice? _device;
+    private IDevice? _currentDevice;
     private Timer? _refreshTimer;
 
     protected override void OnInitialized()
     {
-        _device = DeviceManager.GetDevice(DeviceId);
+        _currentDevice = DeviceManager.GetDevice(DeviceId);
         _refreshTimer = new Timer(_ => {
             InvokeAsync(() => {
-                _device = DeviceManager.GetDevice(DeviceId);
+                _currentDevice = DeviceManager.GetDevice(DeviceId);
                 StateHasChanged();
             });
         }, null, TimeSpan.FromMilliseconds(50), TimeSpan.FromMilliseconds(50));
     }
-
-    public void Dispose() => _refreshTimer?.Dispose();
 }
 ```
+
+**BaseDeviceView** - Shared button header and tab routing:
+- Contains device operation buttons (Read, Write, Burn, Sleep, Wakeup, Bootloader)
+- Computes DeviceName from device type using switch expression
+- Uses pattern matching to route to appropriate tabs component
+- No device-specific views needed (eliminated redundant middle layer)
+
+**Tab Components** - Device-specific tabs:
+- Located in `api/Components/Devices/{DeviceType}/Tabs/`
+- Examples: `DashboardTab.razor`, `ConfigurationTab.razor`
+- Each tab receives the device as a parameter
+- Organized by device type for maintainability
 
 ### Key Patterns
 
@@ -705,7 +749,7 @@ Visual reminder to read device configuration after connection:
 - State persists across navigation (stored in `DeviceUiState`)
 
 ```razor
-<!-- In BasePdmDeviceView.razor -->
+<!-- In BaseDeviceView.razor -->
 <MudButton Color="@(DeviceManager.GetDeviceUiState(Device.Guid).NeedsRead ? Color.Warning : Color.Default)"
            Class="@(DeviceManager.GetDeviceUiState(Device.Guid).NeedsRead ? "flash-button" : "")"
            OnClick="@OnReadDeviceAsync">
@@ -799,30 +843,76 @@ Default: `~/Documents/dingoConfig`
 
 ### 12. DbcSignalCodec Usage
 
-Use for CAN signal encoding/decoding:
+**Location**: `domain/Common/DbcSignalCodec.cs`
+
+Use `DbcSignalCodec` for all CAN signal encoding/decoding to ensure consistent, maintainable parsing. This is now the standard approach for all device implementations.
+
+**Extracting Signals** (used in `Device.Read()` methods):
 ```csharp
-// Extract signal from payload
-var value = DbcSignalCodec.ExtractSignal(
-    payload,
+// Extract 16-bit unsigned value
+var millivolts = DbcSignalCodec.ExtractSignal(
+    data,
     startBit: 0,
     length: 16,
-    byteOrder: ByteOrder.LittleEndian,
-    isSigned: false,
+    ByteOrder.LittleEndian
+);
+
+// Extract with scaling (e.g., temperature)
+var tempC = DbcSignalCodec.ExtractSignal(
+    data,
+    startBit: 48,
+    length: 16,
+    ByteOrder.LittleEndian,
+    factor: 0.01  // Divide by 100
+);
+
+// Extract integer values (for enums, counters, etc.)
+var rotaryPos = (short)DbcSignalCodec.ExtractSignalInt(
+    data,
+    startBit: 0,
+    length: 4,
+    ByteOrder.LittleEndian
+);
+
+// Extract boolean (1-bit signals)
+var digitalState = DbcSignalCodec.ExtractSignalInt(
+    data,
+    startBit: 32,
+    length: 1,
+    ByteOrder.LittleEndian
+) != 0;
+```
+
+**Inserting Signals** (used in `Device.GetWriteMsgs()` methods):
+```csharp
+// Insert 16-bit value
+DbcSignalCodec.InsertSignal(
+    data,
+    value: 1234.5,
+    startBit: 0,
+    length: 16,
+    ByteOrder.LittleEndian,
     factor: 0.1,
     offset: 0
 );
 
-// Insert signal into payload
-DbcSignalCodec.InsertSignal(
-    payload,
-    value,
-    startBit: 0,
-    length: 16,
-    byteOrder: ByteOrder.LittleEndian,
-    factor: 0.1,
-    offset: 0
+// Insert boolean
+DbcSignalCodec.InsertBool(
+    data,
+    value: true,
+    startBit: 8,
+    ByteOrder.LittleEndian
 );
 ```
+
+**Benefits**:
+- Eliminates manual bit shifting and masking
+- Self-documenting (startBit and length are explicit)
+- Handles byte ordering consistently
+- Reduces parsing errors
+- Makes CAN message structure clear
+
+**Example**: CanboardDevice uses DbcSignalCodec for all three message types (ReadMessage0, ReadMessage1, ReadMessage2).
 
 ## Common Tasks
 
