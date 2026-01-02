@@ -53,6 +53,7 @@ builder.Services.AddSingleton<ConfigFileManager>();
 builder.Services.AddSingleton<DeviceManager>();
 builder.Services.AddSingleton<CanMsgLogger>();
 builder.Services.AddSingleton<SystemLogger>();
+builder.Services.AddSingleton<SimPlayback>();
 
 // Add background services
 builder.Services.AddHostedService<CommsDataPipeline>();

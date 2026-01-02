@@ -1,0 +1,91 @@
+@using application.Services
+@inject SimPlayback Playback
+@implements IDisposable
+
+<MudToolBar Dense="true" Class="mb-3">
+    <MudTooltip Text="Play">
+        <MudIconButton Icon="@Icons.Material.Outlined.PlayArrow"
+                       Color="Color.Default"
+                       Disabled="@IsPlayDisabled"
+                       OnClick="@HandlePlay" />
+    </MudTooltip>
+
+    <MudTooltip Text="Pause">
+        <MudIconButton Icon="@Icons.Material.Outlined.Pause"
+                       Color="Color.Default"
+                       Disabled="@IsPauseDisabled"
+                       OnClick="@HandlePause" />
+    </MudTooltip>
+
+    <MudTooltip Text="Reset">
+        <MudIconButton Icon="@Icons.Material.Outlined.ResetTv"
+                       Color="Color.Default"
+                       Disabled="@IsResetDisabled"
+                       OnClick="@HandleReset"/>
+    </MudTooltip>
+
+    <MudDivider Vertical="true" FlexItem="true" Class="mx-2" />
+
+    <MudSwitch @bind-Value="Playback.Loop"
+               Label="Loop"
+               Color="Color.Primary"/>
+
+    <MudDivider Vertical="true" FlexItem="true" Class="mx-2" />
+
+    <MudText Typo="Typo.body2" Color="Color.Secondary">
+        @GetStatusText()
+    </MudText>
+</MudToolBar>
+
+@code {
+    private System.Threading.Timer? _refreshTimer;
+
+    protected override void OnInitialized()
+    {
+        // Refresh UI at 10 Hz to show progress
+        _refreshTimer = new System.Threading.Timer(_ =>
+        {
+            InvokeAsync(StateHasChanged);
+        }, null, TimeSpan.FromMilliseconds(100), TimeSpan.FromMilliseconds(100));
+    }
+
+    private async Task HandlePlay()
+    {
+        await Playback.Play();
+    }
+
+    private async Task HandlePause()
+    {
+        await Playback.Pause();
+    }
+
+    private async Task HandleReset()
+    {
+        await Playback.Reset();
+    }
+
+    private bool IsPlayDisabled => string.IsNullOrEmpty(Playback.CurrentFileName) || Playback.State == PlaybackState.Playing;
+    private bool IsPauseDisabled => Playback.State != PlaybackState.Playing;
+    private bool IsResetDisabled => string.IsNullOrEmpty(Playback.CurrentFileName);
+
+    private string GetStatusText()
+    {
+        if (string.IsNullOrEmpty(Playback.CurrentFileName))
+            return "No file loaded";
+
+        var state = Playback.State switch
+        {
+            PlaybackState.Playing => "▶ Playing",
+            PlaybackState.Paused => "⏸ Paused",
+            PlaybackState.Stopped => "⏹ Stopped",
+            _ => "Ready"
+        };
+
+        return $"{state} | {Playback.CurrentMessageIndex}/{Playback.TotalMessages} | {Playback.CurrentTime:mm\\:ss\\.fff}";
+    }
+
+    public void Dispose()
+    {
+        _refreshTimer?.Dispose();
+    }
+}

@@ -1,8 +1,12 @@
 @using api.Services
+@using api.Components.Dialogs
+@using application.Services
 @using domain.Interfaces
 @using domain.Enums
 @inject ICommsAdapterManager CommsAdapterManager
 @inject NotificationService Notification
+@inject SimPlayback SimPlayback
+@inject IDialogService DialogService
 @rendermode InteractiveServer
 @implements IDisposable
 
@@ -131,6 +135,19 @@
                             <MudText Typo="Typo.caption">No ports detected</MudText>
                         }
                     </MudAlert>
+                }
+
+                @* Open Log File button for Sim adapter *@
+                @if (_selectedAdapterType == "Sim")
+                {
+                    <MudButton Variant="Variant.Outlined"
+                               Color="Color.Secondary"
+                               StartIcon="@Icons.Material.Filled.FolderOpen"
+                               OnClick="@OpenLogFile"
+                               FullWidth="true"
+                               Class="mb-3">
+                        Open Log File
+                    </MudButton>
                 }
 
                 <MudStack Row="true" Spacing="2">
@@ -338,6 +355,28 @@
             return $"Adapter: {_status.ActiveAdapter}";
         }
         return "Adapter: Disconnected";
+    }
+
+    private async Task OpenLogFile()
+    {
+        var parameters = new DialogParameters { };
+        var options = new DialogOptions { MaxWidth = MaxWidth.Large, FullWidth = true };
+
+        var dialog = await DialogService.ShowAsync<OpenCanLogDialog>("Open CAN Log", parameters, options);
+        var result = await dialog.Result;
+
+        if (!result.Canceled && result.Data is string filePath)
+        {
+            var (success, error) = await SimPlayback.LoadFile(filePath);
+            if (success)
+            {
+                Notification.NewSuccess($"Loaded {System.IO.Path.GetFileName(filePath)}");
+            }
+            else
+            {
+                Notification.NewError($"Failed to load file: {error}");
+            }
+        }
     }
 
     public void Dispose()

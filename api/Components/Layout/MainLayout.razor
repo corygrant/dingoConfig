@@ -1,6 +1,9 @@
 ﻿@using api.Services
+@using api.Components.Shared
+@using domain.Interfaces
 @using MudBlazor.Utilities
 @inherits LayoutComponentBase
+@implements IDisposable
 
 @* Required *@
 <MudThemeProvider IsDarkMode="true" Theme="_theme" />
@@ -25,6 +28,10 @@
                      OnSave="HandleSave"
                      OnSaveAs="HandleSaveAs" />
         <MudSpacer />
+        @if (_showSimPlayback)
+        {
+            <SimPlaybackToolbar />
+        }
         <AdapterToolbarControl />
         <MudIconButton Icon="@Icons.Material.Filled.Help"
                        Color="Color.Inherit"
@@ -51,8 +58,11 @@
     [Inject] private application.Services.ConfigFileManager FileManager { get; set; } = null!;
     [Inject] private application.Services.DeviceManager DeviceManager { get; set; } = null!;
     [Inject] private NotificationService Notification { get; set; } = null!;
+    [Inject] private ICommsAdapterManager AdapterManager { get; set; } = null!;
 
     private bool _drawerOpen = true;
+    private bool _showSimPlayback = false;
+    private System.Threading.Timer? _adapterStatusTimer;
 
     readonly MudTheme _theme = new MudTheme()
     {
@@ -65,6 +75,20 @@
             Info = MudColor.Parse("#00FFB3"),
         }
     };
+
+    protected override void OnInitialized()
+    {
+        // Poll adapter status to show/hide SimPlaybackToolbar
+        _adapterStatusTimer = new System.Threading.Timer(_ =>
+        {
+            InvokeAsync(() =>
+            {
+                var status = AdapterManager.GetStatus();
+                _showSimPlayback = status.isConnected && status.activeAdapter == "Sim";
+                StateHasChanged();
+            });
+        }, null, TimeSpan.FromMilliseconds(500), TimeSpan.FromMilliseconds(500));
+    }
 
     private void ToggleDrawer()
     {
@@ -130,5 +154,10 @@
         {
             Notification.NewError($"Error saving file: {fileName}", ex);
         }
+    }
+
+    public void Dispose()
+    {
+        _adapterStatusTimer?.Dispose();
     }
 }

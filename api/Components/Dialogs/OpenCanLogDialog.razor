@@ -1,0 +1,141 @@
+@using System.IO
+
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Filled.FolderOpen" Class="mr-2" />
+            Open CAN Log File
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudText Typo="Typo.caption" Class="mb-3">
+            Log Directory: @_logDirectory
+        </MudText>
+
+        @if (files == null || !files.Any())
+        {
+            <MudAlert Severity="Severity.Info" Dense="true">
+                No .csv log files found in the logs directory.
+            </MudAlert>
+        }
+        else
+        {
+            <MudList T="string" Dense="true">
+                @foreach (var file in files)
+                {
+                    var isSelected = selectedFile == file.FullName;
+                    <MudListItem T="string" OnClick="@(() => OnFileClick(file.FullName))"
+                                 Style="@(isSelected ? "background-color: var(--mud-palette-action-default-hover);" : "")">
+                        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                            <MudStack Spacing="0">
+                                <MudText Typo="Typo.body2">
+                                    <MudIcon Icon="@Icons.Material.Outlined.InsertDriveFile"
+                                             Size="Size.Small"
+                                             Class="mr-1"
+                                             Color="@(isSelected ? Color.Success : Color.Default)" />
+                                    @file.Name
+                                </MudText>
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                    Modified: @file.LastWriteTime.ToString("g")
+                                </MudText>
+                            </MudStack>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                @FormatFileSize(file.Length)
+                            </MudText>
+                        </MudStack>
+                    </MudListItem>
+                }
+            </MudList>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton Variant="Variant.Outlined" OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary"
+                   Variant="Variant.Outlined"
+                   OnClick="Submit"
+                   Disabled="@(string.IsNullOrEmpty(selectedFile))">
+            Open
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    IMudDialogInstance MudDialog { get; set; } = null!;
+
+    private readonly string _logDirectory = "./logs";
+    private List<FileInfo>? files;
+    private string? selectedFile;
+    private DateTime? lastClickTime;
+    private string? lastClickedFile;
+
+    protected override void OnInitialized()
+    {
+        LoadCsvFiles();
+    }
+
+    private void LoadCsvFiles()
+    {
+        try
+        {
+            if (!Directory.Exists(_logDirectory))
+            {
+                Directory.CreateDirectory(_logDirectory);
+            }
+
+            var directoryInfo = new DirectoryInfo(_logDirectory);
+            files = directoryInfo.GetFiles("*.csv")
+                .OrderByDescending(f => f.LastWriteTime)
+                .ToList();
+        }
+        catch
+        {
+            files = new List<FileInfo>();
+        }
+    }
+
+    private void OnFileClick(string filePath)
+    {
+        var now = DateTime.Now;
+
+        // Check for double-click (within 300ms)
+        if (lastClickedFile == filePath &&
+            lastClickTime.HasValue &&
+            (now - lastClickTime.Value).TotalMilliseconds < 300)
+        {
+            selectedFile = filePath;
+            Submit();
+            return;
+        }
+
+        lastClickedFile = filePath;
+        lastClickTime = now;
+        selectedFile = filePath;
+    }
+
+    private void Submit()
+    {
+        if (!string.IsNullOrEmpty(selectedFile))
+        {
+            MudDialog.Close(DialogResult.Ok(selectedFile));
+        }
+    }
+
+    private void Cancel()
+    {
+        MudDialog.Cancel();
+    }
+
+    private string FormatFileSize(long bytes)
+    {
+        string[] sizes = { "B", "KB", "MB", "GB" };
+        double len = bytes;
+        int order = 0;
+        while (len >= 1024 && order < sizes.Length - 1)
+        {
+            order++;
+            len = len / 1024;
+        }
+        return $"{len:0.##} {sizes[order]}";
+    }
+}
