@@ -192,18 +192,22 @@ Central service for device management and CAN communication coordination. Handle
 
 **Key Responsibilities**:
 - **Device Registry**: `Dictionary<Guid, IDevice>` - all devices keyed by Guid
-- **Request Queue**: `ConcurrentDictionary<(BaseId, Prefix, Index), DeviceCanFrame>` - pending messages
+- **Request Queue**: `ConcurrentDictionary<(BaseId, int Prefix, int Index), DeviceCanFrame>` - pending messages
+- **UI State Tracking**: `Dictionary<Guid, DeviceUiState>` - UI state per device (persists across navigation)
+- **Logger Factory**: Creates typed ILogger instances for each device
 - **Timeout Management**: 500ms timeout, max 20 retries
 - **Polymorphic Operations**: Calls interface methods uniformly (no type checking)
+- **Connection Tracking**: Detects device connection changes and sets NeedsRead flag
 
 **Key Methods**:
-- `AddDevice(string deviceType, string name, int baseId)`: Create and register device
+- `AddDevice(string deviceType, string name, int baseId)`: Create device with typed logger
 - `RemoveDevice(Guid id)`: Remove device from registry
-- `GetDevice(Guid id)` / `GetDevice<T>(Guid id)`: Retrieve devices
-- `GetAllDevices()`: Get all devices (for UI display)
+- `GetDevice(Guid id)` / `GetDevice<T>(Guid id)`: Retrieve devices, update connection state
+- `GetAllDevices()`: Get all devices, detect connections, update NeedsRead flags
+- `GetDeviceUiState(Guid id)`: Get/create UI state for device
 - `OnCanDataReceived(CanFrame frame)`: Route incoming CAN data to devices
 - `SetTransmitCallback(Action<CanFrame>)`: Connect to TX channel
-- Device operations: `UploadConfig()`, `DownloadConfig()`, `BurnSettings()`, `Sleep()`, `RequestVersion()`
+- Device operations: `ReadDeviceConfig()`, `WriteDeviceConfig()`, `BurnSettings()`, `RequestSleep()`, `RequestVersion()`
 
 **Request/Response Tracking**:
 - **Queue Key**: `(BaseId, Prefix, Index)` uniquely identifies pending messages
@@ -244,18 +248,28 @@ Manages configuration persistence to JSON files with type-safe device serializat
 - `SaveFile(string path)`: Save to JSON
 - `Initialize()`: Create working directory
 
-### 5. GlobalLogger (Application-Wide Logging)
+### 5. SystemLogger (Application-Wide Logging)
 
-**Location**: `application/Services/GlobalLogger.cs`
+**Location**: `application/Services/SystemLogger.cs`
 
-**NEW FEATURE** - Comprehensive logging system integrated with ASP.NET Core logging pipeline.
+Comprehensive logging system for both backend and frontend with event-based error notifications.
 
 **Features**:
 - **In-Memory Buffer**: 50,000 entries (drop-oldest policy)
 - **CSV File Output**: Optional, single file per session
 - **Log Levels**: Debug, Info, Warning, Error
 - **Filtering**: By level, source, and category
-- **UI Viewer**: `/global-log` page with MudDataGrid
+- **UI Viewer**: `/system-log` page with MudDataGrid
+- **Error Events**: `OnError` event fires for all Error-level logs
+
+**Event System**:
+```csharp
+// Fires when Error logs are recorded
+public event Action<LogEntry>? OnError;
+
+// Usage in NotificationService
+logger.OnError += HandleBackendError;
+```
 
 **Integration**:
 ```csharp
@@ -299,7 +313,37 @@ Notification.NewInfo("Processing...", logOnly: true); // Log without snackbar
 - All user-facing messages automatically logged
 - Consistent source ("UI") and category ("Notification") in logs
 
-### 7. CanMsgLogger (CAN Message Logging)
+**Backend Error Notifications**:
+NotificationService subscribes to `SystemLogger.OnError` event to automatically display backend errors in the snackbar:
+- Filters out "UI" source (prevents duplicates)
+- Shows errors from backend services (DeviceManager, CommsDataPipeline, etc.)
+- Formatted as: `[Source] Message`
+
+### 7. DeviceUiState (UI State Persistence)
+
+**Location**: `application/Models/DeviceUiState.cs`
+
+Tracks UI-related state for devices that persists across navigation (stored in DeviceManager).
+
+**Current Properties**:
+- `NeedsRead`: Triggers flashing Read button when device connects or is added
+
+**Usage**:
+```csharp
+// In DeviceManager
+GetDeviceUiState(deviceId).NeedsRead = true;  // Start flashing
+GetDeviceUiState(deviceId).NeedsRead = false; // Stop flashing
+
+// In UI component
+DeviceManager.GetDeviceUiState(Device.Guid).NeedsRead
+```
+
+**Design**:
+- Stored in `Dictionary<Guid, DeviceUiState>` in DeviceManager (singleton)
+- Survives component navigation/recreation
+- Extensible for future UI state (e.g., `NeedsWrite`, `HasUnsavedChanges`)
+
+### 8. CanMsgLogger (CAN Message Logging)
 
 **Location**: `application/Services/CanMsgLogger.cs`
 
@@ -487,6 +531,53 @@ protected override void OnInitialized()
 - Interface implemented with no-op methods
 - Placeholder for future implementation
 
+### Device Logging
+
+All devices receive typed `ILogger` instances via constructor injection:
+
+**PdmDevice**:
+```csharp
+protected readonly ILogger Logger;  // Non-generic for inheritance
+
+public PdmDevice(ILogger logger, string name, int baseId)
+{
+    Logger = logger;
+    // ... initialization
+}
+```
+
+**PdmMaxDevice**:
+```csharp
+public PdmMaxDevice(ILogger<PdmMaxDevice> logger, string name, int baseId)
+    : base(logger, name, baseId)
+{
+    // Typed logger passed to base
+}
+```
+
+**CanboardDevice**:
+```csharp
+private readonly ILogger<CanboardDevice> _logger;
+
+public CanboardDevice(ILogger<CanboardDevice> logger, string name, int baseId)
+{
+    _logger = logger;
+    // ... initialization
+}
+```
+
+**DeviceManager creates loggers**:
+```csharp
+// Uses ILoggerFactory to create typed loggers
+"pdm" => new PdmDevice(loggerFactory.CreateLogger<PdmDevice>(), name, baseId)
+```
+
+**Usage in devices**:
+```csharp
+Logger.LogInformation("{Name} FW version received: {Version}", Name, Version);
+Logger.LogError("{Name} ID: {BaseId}, Burn Failed", Name, BaseId);
+```
+
 ### Device Functions
 
 **Location**: `domain/Devices/dingoPdm/Functions/`
@@ -600,6 +691,32 @@ All device views follow this pattern:
 **Dialogs**: Use `IDialogService` for modals
 
 **File Operations**: Use `ConfigFileManager` with UI event handling
+
+### UI Features
+
+**Flashing Read Button**:
+Visual reminder to read device configuration after connection:
+- Orange flashing animation defined in `wwwroot/app.css` (`.flash-button`)
+- Triggered when:
+  - Device is added (`DeviceManager.AddDevice`)
+  - Device connects (`GetAllDevices` detects connection change)
+- Stopped when:
+  - User presses Read button (`ReadDeviceConfig`)
+- State persists across navigation (stored in `DeviceUiState`)
+
+```razor
+<!-- In BasePdmDeviceView.razor -->
+<MudButton Color="@(DeviceManager.GetDeviceUiState(Device.Guid).NeedsRead ? Color.Warning : Color.Default)"
+           Class="@(DeviceManager.GetDeviceUiState(Device.Guid).NeedsRead ? "flash-button" : "")"
+           OnClick="@OnReadDeviceAsync">
+    Read
+</MudButton>
+```
+
+**Global CSS Animations**:
+Located in `wwwroot/app.css`:
+- `.flash-button`: Orange pulsing animation (1.5s infinite)
+- `.card-disabled`: Grayed-out disabled cards
 
 ## Important Implementation Notes
 
