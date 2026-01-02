@@ -1,0 +1,188 @@
+@using api.Components.Devices.dingoPdm.Tabs
+@using domain.Devices.dingoPdm.Enums
+@using domain.Devices.dingoPdm
+@using application.Services
+@using api.Services
+@using domain.Enums
+@inject DeviceManager DeviceManager
+@inject NotificationService Notification
+@typeparam TDevice where TDevice : PdmDevice
+
+<MudContainer MaxWidth="MaxWidth.False"
+              Style="display: flex; flex-direction: column; height: calc(100vh - 100px); width: 100%; padding: 0;">
+    @* Device Control Buttons *@
+    <div class="pa-3">
+        <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center">
+            <MudButton Variant="Variant.Outlined"
+                       Color="@(DeviceManager.GetDeviceUiState(Device.Guid).NeedsRead && Device.Connected ? Color.Warning : Color.Default)"
+                       Size="Size.Small"
+                       StartIcon="@Icons.Material.Filled.Download"
+                       Disabled="@(!Device.Connected || !AdapterConnected)"
+                       OnClick="@OnReadDeviceAsync"
+                       Class="@(DeviceManager.GetDeviceUiState(Device.Guid).NeedsRead && Device.Connected ? "flash-button" : "")">
+                Read
+            </MudButton>
+            <MudButton Variant="Variant.Outlined"
+                       Color="Color.Default"
+                       Size="Size.Small"
+                       StartIcon="@Icons.Material.Filled.Upload"
+                       Disabled="@(!Device.Connected || !AdapterConnected)"
+                       OnClick="@OnWriteDeviceAsync">
+                Write
+            </MudButton>
+            <MudButton Variant="Variant.Outlined"
+                       Color="Color.Default"
+                       Size="Size.Small"
+                       StartIcon="@Icons.Material.Filled.Save"
+                       Disabled="@(!Device.Connected || !AdapterConnected)"
+                       OnClick="@OnBurnSettingsAsync">
+                Burn
+            </MudButton>
+            <MudButton Variant="Variant.Outlined"
+                       Color="Color.Default"
+                       Size="Size.Small"
+                       StartIcon="@Icons.Material.Filled.Bedtime"
+                       Disabled="@(!Device.Connected || !AdapterConnected)"
+                       OnClick="@OnSleepAsync">
+                Sleep
+            </MudButton>
+            <MudButton Variant="Variant.Outlined"
+                       Color="Color.Default"
+                       Size="Size.Small"
+                       StartIcon="@Icons.Material.Filled.WbSunny"
+                       Disabled="@(Device.Connected || !AdapterConnected)"
+                       OnClick="@OnWakeupAsync">
+                Wakeup
+            </MudButton>
+            <MudButton Variant="Variant.Outlined"
+                       Color="Color.Default"
+                       Size="Size.Small"
+                       StartIcon="@Icons.Material.Filled.DeveloperMode"
+                       Disabled="@(!Device.Connected || !AdapterConnected)"
+                       OnClick="@OnEnterBootloaderAsync">
+                Bootloader
+            </MudButton>
+            <MudSpacer/>
+            <MudChip T="string" Variant="Variant.Outlined"
+                     Color="@(Device.Connected ? Color.Success : Color.Error)" Size="Size.Small"
+            >
+                @(Device.Connected ? "Connected" : "Disconnected")
+            </MudChip>
+        </MudStack>
+        <MudDivider Class="my-2"/>
+    </div>
+
+    <MudTabs Elevation="2" Rounded="true" ApplyEffectsToContainer="true">
+        <MudTabPanel Text="Dashboard" Icon="@Icons.Material.Filled.Dashboard">
+            <DashboardTab TDevice="TDevice" Device="Device" />
+        </MudTabPanel>
+
+        <MudTabPanel Text="Configuration" Icon="@Icons.Material.Filled.Settings">
+            <ConfigurationTab TDevice="TDevice" Device="Device" />
+        </MudTabPanel>
+
+        <MudTabPanel Text="Plot" Icon="@Icons.Material.Filled.StackedLineChart">
+            <PlotTab />
+        </MudTabPanel>
+
+        <MudTabPanel Text="Flow" Icon="@Icons.Material.Filled.DataExploration">
+            <FlowTab />
+        </MudTabPanel>
+    </MudTabs>
+</MudContainer>
+
+@code {
+    [Parameter, EditorRequired] public TDevice Device { get; set; } = null!;
+
+    [Parameter, EditorRequired] public string DeviceName { get; set; } = null!;
+
+    [Parameter, EditorRequired] public bool AdapterConnected { get; set; }
+
+    // Device operation methods - Direct service calls (no HTTP)
+    private void OnReadDeviceAsync()
+    {
+        try
+        {
+            DeviceManager.ReadDeviceConfig(Device.Guid);
+            Notification.NewInfo($"Device read initiated: {DeviceName}");
+        }
+        catch (Exception ex)
+        {
+            Notification.NewError($"Error reading device: {DeviceName}", ex);
+        }
+    }
+
+    private void OnWriteDeviceAsync()
+    {
+        try
+        {
+            DeviceManager.WriteDeviceConfig(Device.Guid);
+            Notification.NewSuccess($"Device write initiated: {DeviceName}");
+        }
+        catch (Exception ex)
+        {
+            Notification.NewError($"Error writing device: {DeviceName}", ex);
+        }
+    }
+
+    private void OnBurnSettingsAsync()
+    {
+        try
+        {
+            if (DeviceManager.BurnSettings(Device.Guid))
+                Notification.NewSuccess($"Burn sent to device: {DeviceName}");
+            else
+                Notification.NewError($"Failed to send burn: {DeviceName}");
+        }
+        catch (Exception ex)
+        {
+            Notification.NewError($"Error sending burn: {DeviceName}", ex);
+        }
+    }
+
+    private void OnSleepAsync()
+    {
+        try
+        {
+            if (DeviceManager.RequestSleep(Device.Guid))
+                Notification.NewSuccess($"Sleep sent: {DeviceName}");
+            else
+                Notification.NewError($"Failed to send sleep: {DeviceName}");
+        }
+        catch (Exception ex)
+        {
+            Notification.NewError($"Error sending sleep: {DeviceName}", ex);
+        }
+    }
+
+    private void OnWakeupAsync()
+    {
+        try
+        {
+            if (DeviceManager.RequestWakeup(Device.Guid))
+                Notification.NewSuccess($"Wakeup command sent: {DeviceName}");
+            else
+                Notification.NewError($"Failed to send wakeup: {DeviceName}");
+        }
+        catch (Exception ex)
+        {
+            Notification.NewError($"Error sending wakeup: {DeviceName}", ex);
+        }
+    }
+
+    private void OnEnterBootloaderAsync()
+    {
+        try
+        {
+            if (DeviceManager.RequestBootloader(Device.Guid))
+                Notification.NewSuccess($"Bootloader command sent: {DeviceName}");
+            else
+                Notification.NewError($"Failed to send bootloader command: {DeviceName}");
+        }
+        catch (Exception ex)
+        {
+            Notification.NewError($"Error sending bootloader command: {DeviceName}", ex);
+        }
+    }
+
+}

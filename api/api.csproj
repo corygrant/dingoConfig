@@ -23,6 +23,21 @@
     <_ContentIncludedByDefault Remove="ClientApp\tsconfig.node.json" />
   </ItemGroup>
 
+  <ItemGroup>
+    <AdditionalFiles Include="Components\Devices\dingoPdm\Functions\CanInputCard.razor" />
+    <AdditionalFiles Include="Components\Devices\dingoPdm\Functions\CanInputDialog.razor" />
+    <AdditionalFiles Include="Components\Devices\dingoPdm\Functions\CanInputsGrid.razor" />
+    <AdditionalFiles Include="Components\Devices\dingoPdm\Functions\ConditionsGrid.razor" />
+    <AdditionalFiles Include="Components\Devices\dingoPdm\Functions\CountersGrid.razor" />
+    <AdditionalFiles Include="Components\Devices\dingoPdm\Functions\FlashersGrid.razor" />
+    <AdditionalFiles Include="Components\Devices\dingoPdm\Functions\InputsGrid.razor" />
+    <AdditionalFiles Include="Components\Devices\dingoPdm\Functions\OutputsGrid.razor" />
+    <AdditionalFiles Include="Components\Devices\dingoPdm\Functions\OutputsPwmGrid.razor" />
+    <AdditionalFiles Include="Components\Devices\dingoPdm\Functions\StarterDisableConfig.razor" />
+    <AdditionalFiles Include="Components\Devices\dingoPdm\Functions\VirtualInputsGrid.razor" />
+    <AdditionalFiles Include="Components\Devices\dingoPdm\Functions\WiperConfig.razor" />
+  </ItemGroup>
+
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <AssemblyName>dingoConfig</AssemblyName>
