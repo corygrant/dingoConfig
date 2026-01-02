@@ -1,2 +1,79 @@
-<MudIcon Size="Size.Large" Icon="@Icons.Custom.Uncategorized.Radioactive"/>
-<MudText Typo="Typo.h5">Under construction</MudText>
+@using domain.Devices.dingoPdm
+@using domain.Devices.dingoPdm.Enums
+@typeparam TDevice where TDevice : PdmDevice
+
+<div
+    style="overflow-y: auto; height: calc(100vh - 250px); padding: 24px; scrollbar-width: auto; scrollbar-color: #888 transparent;">
+    <MudText Typo="Typo.h4">Select data to plot</MudText>
+    <MudSelect T="VarMap" @bind-Value="@_selectedVarToAdd" Variant="Variant.Outlined" Dense="true">
+        @foreach (VarMap varMap in Enum.GetValues(typeof(VarMap)))
+        {
+            <MudSelectItem T="VarMap" Value="@varMap">@varMap</MudSelectItem>
+        }
+    </MudSelect>
+    <MudButton Variant="Variant.Outlined" OnClick="@OnAdd">Add</MudButton>
+
+    <MudDivider Vertical="false"/>
+
+    <MudGrid Justify="Justify.Center">
+        <MudItem Style="width: 100%">
+            <MudCard Elevation="4">
+                <MudCardHeader>
+                    <MudText Typo="Typo.h5" Align="Align.Center">Current</MudText>
+                </MudCardHeader>
+                <MudCardContent>
+                    <MudChart LegendPosition="Position.Right" ChartType="ChartType.Line" ChartOptions="_options"
+                              ChartSeries="_currentSeries" CanHideSeries Width="100%" Height="400px"/>
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+
+        <MudItem Style="width: 100%">
+            <MudCard Elevation="4">
+                <MudCardHeader>
+                    <MudText Typo="Typo.h5">State</MudText>
+                </MudCardHeader>
+                <MudCardContent>
+                    <MudChart LegendPosition="Position.Right" ChartType="ChartType.Line" ChartOptions="_options"
+                              ChartSeries="_stateSeries" CanHideSeries Width="100%" Height="100%"/>
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+
+        <MudItem Style="width: 100%">
+            <MudCard Elevation="4">
+                <MudCardHeader>
+                    <MudText Typo="Typo.h5">Battery</MudText>
+                </MudCardHeader>
+                <MudCardContent>
+                    <MudChart LegendPosition="Position.Right" ChartType="ChartType.Line" ChartOptions="_options"
+                              ChartSeries="_batterySeries" CanHideSeries Width="100%" Height="100%"/>
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+    </MudGrid>
+</div>
+
+@code
+{
+    [Parameter, EditorRequired] public TDevice Device { get; set; } = null!;
+
+    private readonly List<ChartSeries> _currentSeries = [];
+    private readonly List<ChartSeries> _stateSeries = [];
+    private readonly List<ChartSeries> _batterySeries = [];
+    private readonly ChartOptions _options = new();
+
+    private VarMap _selectedVarToAdd;
+
+    protected override void OnInitialized()
+    {
+        _options.InterpolationOption = InterpolationOption.Straight;
+        _options.YAxisFormat = "F2";
+    }
+
+    private void OnAdd(MouseEventArgs obj)
+    {
+        //Add selected var to background plotting service
+        //Don't plot in UI as it will be too slow
+    }
+}
