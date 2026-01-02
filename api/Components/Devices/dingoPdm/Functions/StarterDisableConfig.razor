@@ -3,77 +3,69 @@
 
 <MudCard Outlined="true" Class="mb-2">
     <MudCardContent>
-        <MudGrid>
-            <MudItem xs="12" md="6">
-                <MudTextField @bind-Value="StarterDisable.Name"
-                              Label="Name"
-                              Variant="Variant.Outlined" />
-            </MudItem>
-            <MudItem xs="12" md="6">
-                <MudSwitch @bind-Value="StarterDisable.Enabled"
-                           Label="Enabled"
-                           Color="Color.Primary" />
-            </MudItem>
-            <MudItem xs="12" md="12">
-                <MudSelect @bind-Value="StarterDisable.Input"
-                           Label="Input Source"
-                           Variant="Variant.Outlined"
-                           T="VarMap">
-                    @foreach (VarMap varMap in Enum.GetValues(typeof(VarMap)))
-                    {
-                        <MudSelectItem Value="@varMap">@varMap</MudSelectItem>
-                    }
-                </MudSelect>
+        <MudGrid Spacing="5">
+            <MudItem>
+                <MudCard Elevation="4" Style="width: 250px; height: 100%">
+                    <MudCardHeader>
+                        <MudText Typo="Typo.h6" Class="mt-2">Enable</MudText>
+                    </MudCardHeader>
+                    <MudCardContent>
+                        <MudTextField @bind-Value="StarterDisable.Name"
+                                      Label="Name"
+                                      Variant="Variant.Outlined"/>
+                        <MudSwitch @bind-Value="StarterDisable.Enabled"
+                                   Label="Enabled"
+                                   Color="Color.Primary"/>
+                        <MudSelect @bind-Value="StarterDisable.Input"
+                                   Label="Input Source"
+                                   Variant="Variant.Outlined"
+                                   T="VarMap">
+                            @foreach (VarMap varMap in Enum.GetValues(typeof(VarMap)))
+                            {
+                                <MudSelectItem Value="@varMap">@varMap</MudSelectItem>
+                            }
+                        </MudSelect>
+                    </MudCardContent>
+                </MudCard>
             </MudItem>
 
-            <MudItem xs="12">
-                <MudText Typo="Typo.h6" Class="mt-2">Output Disable Mask</MudText>
-            </MudItem>
-            <MudItem xs="6" md="3">
-                <MudSwitch @bind-Value="StarterDisable.Output1"
-                           Label="Output 1"
-                           Color="Color.Primary" />
-            </MudItem>
-            <MudItem xs="6" md="3">
-                <MudSwitch @bind-Value="StarterDisable.Output2"
-                           Label="Output 2"
-                           Color="Color.Primary" />
-            </MudItem>
-            <MudItem xs="6" md="3">
-                <MudSwitch @bind-Value="StarterDisable.Output3"
-                           Label="Output 3"
-                           Color="Color.Primary" />
-            </MudItem>
-            <MudItem xs="6" md="3">
-                <MudSwitch @bind-Value="StarterDisable.Output4"
-                           Label="Output 4"
-                           Color="Color.Primary" />
-            </MudItem>
-            <MudItem xs="6" md="3">
-                <MudSwitch @bind-Value="StarterDisable.Output5"
-                           Label="Output 5"
-                           Color="Color.Primary" />
-            </MudItem>
-            <MudItem xs="6" md="3">
-                <MudSwitch @bind-Value="StarterDisable.Output6"
-                           Label="Output 6"
-                           Color="Color.Primary" />
-            </MudItem>
-            <MudItem xs="6" md="3">
-                <MudSwitch @bind-Value="StarterDisable.Output7"
-                           Label="Output 7"
-                           Color="Color.Primary" />
-            </MudItem>
-            <MudItem xs="6" md="3">
-                <MudSwitch @bind-Value="StarterDisable.Output8"
-                           Label="Output 8"
-                           Color="Color.Primary" />
+            <MudItem>
+                <MudCard Elevation="4" Style="width: 250px; height: 100%">
+                    <MudCardHeader>
+                        <MudText Typo="Typo.h6" Class="mt-2">Disable</MudText>
+                    </MudCardHeader>
+                    <MudCardContent>
+                        <MudSwitch @bind-Value="StarterDisable.Output1"
+                                   Label="Output 1"
+                                   Color="Color.Primary"/>
+                        <MudSwitch @bind-Value="StarterDisable.Output2"
+                                   Label="Output 2"
+                                   Color="Color.Primary"/>
+                        <MudSwitch @bind-Value="StarterDisable.Output3"
+                                   Label="Output 3"
+                                   Color="Color.Primary"/>
+                        <MudSwitch @bind-Value="StarterDisable.Output4"
+                                   Label="Output 4"
+                                   Color="Color.Primary"/>
+                        <MudSwitch @bind-Value="StarterDisable.Output5"
+                                   Label="Output 5"
+                                   Color="Color.Primary"/>
+                        <MudSwitch @bind-Value="StarterDisable.Output6"
+                                   Label="Output 6"
+                                   Color="Color.Primary"/>
+                        <MudSwitch @bind-Value="StarterDisable.Output7"
+                                   Label="Output 7"
+                                   Color="Color.Primary"/>
+                        <MudSwitch @bind-Value="StarterDisable.Output8"
+                                   Label="Output 8"
+                                   Color="Color.Primary"/>
+                    </MudCardContent>
+                </MudCard>
             </MudItem>
         </MudGrid>
     </MudCardContent>
 </MudCard>
 
 @code {
-    [Parameter, EditorRequired]
-    public StarterDisable StarterDisable { get; set; } = null!;
+    [Parameter, EditorRequired] public StarterDisable StarterDisable { get; set; } = null!;
 }
