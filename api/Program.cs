@@ -54,6 +54,7 @@ builder.Services.AddSingleton<DeviceManager>();
 builder.Services.AddSingleton<CanMsgLogger>();
 builder.Services.AddSingleton<SystemLogger>();
 builder.Services.AddSingleton<SimPlayback>();
+builder.Services.AddSingleton<DevicePlotService>();
 
 // Add background services
 builder.Services.AddHostedService<CommsDataPipeline>();

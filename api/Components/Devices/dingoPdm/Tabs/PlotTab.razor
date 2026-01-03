@@ -1,79 +1,371 @@
 @using domain.Devices.dingoPdm
-@using domain.Devices.dingoPdm.Enums
+@using application.Services
+@using application.Models
+@using Plotly.Blazor
+@using Plotly.Blazor.Traces
+@using Plotly.Blazor.Traces.ScatterLib
+@using Plotly.Blazor.LayoutLib
+@using Plotly.Blazor.LayoutLib.XAxisLib
+@using Plotly.Blazor.LayoutLib.YAxisLib
 @typeparam TDevice where TDevice : PdmDevice
+@inject DevicePlotService PlotService
+@inject DeviceManager DeviceManager
+@implements IDisposable
 
-<div
-    style="overflow-y: auto; height: calc(100vh - 250px); padding: 24px; scrollbar-width: auto; scrollbar-color: #888 transparent;">
-    <MudText Typo="Typo.h4">Select data to plot</MudText>
-    <MudSelect T="VarMap" @bind-Value="@_selectedVarToAdd" Variant="Variant.Outlined" Dense="true">
-        @foreach (VarMap varMap in Enum.GetValues(typeof(VarMap)))
-        {
-            <MudSelectItem T="VarMap" Value="@varMap">@varMap</MudSelectItem>
-        }
-    </MudSelect>
-    <MudButton Variant="Variant.Outlined" OnClick="@OnAdd">Add</MudButton>
+<div style="overflow-y: auto; height: calc(100vh - 250px); padding: 24px; scrollbar-width: auto; scrollbar-color: #888 transparent;">
 
-    <MudDivider Vertical="false"/>
+    <!-- Controls Section -->
+    <MudPaper Class="pa-4 mb-4">
+        <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center">
+            <!-- Recording Controls -->
+            <MudButton Color="Color.Success"
+                       Variant="Variant.Outlined"
+                       StartIcon="@Icons.Material.Filled.FiberManualRecord"
+                       OnClick="StartRecording"
+                       Disabled="@(_recordingState == RecordingState.Recording)">
+                Record
+            </MudButton>
+            <MudButton Color="Color.Warning"
+                       Variant="Variant.Outlined"
+                       StartIcon="@Icons.Material.Filled.Pause"
+                       OnClick="PauseRecording"
+                       Disabled="@(_recordingState != RecordingState.Recording)">
+                Pause
+            </MudButton>
+            <MudButton Color="Color.Error"
+                       Variant="Variant.Outlined"
+                       StartIcon="@Icons.Material.Filled.Stop"
+                       OnClick="StopRecording"
+                       Disabled="@(_recordingState == RecordingState.Stopped)">
+                Stop
+            </MudButton>
 
-    <MudGrid Justify="Justify.Center">
-        <MudItem Style="width: 100%">
-            <MudCard Elevation="4">
-                <MudCardHeader>
-                    <MudText Typo="Typo.h5" Align="Align.Center">Current</MudText>
-                </MudCardHeader>
-                <MudCardContent>
-                    <MudChart LegendPosition="Position.Right" ChartType="ChartType.Line" ChartOptions="_options"
-                              ChartSeries="_currentSeries" CanHideSeries Width="100%" Height="400px"/>
-                </MudCardContent>
-            </MudCard>
-        </MudItem>
+            <MudDivider Vertical="true" FlexItem="true" />
 
-        <MudItem Style="width: 100%">
-            <MudCard Elevation="4">
-                <MudCardHeader>
-                    <MudText Typo="Typo.h5">State</MudText>
-                </MudCardHeader>
-                <MudCardContent>
-                    <MudChart LegendPosition="Position.Right" ChartType="ChartType.Line" ChartOptions="_options"
-                              ChartSeries="_stateSeries" CanHideSeries Width="100%" Height="100%"/>
-                </MudCardContent>
-            </MudCard>
-        </MudItem>
+            <!-- Signal Selection -->
+            <MudSelect T="SignalSource"
+                       @bind-Value="_selectedSource"
+                       Label="Source"
+                       Variant="Variant.Outlined"
+                       Dense="true"
+                       Style="min-width: 150px">
+                <MudSelectItem Value="SignalSource.Output">Outputs</MudSelectItem>
+                <MudSelectItem Value="SignalSource.Input">Inputs</MudSelectItem>
+                <MudSelectItem Value="SignalSource.CanInput">CAN Inputs</MudSelectItem>
+                <MudSelectItem Value="SignalSource.VirtualInput">Virtual Inputs</MudSelectItem>
+                <MudSelectItem Value="SignalSource.Counter">Counters</MudSelectItem>
+                <MudSelectItem Value="SignalSource.Condition">Conditions</MudSelectItem>
+                <MudSelectItem Value="SignalSource.Flasher">Flashers</MudSelectItem>
+                <MudSelectItem Value="SignalSource.DeviceProperty">Device Properties</MudSelectItem>
+            </MudSelect>
 
-        <MudItem Style="width: 100%">
-            <MudCard Elevation="4">
-                <MudCardHeader>
-                    <MudText Typo="Typo.h5">Battery</MudText>
-                </MudCardHeader>
-                <MudCardContent>
-                    <MudChart LegendPosition="Position.Right" ChartType="ChartType.Line" ChartOptions="_options"
-                              ChartSeries="_batterySeries" CanHideSeries Width="100%" Height="100%"/>
-                </MudCardContent>
-            </MudCard>
-        </MudItem>
-    </MudGrid>
+            <!-- Index selector (dynamic count from device) -->
+            @if (_selectedSource != SignalSource.DeviceProperty)
+            {
+                <MudSelect T="int"
+                           @bind-Value="_selectedIndex"
+                           Label="Index"
+                           Variant="Variant.Outlined"
+                           Dense="true"
+                           Style="min-width: 100px">
+                    @for (int i = 0; i < GetCollectionCount(_selectedSource); i++)
+                    {
+                        <MudSelectItem Value="i">@(i + 1)</MudSelectItem>
+                    }
+                </MudSelect>
+            }
+
+            <!-- Property selector (filtered by source) -->
+            <MudSelect T="SignalProperty"
+                       @bind-Value="_selectedProperty"
+                       Label="Property"
+                       Variant="Variant.Outlined"
+                       Dense="true"
+                       Style="min-width: 150px">
+                @foreach (var prop in GetAvailableProperties(_selectedSource))
+                {
+                    <MudSelectItem Value="prop">@prop</MudSelectItem>
+                }
+            </MudSelect>
+
+            <MudButton Color="Color.Primary"
+                       Variant="Variant.Outlined"
+                       StartIcon="@Icons.Material.Filled.Add"
+                       OnClick="AddSignal">
+                Add Signal
+            </MudButton>
+        </MudStack>
+    </MudPaper>
+
+    <!-- Active Signals -->
+    @if (_activeSignals.Any())
+    {
+        <MudPaper Class="pa-4 mb-4">
+            <MudText Typo="Typo.h6" Class="mb-2">Active Signals</MudText>
+            <MudChipSet T="PlotSignalDescriptor">
+                @foreach (var descriptor in _activeSignals)
+                {
+                    var color = PlotService.GetSignalColor(Device.Guid, descriptor);
+                    <MudChip Text="@descriptor.GetDisplayName()"
+                             Color="Color.Primary"
+                             Style="@($"background-color: {color}; color: white;")"
+                             OnClose="@CreateRemoveCallback(descriptor)" />
+                }
+            </MudChipSet>
+        </MudPaper>
+    }
+
+    <!-- Chart Section -->
+    @if (_activeSignals.Any())
+    {
+        <MudPaper Class="pa-4">
+            <PlotlyChart @bind-Config="_config"
+                         @bind-Layout="_layout"
+                         @bind-Data="_data"
+                         @ref="_chart"
+                         Style="height: 500px; width: 100%;" />
+        </MudPaper>
+    }
+    else
+    {
+        <MudPaper Class="pa-4">
+            <MudText Typo="Typo.body1" Align="Align.Center" Color="Color.Secondary">
+                Add signals above to start plotting. Click Record to begin data collection.
+            </MudText>
+        </MudPaper>
+    }
 </div>
 
-@code
-{
+@code {
     [Parameter, EditorRequired] public TDevice Device { get; set; } = null!;
+    
+    private PlotlyChart? _chart;
+    private Config _config = new Config();
+    private Layout _layout = new Layout();
+    private IList<ITrace> _data = new List<ITrace>();
+    private Timer? _refreshTimer;
 
-    private readonly List<ChartSeries> _currentSeries = [];
-    private readonly List<ChartSeries> _stateSeries = [];
-    private readonly List<ChartSeries> _batterySeries = [];
-    private readonly ChartOptions _options = new();
+    private RecordingState _recordingState = RecordingState.Stopped;
+    private List<PlotSignalDescriptor> _activeSignals = new();
 
-    private VarMap _selectedVarToAdd;
+    // Selection state
+    private SignalSource _selectedSource = SignalSource.Output;
+    private int _selectedIndex = 0;
+    private SignalProperty _selectedProperty = SignalProperty.Current;
+
+    // Track data point counts per trace to use ExtendTrace
+    private Dictionary<string, int> _traceSampleCounts = new();
 
     protected override void OnInitialized()
     {
-        _options.InterpolationOption = InterpolationOption.Straight;
-        _options.YAxisFormat = "F2";
+        // Get MudBlazor default theme for styling
+        var theme = new MudBlazor.MudTheme();
+        var palette = theme.PaletteDark;
+
+        // Configure Plotly layout
+        _layout.Title = new Plotly.Blazor.LayoutLib.Title { Text = $"{Device.Name} Plot" };
+        _layout.XAxis = new List<XAxis>
+        {
+            new XAxis { Title = new Plotly.Blazor.LayoutLib.XAxisLib.Title { Text = "Time" } }
+        };
+        _layout.YAxis = new List<YAxis>
+        {
+            new YAxis
+            {
+                Title = new Plotly.Blazor.LayoutLib.YAxisLib.Title { Text = "Value" },
+                AutoRange = Plotly.Blazor.LayoutLib.YAxisLib.AutoRangeEnum.True
+            }
+        };
+
+        _layout.PaperBgColor = palette.Surface.ToString();
+        _layout.PlotBgColor = palette.Surface.ToString();
+        _layout.Font = new Font
+        {
+            Color = palette.TextPrimary.ToString()
+        };
+
+        // Load existing active signals and recording state
+        _activeSignals = PlotService.GetActiveSignals(Device.Guid);
+        _recordingState = PlotService.GetRecordingState(Device.Guid);
+
+        // Initialize traces for existing signals
+        foreach (var signal in _activeSignals)
+        {
+            AddTraceForSignal(signal, initialLoad: true);
+        }
+
+        // Start 20 Hz UI refresh timer
+        _refreshTimer = new Timer(_ =>
+        {
+            InvokeAsync(() =>
+            {
+                RefreshChart();
+                StateHasChanged();
+            });
+        }, null, TimeSpan.FromMilliseconds(50), TimeSpan.FromMilliseconds(50));
     }
 
-    private void OnAdd(MouseEventArgs obj)
+    private async void RefreshChart()
     {
-        //Add selected var to background plotting service
-        //Don't plot in UI as it will be too slow
+        if (_chart == null || !_activeSignals.Any())
+            return;
+
+        // Update recording state
+        _recordingState = PlotService.GetRecordingState(Device.Guid);
+
+        // Update each trace with new data
+        foreach (var descriptor in _activeSignals)
+        {
+            var plotData = PlotService.GetPlotData(Device.Guid, descriptor);
+
+            // Get new data points since last update
+            var previousCount = _traceSampleCounts.GetValueOrDefault(descriptor.Key, 0);
+            var newPoints = plotData.Skip(previousCount).ToList();
+
+            if (newPoints.Any())
+            {
+                // Find trace index
+                var traceIndex = _activeSignals.IndexOf(descriptor);
+
+                // Prepare X and Y data
+                var xData = newPoints.Select(p => (object)p.Timestamp.ToString("HH:mm:ss.fff")).ToList();
+                var yData = newPoints.Select(p => (object)p.Value).ToList();
+
+                // Extend trace with new data
+                await _chart.ExtendTrace(xData, yData, traceIndex);
+
+                // Update sample count
+                _traceSampleCounts[descriptor.Key] = plotData.Count;
+            }
+        }
+    }
+
+    private void StartRecording()
+    {
+        PlotService.StartRecording(Device.Guid);
+        _recordingState = RecordingState.Recording;
+    }
+
+    private void PauseRecording()
+    {
+        PlotService.PauseRecording(Device.Guid);
+        _recordingState = RecordingState.Paused;
+    }
+
+    private void StopRecording()
+    {
+        PlotService.StopRecording(Device.Guid);
+        _recordingState = RecordingState.Stopped;
+
+        // Clear chart
+        _data.Clear();
+        _traceSampleCounts.Clear();
+    }
+
+    private void AddSignal()
+    {
+        var descriptor = new PlotSignalDescriptor
+        {
+            Source = _selectedSource,
+            Index = _selectedSource != SignalSource.DeviceProperty ? _selectedIndex : null,
+            Property = _selectedProperty
+        };
+
+        PlotService.AddSignal(Device.Guid, descriptor);
+        _activeSignals = PlotService.GetActiveSignals(Device.Guid);
+
+        // Add trace to chart
+        AddTraceForSignal(descriptor, initialLoad: false);
+    }
+
+    private void RemoveSignal(PlotSignalDescriptor descriptor)
+    {
+        PlotService.RemoveSignal(Device.Guid, descriptor);
+        _activeSignals = PlotService.GetActiveSignals(Device.Guid);
+
+        // Remove trace from chart
+        var traceIndex = _activeSignals.IndexOf(descriptor);
+        if (traceIndex >= 0 && traceIndex < _data.Count)
+        {
+            _data.RemoveAt(traceIndex);
+        }
+
+        _traceSampleCounts.Remove(descriptor.Key);
+    }
+
+    private EventCallback<MudBlazor.MudChip<PlotSignalDescriptor>> CreateRemoveCallback(PlotSignalDescriptor descriptor)
+    {
+        return EventCallback.Factory.Create<MudBlazor.MudChip<PlotSignalDescriptor>>(this, chip => RemoveSignal(descriptor));
+    }
+
+    private void AddTraceForSignal(PlotSignalDescriptor descriptor, bool initialLoad)
+    {
+        var color = PlotService.GetSignalColor(Device.Guid, descriptor) ?? "#2196F3";
+
+        var plotData = PlotService.GetPlotData(Device.Guid, descriptor);
+
+        var scatter = new Scatter
+        {
+            Name = descriptor.GetDisplayName(),
+            Mode = ModeFlag.Lines,
+            X = initialLoad ? plotData.Select(p => (object)p.Timestamp.ToString("HH:mm:ss.fff")).ToList() : new List<object>(),
+            Y = initialLoad ? plotData.Select(p => (object)p.Value).ToList() : new List<object>(),
+            Line = new Line { Color = color }
+        };
+
+        _data.Add(scatter);
+        _traceSampleCounts[descriptor.Key] = plotData.Count;
+    }
+
+    private int GetCollectionCount(SignalSource source)
+    {
+        return source switch
+        {
+            SignalSource.Output => Device.Outputs.Count,
+            SignalSource.Input => Device.Inputs.Count,
+            SignalSource.CanInput => Device.CanInputs.Count,
+            SignalSource.VirtualInput => Device.VirtualInputs.Count,
+            SignalSource.Counter => Device.Counters.Count,
+            SignalSource.Condition => Device.Conditions.Count,
+            SignalSource.Flasher => Device.Flashers.Count,
+            SignalSource.Wiper => 2, // Slow and Fast
+            _ => 0
+        };
+    }
+
+    private List<SignalProperty> GetAvailableProperties(SignalSource source)
+    {
+        return source switch
+        {
+            SignalSource.Output => new List<SignalProperty>
+            {
+                SignalProperty.State,
+                SignalProperty.Current,
+                SignalProperty.DutyCycle
+            },
+            SignalSource.Input => new List<SignalProperty> { SignalProperty.State },
+            SignalSource.CanInput => new List<SignalProperty>
+            {
+                SignalProperty.State,
+                SignalProperty.Value
+            },
+            SignalSource.VirtualInput => new List<SignalProperty> { SignalProperty.State },
+            SignalSource.Counter => new List<SignalProperty> { SignalProperty.Value },
+            SignalSource.Condition => new List<SignalProperty> { SignalProperty.State },
+            SignalSource.Flasher => new List<SignalProperty> { SignalProperty.State },
+            SignalSource.Wiper => new List<SignalProperty> { SignalProperty.State },
+            SignalSource.DeviceProperty => new List<SignalProperty>
+            {
+                SignalProperty.BatteryVoltage,
+                SignalProperty.TotalCurrent,
+                SignalProperty.BoardTemperature
+            },
+            _ => new List<SignalProperty>()
+        };
+    }
+
+    public void Dispose()
+    {
+        _refreshTimer?.Dispose();
     }
 }
