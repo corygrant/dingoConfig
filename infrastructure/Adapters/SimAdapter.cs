@@ -28,6 +28,7 @@ public class SimAdapter(SimPlayback playback) : ICommsAdapter
     public Task<bool> StopAsync()
     {
         playback.MessageReady -= OnMessageReady;
+        playback.Clear();
         IsConnected = false;
         return Task.FromResult(true);
     }

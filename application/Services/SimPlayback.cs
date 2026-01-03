@@ -70,22 +70,17 @@ public class SimPlayback(ILogger<SimPlayback> logger)
                         ? DataDirection.Rx
                         : DataDirection.Tx;
 
-                    // Parse CAN ID (hex or decimal)
+                    // Parse CAN ID (always hex)
                     var canIdStr = parts[2].Trim();
-                    var canId = canIdStr.StartsWith("0x", StringComparison.OrdinalIgnoreCase)
-                        ? Convert.ToInt32(canIdStr, 16)
-                        : int.Parse(canIdStr);
+                    var canId = Convert.ToInt32(canIdStr, 16);
 
                     // Parse length
                     var length = byte.Parse(parts[3].Trim());
 
-                    // Parse data bytes
+                    // Parse data bytes (always hex)
                     var dataStr = parts[4].Trim();
                     var dataBytes = dataStr.Split(' ', StringSplitOptions.RemoveEmptyEntries)
-                        .Select(b => b.StartsWith("0x", StringComparison.OrdinalIgnoreCase)
-                            ? Convert.ToByte(b, 16)
-                            : byte.Parse(b))
-                        .ToArray();
+                        .Select(b => Convert.ToByte(b, 16)).ToArray();
 
                     // Ensure we have exactly 'length' bytes
                     if (dataBytes.Length < length)
@@ -110,9 +105,9 @@ public class SimPlayback(ILogger<SimPlayback> logger)
                         Direction = direction
                     });
                 }
-                catch (Exception ex)
+                catch
                 {
-                    logger.LogWarning("Skipping invalid line {LineNumber}: {Error}", i + 1, ex.Message);
+                    //logger.LogWarning("Skipping invalid line {LineNumber}: {Error}", i + 1, ex.Message);
                 }
             }
 
@@ -254,6 +249,23 @@ public class SimPlayback(ILogger<SimPlayback> logger)
                 State = PlaybackState.Stopped;
             }
         }
+    }
+
+    public Task Clear()
+    {
+        lock (_stateLock)
+        {
+            _playCts?.Cancel();
+            CurrentMessageIndex = 0;
+            CurrentTime = TimeSpan.Zero;
+            State = PlaybackState.Idle;
+            
+            _messages.Clear();
+        }
+        
+        logger.LogInformation("Playback cleared");
+
+        return Task.CompletedTask;
     }
 
     private class PlaybackMessage

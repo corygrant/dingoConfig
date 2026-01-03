@@ -108,13 +108,10 @@ public class CanMsgLogger(int maxHistorySize = 100000, string logDirectory = "./
     {
         if (_logWriter == null || entry.Payload == null) return;
 
-        var idStr = IdFormat == NumberFormat.Hex
-            ? $"0x{entry.Id:X}"
-            : entry.Id.ToString();
+        //Always write ID and payload as hex to make parsing easier later
+        var idStr = $"0x{entry.Id:X}";
 
-        var dataStr = PayloadFormat == NumberFormat.Hex
-            ? BitConverter.ToString(entry.Payload).Replace("-", " ")
-            : string.Join(" ", entry.Payload);
+        var dataStr = BitConverter.ToString(entry.Payload).Replace("-", " ");
 
         _logWriter.WriteLine(
             $"{entry.Timestamp:yyyy-MM-dd HH:mm:ss.fff}," +
