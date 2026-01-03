@@ -105,9 +105,11 @@ public class SimPlayback(ILogger<SimPlayback> logger)
                         Direction = direction
                     });
                 }
-                catch
+                catch (Exception ex)
                 {
-                    //logger.LogWarning("Skipping invalid line {LineNumber}: {Error}", i + 1, ex.Message);
+                    logger.LogError("Cancelling file read, invalid line {LineNumber}: {Error}", i + 1, ex.Message);
+                    //Don't keep reading if there is a bad line, logs will be flooded
+                    break;
                 }
             }
 
