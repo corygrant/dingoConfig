@@ -1,0 +1,155 @@
+name: Build and Publish Release
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  check-version:
+    name: Check Version and Create Release
+    runs-on: ubuntu-latest
+    outputs:
+      version_changed: ${{ steps.check_version.outputs.changed }}
+      version: ${{ steps.check_version.outputs.version }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Fetch all history and tags
+
+      - name: Check if version release exists
+        id: check_version
+        run: |
+          # Extract current version from api.csproj
+          CURRENT_VERSION=$(grep -oP '(?<=<Version>)[^<]+' api/api.csproj)
+          echo "Current version: $CURRENT_VERSION"
+
+          # Check if a tag with this version already exists
+          if git rev-parse "v$CURRENT_VERSION" >/dev/null 2>&1; then
+            echo "Release tag v$CURRENT_VERSION already exists"
+            echo "changed=false" >> $GITHUB_OUTPUT
+          else
+            echo "Release tag v$CURRENT_VERSION does not exist - will create new release"
+            echo "changed=true" >> $GITHUB_OUTPUT
+            echo "version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create Release
+        if: steps.check_version.outputs.changed == 'true'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.check_version.outputs.version }}
+          name: v${{ steps.check_version.outputs.version }}
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  build:
+    name: Build Release Assets
+    needs: check-version
+    if: needs.check-version.outputs.version_changed == 'true'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Create output directory
+        run: mkdir -p publish/dingoConfig-${{ needs.check-version.outputs.version }}
+
+      - name: Build Windows x64
+        run: |
+          dotnet publish api/api.csproj \
+            -c Release \
+            -r win-x64 \
+            --self-contained true \
+            -p:PublishSingleFile=true \
+            -p:IncludeNativeLibrariesForSelfExtract=true \
+            -o publish/dingoConfig-${{ needs.check-version.outputs.version }}/win-x64
+
+      - name: Build Windows ARM64
+        run: |
+          dotnet publish api/api.csproj \
+            -c Release \
+            -r win-arm64 \
+            --self-contained true \
+            -p:PublishSingleFile=true \
+            -p:IncludeNativeLibrariesForSelfExtract=true \
+            -o publish/dingoConfig-${{ needs.check-version.outputs.version }}/win-arm64
+
+      - name: Build Linux x64
+        run: |
+          dotnet publish api/api.csproj \
+            -c Release \
+            -r linux-x64 \
+            --self-contained true \
+            -p:PublishSingleFile=true \
+            -p:IncludeNativeLibrariesForSelfExtract=true \
+            -o publish/dingoConfig-${{ needs.check-version.outputs.version }}/linux-x64
+
+      - name: Build Linux ARM64
+        run: |
+          dotnet publish api/api.csproj \
+            -c Release \
+            -r linux-arm64 \
+            --self-contained true \
+            -p:PublishSingleFile=true \
+            -p:IncludeNativeLibrariesForSelfExtract=true \
+            -o publish/dingoConfig-${{ needs.check-version.outputs.version }}/linux-arm64
+
+      - name: Build macOS x64
+        run: |
+          dotnet publish api/api.csproj \
+            -c Release \
+            -r osx-x64 \
+            --self-contained true \
+            -p:PublishSingleFile=true \
+            -p:IncludeNativeLibrariesForSelfExtract=true \
+            -o publish/dingoConfig-${{ needs.check-version.outputs.version }}/osx-x64
+
+      - name: Build macOS ARM64
+        run: |
+          dotnet publish api/api.csproj \
+            -c Release \
+            -r osx-arm64 \
+            --self-contained true \
+            -p:PublishSingleFile=true \
+            -p:IncludeNativeLibrariesForSelfExtract=true \
+            -o publish/dingoConfig-${{ needs.check-version.outputs.version }}/osx-arm64
+
+      - name: Create zip archives
+        run: |
+          cd publish/dingoConfig-${{ needs.check-version.outputs.version }}
+
+          zip -r dingoConfig-${{ needs.check-version.outputs.version }}-win-x64.zip win-x64/
+          zip -r dingoConfig-${{ needs.check-version.outputs.version }}-win-arm64.zip win-arm64/
+          zip -r dingoConfig-${{ needs.check-version.outputs.version }}-linux-x64.zip linux-x64/
+          zip -r dingoConfig-${{ needs.check-version.outputs.version }}-linux-arm64.zip linux-arm64/
+          zip -r dingoConfig-${{ needs.check-version.outputs.version }}-osx-x64.zip osx-x64/
+          zip -r dingoConfig-${{ needs.check-version.outputs.version }}-osx-arm64.zip osx-arm64/
+
+          cd ../..
+          ls -lh publish/dingoConfig-${{ needs.check-version.outputs.version }}/*.zip
+
+      - name: Upload release assets
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ needs.check-version.outputs.version }}
+          files: |
+            publish/dingoConfig-${{ needs.check-version.outputs.version }}/dingoConfig-${{ needs.check-version.outputs.version }}-win-x64.zip
+            publish/dingoConfig-${{ needs.check-version.outputs.version }}/dingoConfig-${{ needs.check-version.outputs.version }}-win-arm64.zip
+            publish/dingoConfig-${{ needs.check-version.outputs.version }}/dingoConfig-${{ needs.check-version.outputs.version }}-linux-x64.zip
+            publish/dingoConfig-${{ needs.check-version.outputs.version }}/dingoConfig-${{ needs.check-version.outputs.version }}-linux-arm64.zip
+            publish/dingoConfig-${{ needs.check-version.outputs.version }}/dingoConfig-${{ needs.check-version.outputs.version }}-osx-x64.zip
+            publish/dingoConfig-${{ needs.check-version.outputs.version }}/dingoConfig-${{ needs.check-version.outputs.version }}-osx-arm64.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

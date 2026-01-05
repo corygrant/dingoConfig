@@ -24,9 +24,19 @@ Write-Host ""
 Write-Host "Building for Windows (x64)..." -ForegroundColor Yellow
 dotnet publish $project -c $config -r win-x64 @publishArgs -o "$outputDir/win-x64"
 if ($LASTEXITCODE -eq 0) {
-    Write-Host "✓ Windows build complete" -ForegroundColor Green
+    Write-Host "✓ Windows (x64) build complete" -ForegroundColor Green
 } else {
-    Write-Host "✗ Windows build failed" -ForegroundColor Red
+    Write-Host "✗ Windows (x64) build failed" -ForegroundColor Red
+}
+
+# Publish for Windows (arm64)
+Write-Host ""
+Write-Host "Building for Windows (arm64)..." -ForegroundColor Yellow
+dotnet publish $project -c $config -r win-arm64 @publishArgs -o "$outputDir/win-arm64"
+if ($LASTEXITCODE -eq 0) {
+    Write-Host "✓ Windows (arm64) build complete" -ForegroundColor Green
+} else {
+    Write-Host "✗ Windows (arm64) build failed" -ForegroundColor Red
 }
 
 # Publish for Linux (x64)
@@ -34,9 +44,19 @@ Write-Host ""
 Write-Host "Building for Linux (x64)..." -ForegroundColor Yellow
 dotnet publish $project -c $config -r linux-x64 @publishArgs -o "$outputDir/linux-x64"
 if ($LASTEXITCODE -eq 0) {
-    Write-Host "✓ Linux build complete" -ForegroundColor Green
+    Write-Host "✓ Linux (x64) build complete" -ForegroundColor Green
 } else {
-    Write-Host "✗ Linux build failed" -ForegroundColor Red
+    Write-Host "✗ Linux (x64) build failed" -ForegroundColor Red
+}
+
+# Publish for Linux (arm64)
+Write-Host ""
+Write-Host "Building for Linux (arm64)..." -ForegroundColor Yellow
+dotnet publish $project -c $config -r linux-arm64 @publishArgs -o "$outputDir/linux-arm64"
+if ($LASTEXITCODE -eq 0) {
+    Write-Host "✓ Linux (arm64) build complete" -ForegroundColor Green
+} else {
+    Write-Host "✗ Linux (arm64) build failed" -ForegroundColor Red
 }
 
 # Publish for macOS (x64 - Intel)
@@ -61,11 +81,43 @@ if ($LASTEXITCODE -eq 0) {
 
 Write-Host ""
 Write-Host "=========================================" -ForegroundColor Cyan
+Write-Host "Creating zip archives..." -ForegroundColor Yellow
+Write-Host ""
+
+# Create zip files for each platform
+Write-Host "Zipping Windows (x64)..."
+Compress-Archive -Path "$outputDir/win-x64/*" -DestinationPath "$outputDir/dingoConfig-$version-win-x64.zip" -Force
+Write-Host "✓ dingoConfig-$version-win-x64.zip created" -ForegroundColor Green
+
+Write-Host "Zipping Windows (arm64)..."
+Compress-Archive -Path "$outputDir/win-arm64/*" -DestinationPath "$outputDir/dingoConfig-$version-win-arm64.zip" -Force
+Write-Host "✓ dingoConfig-$version-win-arm64.zip created" -ForegroundColor Green
+
+Write-Host "Zipping Linux (x64)..."
+Compress-Archive -Path "$outputDir/linux-x64/*" -DestinationPath "$outputDir/dingoConfig-$version-linux-x64.zip" -Force
+Write-Host "✓ dingoConfig-$version-linux-x64.zip created" -ForegroundColor Green
+
+Write-Host "Zipping Linux (arm64)..."
+Compress-Archive -Path "$outputDir/linux-arm64/*" -DestinationPath "$outputDir/dingoConfig-$version-linux-arm64.zip" -Force
+Write-Host "✓ dingoConfig-$version-linux-arm64.zip created" -ForegroundColor Green
+
+Write-Host "Zipping macOS (x64)..."
+Compress-Archive -Path "$outputDir/osx-x64/*" -DestinationPath "$outputDir/dingoConfig-$version-osx-x64.zip" -Force
+Write-Host "✓ dingoConfig-$version-osx-x64.zip created" -ForegroundColor Green
+
+Write-Host "Zipping macOS (arm64)..."
+Compress-Archive -Path "$outputDir/osx-arm64/*" -DestinationPath "$outputDir/dingoConfig-$version-osx-arm64.zip" -Force
+Write-Host "✓ dingoConfig-$version-osx-arm64.zip created" -ForegroundColor Green
+
+Write-Host ""
+Write-Host "=========================================" -ForegroundColor Cyan
 Write-Host "All builds complete!" -ForegroundColor Green
 Write-Host "Output directory: $outputDir" -ForegroundColor Cyan
 Write-Host ""
-Write-Host "Executables:" -ForegroundColor Cyan
-Write-Host "  Windows:               $outputDir/win-x64/dingoConfig.exe"
-Write-Host "  Linux:                 $outputDir/linux-x64/dingoConfig"
-Write-Host "  macOS (Intel):         $outputDir/osx-x64/dingoConfig"
-Write-Host "  macOS (Apple Silicon): $outputDir/osx-arm64/dingoConfig"
+Write-Host "Zip files:" -ForegroundColor Cyan
+Write-Host "  Windows (x64):         $outputDir/dingoConfig-$version-win-x64.zip"
+Write-Host "  Windows (arm64):       $outputDir/dingoConfig-$version-win-arm64.zip"
+Write-Host "  Linux (x64):           $outputDir/dingoConfig-$version-linux-x64.zip"
+Write-Host "  Linux (arm64):         $outputDir/dingoConfig-$version-linux-arm64.zip"
+Write-Host "  macOS (Intel):         $outputDir/dingoConfig-$version-osx-x64.zip"
+Write-Host "  macOS (Apple Silicon): $outputDir/dingoConfig-$version-osx-arm64.zip"

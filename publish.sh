@@ -30,10 +30,30 @@ else
     echo "✗ Windows build failed"
 fi
 
+# Publish for Windows (arm64)
+echo ""
+echo "Building for Windows (arm64)..."
+dotnet publish "$PROJECT" -c "$CONFIG" -r win-arm64 $PUBLISH_ARGS -o "$OUTPUT_DIR/win-arm64"
+if [ $? -eq 0 ]; then
+    echo "✓ Windows build complete"
+else
+    echo "✗ Windows build failed"
+fi
+
 # Publish for Linux (x64)
 echo ""
 echo "Building for Linux (x64)..."
 dotnet publish "$PROJECT" -c "$CONFIG" -r linux-x64 $PUBLISH_ARGS -o "$OUTPUT_DIR/linux-x64"
+if [ $? -eq 0 ]; then
+    echo "✓ Linux build complete"
+else
+    echo "✗ Linux build failed"
+fi
+
+# Publish for Linux (arm64)
+echo ""
+echo "Building for Linux (arm64)..."
+dotnet publish "$PROJECT" -c "$CONFIG" -r linux-arm64 $PUBLISH_ARGS -o "$OUTPUT_DIR/linux-arm64"
 if [ $? -eq 0 ]; then
     echo "✓ Linux build complete"
 else
@@ -62,11 +82,47 @@ fi
 
 echo ""
 echo "========================================="
+echo "Creating zip archives..."
+echo ""
+
+# Create zip files for each platform
+cd "$OUTPUT_DIR"
+
+echo "Zipping Windows (x64)..."
+zip -r "dingoConfig-$VERSION-win-x64.zip" win-x64/ > /dev/null
+echo "✓ dingoConfig-$VERSION-win-x64.zip created"
+
+echo "Zipping Windows (arm64)..."
+zip -r "dingoConfig-$VERSION-win-arm64.zip" win-arm64/ > /dev/null
+echo "✓ dingoConfig-$VERSION-win-arm64.zip created"
+
+echo "Zipping Linux (x64)..."
+zip -r "dingoConfig-$VERSION-linux-x64.zip" linux-x64/ > /dev/null
+echo "✓ dingoConfig-$VERSION-linux-x64.zip created"
+
+echo "Zipping Linux (arm64)..."
+zip -r "dingoConfig-$VERSION-linux-arm64.zip" linux-arm64/ > /dev/null
+echo "✓ dingoConfig-$VERSION-linux-arm64.zip created"
+
+echo "Zipping macOS (x64)..."
+zip -r "dingoConfig-$VERSION-osx-x64.zip" osx-x64/ > /dev/null
+echo "✓ dingoConfig-$VERSION-osx-x64.zip created"
+
+echo "Zipping macOS (arm64)..."
+zip -r "dingoConfig-$VERSION-osx-arm64.zip" osx-arm64/ > /dev/null
+echo "✓ dingoConfig-$VERSION-osx-arm64.zip created"
+
+cd - > /dev/null
+
+echo ""
+echo "========================================="
 echo "All builds complete!"
 echo "Output directory: $OUTPUT_DIR"
 echo ""
-echo "Executables:"
-echo "  Windows:             $OUTPUT_DIR/win-x64/dingoConfig.exe"
-echo "  Linux:               $OUTPUT_DIR/linux-x64/dingoConfig"
-echo "  macOS (Intel):       $OUTPUT_DIR/osx-x64/dingoConfig"
-echo "  macOS (Apple Silicon): $OUTPUT_DIR/osx-arm64/dingoConfig"
+echo "Zip files:"
+echo "  Windows (x64):         $OUTPUT_DIR/dingoConfig-$VERSION-win-x64.zip"
+echo "  Windows (arm64):       $OUTPUT_DIR/dingoConfig-$VERSION-win-arm64.zip"
+echo "  Linux (x64):           $OUTPUT_DIR/dingoConfig-$VERSION-linux-x64.zip"
+echo "  Linux (arm64):         $OUTPUT_DIR/dingoConfig-$VERSION-linux-arm64.zip"
+echo "  macOS (Intel):         $OUTPUT_DIR/dingoConfig-$VERSION-osx-x64.zip"
+echo "  macOS (Apple Silicon): $OUTPUT_DIR/dingoConfig-$VERSION-osx-arm64.zip"
