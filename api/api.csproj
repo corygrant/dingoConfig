@@ -43,8 +43,7 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <BlazorDisableThrowNavigationException>true</BlazorDisableThrowNavigationException>
-    <OutputType Condition="'$(RuntimeIdentifier)' == 'win-x64'">WinExe</OutputType>
-    <OutputType Condition="'$(RuntimeIdentifier)' != 'win-x64'">Exe</OutputType>
+    <OutputType>Exe</OutputType>
     <Version>0.1.1</Version>
     <ApplicationIcon>icon.ico</ApplicationIcon>
     <!-- Ensure static web assets are generated during publish -->

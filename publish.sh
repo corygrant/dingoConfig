@@ -11,14 +11,20 @@ fi
 echo "Publishing dingoConfig version $VERSION"
 echo "========================================="
 
-# Create output directory
-OUTPUT_DIR="publish/dingoConfig-$VERSION"
-mkdir -p "$OUTPUT_DIR"
-
 # Common publish arguments
 PROJECT="api/api.csproj"
 CONFIG="Release"
 PUBLISH_ARGS="--self-contained true"
+
+# Clean build artifacts to prevent caching issues
+echo ""
+echo "Cleaning previous build artifacts..."
+dotnet clean "$PROJECT" -c "$CONFIG"
+echo "[OK] Clean complete"
+
+# Create output directory
+OUTPUT_DIR="publish/dingoConfig-$VERSION"
+mkdir -p "$OUTPUT_DIR"
 
 # Publish for Windows (x64)
 echo ""
