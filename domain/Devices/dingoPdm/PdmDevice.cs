@@ -17,7 +17,7 @@ public class PdmDevice : IDevice
 
     [JsonIgnore] protected virtual int MinMajorVersion { get; } = 0;
     [JsonIgnore] protected virtual int MinMinorVersion { get; } = 4;
-    [JsonIgnore] protected virtual int MinBuildVersion { get; } = 28;
+    [JsonIgnore] protected virtual int MinBuildVersion { get; } = 27;
 
     [JsonIgnore] protected virtual int NumDigitalInputs { get; } = 2;
     [JsonIgnore] protected virtual int NumOutputs { get; } = 8;

@@ -72,8 +72,6 @@ jobs:
             -c Release \
             -r win-x64 \
             --self-contained true \
-            -p:PublishSingleFile=true \
-            -p:IncludeNativeLibrariesForSelfExtract=true \
             -o publish/dingoConfig-${{ needs.check-version.outputs.version }}/win-x64
 
       - name: Build Windows ARM64
@@ -82,8 +80,6 @@ jobs:
             -c Release \
             -r win-arm64 \
             --self-contained true \
-            -p:PublishSingleFile=true \
-            -p:IncludeNativeLibrariesForSelfExtract=true \
             -o publish/dingoConfig-${{ needs.check-version.outputs.version }}/win-arm64
 
       - name: Build Linux x64
@@ -92,8 +88,6 @@ jobs:
             -c Release \
             -r linux-x64 \
             --self-contained true \
-            -p:PublishSingleFile=true \
-            -p:IncludeNativeLibrariesForSelfExtract=true \
             -o publish/dingoConfig-${{ needs.check-version.outputs.version }}/linux-x64
 
       - name: Build Linux ARM64
@@ -102,8 +96,6 @@ jobs:
             -c Release \
             -r linux-arm64 \
             --self-contained true \
-            -p:PublishSingleFile=true \
-            -p:IncludeNativeLibrariesForSelfExtract=true \
             -o publish/dingoConfig-${{ needs.check-version.outputs.version }}/linux-arm64
 
       - name: Build macOS x64
@@ -112,8 +104,6 @@ jobs:
             -c Release \
             -r osx-x64 \
             --self-contained true \
-            -p:PublishSingleFile=true \
-            -p:IncludeNativeLibrariesForSelfExtract=true \
             -o publish/dingoConfig-${{ needs.check-version.outputs.version }}/osx-x64
 
       - name: Build macOS ARM64
@@ -122,8 +112,6 @@ jobs:
             -c Release \
             -r osx-arm64 \
             --self-contained true \
-            -p:PublishSingleFile=true \
-            -p:IncludeNativeLibrariesForSelfExtract=true \
             -o publish/dingoConfig-${{ needs.check-version.outputs.version }}/osx-arm64
 
       - name: Create zip archives

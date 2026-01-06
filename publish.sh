@@ -18,16 +18,16 @@ mkdir -p "$OUTPUT_DIR"
 # Common publish arguments
 PROJECT="api/api.csproj"
 CONFIG="Release"
-PUBLISH_ARGS="--self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true"
+PUBLISH_ARGS="--self-contained true"
 
 # Publish for Windows (x64)
 echo ""
 echo "Building for Windows (x64)..."
 dotnet publish "$PROJECT" -c "$CONFIG" -r win-x64 $PUBLISH_ARGS -o "$OUTPUT_DIR/win-x64"
 if [ $? -eq 0 ]; then
-    echo "✓ Windows build complete"
+    echo "[OK] Windows (x64) build complete"
 else
-    echo "✗ Windows build failed"
+    echo "[FAILED] Windows (x64) build failed"
 fi
 
 # Publish for Windows (arm64)
@@ -35,9 +35,9 @@ echo ""
 echo "Building for Windows (arm64)..."
 dotnet publish "$PROJECT" -c "$CONFIG" -r win-arm64 $PUBLISH_ARGS -o "$OUTPUT_DIR/win-arm64"
 if [ $? -eq 0 ]; then
-    echo "✓ Windows build complete"
+    echo "[OK] Windows (arm64) build complete"
 else
-    echo "✗ Windows build failed"
+    echo "[FAILED] Windows (arm64) build failed"
 fi
 
 # Publish for Linux (x64)
@@ -45,9 +45,9 @@ echo ""
 echo "Building for Linux (x64)..."
 dotnet publish "$PROJECT" -c "$CONFIG" -r linux-x64 $PUBLISH_ARGS -o "$OUTPUT_DIR/linux-x64"
 if [ $? -eq 0 ]; then
-    echo "✓ Linux build complete"
+    echo "[OK] Linux (x64) build complete"
 else
-    echo "✗ Linux build failed"
+    echo "[FAILED] Linux (x64) build failed"
 fi
 
 # Publish for Linux (arm64)
@@ -55,9 +55,9 @@ echo ""
 echo "Building for Linux (arm64)..."
 dotnet publish "$PROJECT" -c "$CONFIG" -r linux-arm64 $PUBLISH_ARGS -o "$OUTPUT_DIR/linux-arm64"
 if [ $? -eq 0 ]; then
-    echo "✓ Linux build complete"
+    echo "[OK] Linux (arm64) build complete"
 else
-    echo "✗ Linux build failed"
+    echo "[FAILED] Linux (arm64) build failed"
 fi
 
 # Publish for macOS (x64 - Intel)
@@ -65,9 +65,9 @@ echo ""
 echo "Building for macOS (x64 - Intel)..."
 dotnet publish "$PROJECT" -c "$CONFIG" -r osx-x64 $PUBLISH_ARGS -o "$OUTPUT_DIR/osx-x64"
 if [ $? -eq 0 ]; then
-    echo "✓ macOS Intel build complete"
+    echo "[OK] macOS Intel build complete"
 else
-    echo "✗ macOS Intel build failed"
+    echo "[FAILED] macOS Intel build failed"
 fi
 
 # Publish for macOS (arm64 - Apple Silicon)
@@ -75,9 +75,9 @@ echo ""
 echo "Building for macOS (arm64 - Apple Silicon)..."
 dotnet publish "$PROJECT" -c "$CONFIG" -r osx-arm64 $PUBLISH_ARGS -o "$OUTPUT_DIR/osx-arm64"
 if [ $? -eq 0 ]; then
-    echo "✓ macOS Apple Silicon build complete"
+    echo "[OK] macOS Apple Silicon build complete"
 else
-    echo "✗ macOS Apple Silicon build failed"
+    echo "[FAILED] macOS Apple Silicon build failed"
 fi
 
 echo ""
@@ -90,27 +90,27 @@ cd "$OUTPUT_DIR"
 
 echo "Zipping Windows (x64)..."
 zip -r "dingoConfig-$VERSION-win-x64.zip" win-x64/ > /dev/null
-echo "✓ dingoConfig-$VERSION-win-x64.zip created"
+echo "[OK] dingoConfig-$VERSION-win-x64.zip created"
 
 echo "Zipping Windows (arm64)..."
 zip -r "dingoConfig-$VERSION-win-arm64.zip" win-arm64/ > /dev/null
-echo "✓ dingoConfig-$VERSION-win-arm64.zip created"
+echo "[OK] dingoConfig-$VERSION-win-arm64.zip created"
 
 echo "Zipping Linux (x64)..."
 zip -r "dingoConfig-$VERSION-linux-x64.zip" linux-x64/ > /dev/null
-echo "✓ dingoConfig-$VERSION-linux-x64.zip created"
+echo "[OK] dingoConfig-$VERSION-linux-x64.zip created"
 
 echo "Zipping Linux (arm64)..."
 zip -r "dingoConfig-$VERSION-linux-arm64.zip" linux-arm64/ > /dev/null
-echo "✓ dingoConfig-$VERSION-linux-arm64.zip created"
+echo "[OK] dingoConfig-$VERSION-linux-arm64.zip created"
 
 echo "Zipping macOS (x64)..."
 zip -r "dingoConfig-$VERSION-osx-x64.zip" osx-x64/ > /dev/null
-echo "✓ dingoConfig-$VERSION-osx-x64.zip created"
+echo "[OK] dingoConfig-$VERSION-osx-x64.zip created"
 
 echo "Zipping macOS (arm64)..."
 zip -r "dingoConfig-$VERSION-osx-arm64.zip" osx-arm64/ > /dev/null
-echo "✓ dingoConfig-$VERSION-osx-arm64.zip created"
+echo "[OK] dingoConfig-$VERSION-osx-arm64.zip created"
 
 cd - > /dev/null
 
