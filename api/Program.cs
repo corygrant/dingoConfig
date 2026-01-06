@@ -10,6 +10,13 @@ using domain.Interfaces;
 using Microsoft.AspNetCore.Components;
 using MudBlazor;
 using Microsoft.AspNetCore.Connections;
+using System.Runtime.InteropServices;
+
+// Hide console window on Windows
+if (OperatingSystem.IsWindows())
+{
+    HideConsoleWindow();
+}
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -125,4 +132,17 @@ static void OpenBrowser(string url)
     {
         // Browser launch failed - app will still run
     }
+}
+
+[DllImport("kernel32.dll")]
+static extern IntPtr GetConsoleWindow();
+
+[DllImport("user32.dll")]
+static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
+
+static void HideConsoleWindow()
+{
+    const int SW_HIDE = 0;
+    var handle = GetConsoleWindow();
+    ShowWindow(handle, SW_HIDE);
 }

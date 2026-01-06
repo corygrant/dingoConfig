@@ -46,8 +46,7 @@
     <OutputType>Exe</OutputType>
     <Version>0.1.1</Version>
     <ApplicationIcon>icon.ico</ApplicationIcon>
-    <!-- Ensure static web assets are generated during publish -->
-    <GenerateStaticWebAssetsPropsFile>true</GenerateStaticWebAssetsPropsFile>
+    <!-- Console window is hidden programmatically in Program.cs for Windows -->
   </PropertyGroup>
 
 </Project>
