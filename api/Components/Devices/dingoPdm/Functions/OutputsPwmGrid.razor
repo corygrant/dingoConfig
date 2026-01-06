@@ -25,18 +25,30 @@
                 </MudChip>
             </CellTemplate>
         </PropertyColumn>
+        <PropertyColumn Property="x => x.Frequency" Title="Freq (Hz)" />
+        <PropertyColumn Property="x => x.FixedDutyCycle" Title="Fixed DC (%)" />
+        <PropertyColumn Property="x => x.VariableDutyCycle" Title="Variable DC">
+            <EditTemplate>
+                <MudCheckBox @bind-Value="context.Item.VariableDutyCycle" Dense="true" />
+            </EditTemplate>
+        </PropertyColumn>
+        <PropertyColumn Property="x => x.DutyCycleInput" Title="DC Input">
+            <EditTemplate>
+                <MudSelect T="VarMap" @bind-Value="context.Item.DutyCycleInput" Variant="Variant.Outlined" Dense="true">
+                    @foreach (VarMap varMap in Enum.GetValues(typeof(VarMap)))
+                    {
+                        <MudSelectItem T="VarMap" Value="@varMap">@varMap</MudSelectItem>
+                    }
+                </MudSelect>
+            </EditTemplate>
+        </PropertyColumn>
+        <PropertyColumn Property="x => x.DutyCycleDenominator" Title="Variable DC Denom" />
         <PropertyColumn Property="x => x.SoftStartEnabled" Title="Soft Start">
             <EditTemplate>
                 <MudCheckBox @bind-Value="context.Item.SoftStartEnabled" Dense="true" />
             </EditTemplate>
         </PropertyColumn>
-        <PropertyColumn Property="x => x.VariableDutyCycle" Title="Variable PWM">
-            <EditTemplate>
-                <MudCheckBox @bind-Value="context.Item.VariableDutyCycle" Dense="true" />
-            </EditTemplate>
-        </PropertyColumn>
-        <PropertyColumn Property="x => x.Frequency" Title="Freq (Hz)" />
-        <PropertyColumn Property="x => x.FixedDutyCycle" Title="Duty %" />
+        <PropertyColumn Property="x => x.FixedDutyCycle" Title="SS Duration (ms)" />
     </Columns>
 </MudDataGrid>
 
