@@ -3,9 +3,10 @@
 @using domain.Enums
 
 <MudDataGrid Items="@VirtualInputs" Dense="true" Hover="true" Striped="false" EditMode="DataGridEditMode.Cell" ReadOnly="false"
-             SortMode="SortMode.None" ColumnResizeMode="ResizeMode.Container" Virtualize="true">
+             SortMode="SortMode.None" ColumnResizeMode="ResizeMode.Container" Virtualize="true" 
+             FixedHeader="true" HorizontalScrollbar="true" Style="max-height: 400px;">
     <Columns>
-        <PropertyColumn Property="x => x.Number" Title="No." Editable="false"/>
+        <PropertyColumn Property="x => x.Number" Title="#" StickyLeft="true" Editable="false"/>
         <PropertyColumn Property="x => x.Enabled">
             <EditTemplate>
                 <MudCheckBox @bind-Value="context.Item.Enabled" Dense="true" />

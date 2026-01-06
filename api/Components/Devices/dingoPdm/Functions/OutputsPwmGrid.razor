@@ -2,9 +2,10 @@
 @using domain.Devices.dingoPdm.Enums
 
 <MudDataGrid Items="@Outputs" Dense="true" Hover="true" Striped="false" EditMode="DataGridEditMode.Cell" ReadOnly="false" 
-             SortMode="SortMode.None" ColumnResizeMode="ResizeMode.Container" Virtualize="true">
+             SortMode="SortMode.None" ColumnResizeMode="ResizeMode.Container" Virtualize="true" 
+             FixedHeader="true" HorizontalScrollbar="true" Style="max-height: 400px;">
     <Columns>
-        <PropertyColumn Property="x => x.Number" Title="Num" Editable="false" />
+        <PropertyColumn Property="x => x.Number" Title="#" StickyLeft="true" Editable="false" />
         <PropertyColumn Property="x => x.PwmEnabled" Title="Enabled">
             <EditTemplate>
                 <MudCheckBox @bind-Value="context.Item.PwmEnabled" Dense="true" />
