@@ -7,24 +7,28 @@
 @inject NotificationService Notification
 @inject SimPlayback SimPlayback
 @inject IDialogService DialogService
+@inject DemoModeService DemoMode
 @rendermode InteractiveServer
 @implements IDisposable
 
-<MudBadge Color="Color.Warning"
-          Dot="true"
-          Overlap="true"
-          Bordered="true"
-          Visible="@(_available.Ports?.Length == 0)">
-    <MudChip T="string"
-             Icon="@Icons.Material.Filled.Cable"
-             Color="@GetAdapterChipColor()"
-             Variant="Variant.Outlined"
-             Size="Size.Medium"
-             OnClick="@((e) => TogglePopover(e))"
-             Style="cursor: pointer;">
-        @GetAdapterText()
-    </MudChip>
-</MudBadge>
+@if (!(DemoMode.IsEnabled && DemoMode.RestrictModifications))
+{
+    <MudBadge Color="Color.Warning"
+              Dot="true"
+              Overlap="true"
+              Bordered="true"
+              Visible="@(_available.Ports?.Length == 0)">
+        <MudChip T="string"
+                 Icon="@Icons.Material.Filled.Cable"
+                 Color="@GetAdapterChipColor()"
+                 Variant="Variant.Outlined"
+                 Size="Size.Medium"
+                 OnClick="@((e) => TogglePopover(e))"
+                 Style="cursor: pointer;">
+            @GetAdapterText()
+        </MudChip>
+    </MudBadge>
+}
 
 <MudPopover Open="@_isOpen"
             AnchorOrigin="Origin.BottomRight"

@@ -42,6 +42,9 @@ builder.Services.AddScoped(sp =>
 // Add NotificationService for combined Snackbar + GlobalLogger calls
 builder.Services.AddScoped<NotificationService>();
 
+// Add DemoModeService
+builder.Services.AddSingleton<DemoModeService>();
+
 // Add API services
 builder.Services.AddTransient<UsbAdapter>();
 builder.Services.AddTransient<SlcanAdapter>();
@@ -57,6 +60,7 @@ builder.Services.AddSingleton<SimPlayback>();
 
 // Add background services
 builder.Services.AddHostedService<CommsDataPipeline>();
+builder.Services.AddHostedService<DemoInitializationService>();
 
 // Add GlobalLogger to logging pipeline using factory to avoid creating duplicate singleton
 builder.Logging.Services.AddSingleton<ILoggerProvider>(sp =>

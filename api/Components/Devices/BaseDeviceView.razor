@@ -7,6 +7,7 @@
 @using domain.Devices.dingoPdmMax
 @inject DeviceManager DeviceManager
 @inject NotificationService Notification
+@inject DemoModeService DemoMode
 @typeparam TDevice where TDevice : domain.Interfaces.IDevice
 
 <MudContainer MaxWidth="MaxWidth.False"
@@ -27,7 +28,7 @@
                        Color="Color.Default"
                        Size="Size.Small"
                        StartIcon="@Icons.Material.Filled.Upload"
-                       Disabled="@(!Device.Connected || !AdapterConnected)"
+                       Disabled="@(!Device.Connected || !AdapterConnected || (DemoMode.IsEnabled && DemoMode.RestrictModifications))"
                        OnClick="@OnWriteDeviceAsync">
                 Write
             </MudButton>
@@ -35,7 +36,7 @@
                        Color="Color.Default"
                        Size="Size.Small"
                        StartIcon="@Icons.Material.Filled.Save"
-                       Disabled="@(!Device.Connected || !AdapterConnected)"
+                       Disabled="@(!Device.Connected || !AdapterConnected || (DemoMode.IsEnabled && DemoMode.RestrictModifications))"
                        OnClick="@OnBurnSettingsAsync">
                 Burn
             </MudButton>
@@ -43,7 +44,7 @@
                        Color="Color.Default"
                        Size="Size.Small"
                        StartIcon="@Icons.Material.Filled.Bedtime"
-                       Disabled="@(!Device.Connected || !AdapterConnected)"
+                       Disabled="@(!Device.Connected || !AdapterConnected || (DemoMode.IsEnabled && DemoMode.RestrictModifications))"
                        OnClick="@OnSleepAsync">
                 Sleep
             </MudButton>
@@ -51,7 +52,7 @@
                        Color="Color.Default"
                        Size="Size.Small"
                        StartIcon="@Icons.Material.Filled.WbSunny"
-                       Disabled="@(Device.Connected || !AdapterConnected)"
+                       Disabled="@(Device.Connected || !AdapterConnected || (DemoMode.IsEnabled && DemoMode.RestrictModifications))"
                        OnClick="@OnWakeupAsync">
                 Wakeup
             </MudButton>
@@ -59,7 +60,7 @@
                        Color="Color.Default"
                        Size="Size.Small"
                        StartIcon="@Icons.Material.Filled.DeveloperMode"
-                       Disabled="@(!Device.Connected || !AdapterConnected)"
+                       Disabled="@(!Device.Connected || !AdapterConnected || (DemoMode.IsEnabled && DemoMode.RestrictModifications))"
                        OnClick="@OnEnterBootloaderAsync">
                 Bootloader
             </MudButton>

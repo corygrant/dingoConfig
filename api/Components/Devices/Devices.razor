@@ -6,6 +6,7 @@
 @inject NotificationService Notification
 @inject IDialogService DialogService
 @inject NavigationManager Navigation
+@inject DemoModeService DemoMode
 
 <PageTitle>Devices</PageTitle>
 
@@ -14,7 +15,8 @@
         <MudButton Variant="Variant.Outlined"
                    Color="Color.Primary"
                    StartIcon="@Icons.Material.Outlined.Add"
-                   OnClick="@ToggleCreateForm">
+                   OnClick="@ToggleCreateForm"
+                   Disabled="@(DemoMode.IsEnabled && DemoMode.RestrictModifications)">
             @(_showCreateForm ? "Cancel" : "Add Device")
         </MudButton>
     </MudStack>
@@ -156,14 +158,16 @@
                                        Variant="Variant.Outlined"
                                        Color="Color.Info"
                                        Size="Size.Small"
-                                       OnClick="@(() => ShowModifyForm(device))">
+                                       OnClick="@(() => ShowModifyForm(device))"
+                                       Disabled="@(DemoMode.IsEnabled && DemoMode.RestrictModifications)">
                                 Modify
                             </MudButton>
                             <MudButton Class="mx-2"
                                        Variant="Variant.Outlined"
                                        Color="Color.Error"
                                        Size="Size.Small"
-                                       OnClick="@(() => DeleteDevice(device))">
+                                       OnClick="@(() => DeleteDevice(device))"
+                                       Disabled="@(DemoMode.IsEnabled && DemoMode.RestrictModifications)">
                                 Delete
                             </MudButton>
                         </MudCardActions>

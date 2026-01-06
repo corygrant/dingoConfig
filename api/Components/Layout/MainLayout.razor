@@ -22,11 +22,14 @@
                        Edge="Edge.Start"
                        OnClick="@ToggleDrawer" />
         <MudText Typo="Typo.h5" Class="ml-3">dingoConfig</MudText>
-        <MudDivider Vertical="true" FlexItem="true" Class="mx-3" />
-        <FileToolbar OnNew="HandleNew"
-                     OnOpen="HandleOpen"
-                     OnSave="HandleSave"
-                     OnSaveAs="HandleSaveAs" />
+        @if (!(DemoMode.IsEnabled && DemoMode.RestrictModifications))
+        {
+            <MudDivider Vertical="true" FlexItem="true" Class="mx-3" />
+            <FileToolbar OnNew="HandleNew"
+                         OnOpen="HandleOpen"
+                         OnSave="HandleSave"
+                         OnSaveAs="HandleSaveAs" />
+        }
         <MudSpacer />
         @if (_showSimPlayback)
         {
@@ -44,6 +47,15 @@
     </MudDrawer>
 
     <MudMainContent>
+        @if (DemoMode.IsEnabled && DemoMode.ShowBanner)
+        {
+            <MudAlert Severity="Severity.Info" Variant="Variant.Filled" Class="ma-4" Dense="true">
+                <MudText Typo="Typo.body2">
+                    <strong>Demo Mode:</strong> This is a read-only demonstration.
+                    Device modifications are disabled. Data is simulated and not persisted.
+                </MudText>
+            </MudAlert>
+        }
         @Body
     </MudMainContent>
 </MudLayout>
@@ -59,6 +71,7 @@
     [Inject] private application.Services.DeviceManager DeviceManager { get; set; } = null!;
     [Inject] private NotificationService Notification { get; set; } = null!;
     [Inject] private ICommsAdapterManager AdapterManager { get; set; } = null!;
+    [Inject] private DemoModeService DemoMode { get; set; } = null!;
 
     private bool _drawerOpen = true;
     private bool _showSimPlayback = false;
