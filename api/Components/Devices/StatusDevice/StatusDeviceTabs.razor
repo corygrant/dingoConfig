@@ -1,0 +1,28 @@
+@using api.Components.Devices.StatusDevice.Tabs
+@using api.Components.Devices.Shared
+@using domain.Devices.StatusDevice
+@typeparam TDevice where TDevice : StatusDevice
+
+<MudTabs Elevation="2" Rounded="true" ApplyEffectsToContainer="true">
+    <MudTabPanel Text="Dashboard" Icon="@Icons.Material.Filled.Dashboard">
+        <DashboardTab TDevice="TDevice" Device="Device" />
+    </MudTabPanel>
+
+    <MudTabPanel Text="Configuration" Icon="@Icons.Material.Filled.Settings">
+        <ConfigurationTab TDevice="TDevice" Device="Device"/>
+    </MudTabPanel>
+
+    <MudTabPanel Text="Plot" Icon="@Icons.Material.Filled.StackedLineChart">
+        <PlotTab TDevice="TDevice" Device="Device" />
+    </MudTabPanel>
+
+    @*
+    <MudTabPanel Text="Flow" Icon="@Icons.Material.Filled.DataExploration">
+        <FlowTab />
+    </MudTabPanel>
+    *@
+</MudTabs>
+
+@code {
+    [Parameter, EditorRequired] public TDevice Device { get; set; } = null!;
+}

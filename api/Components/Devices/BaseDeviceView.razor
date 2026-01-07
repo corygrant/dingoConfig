@@ -1,5 +1,6 @@
 @using api.Components.Devices.CANBoard
 @using api.Components.Devices.dingoPdm
+@using api.Components.Devices.StatusDevice
 @using application.Services
 @using api.Services
 @using domain.Devices.Canboard
@@ -88,6 +89,10 @@
             <CanboardDeviceTabs TDevice="CanboardDevice" Device="canboardDevice" />
             break;
 
+        case domain.Devices.StatusDevice.StatusDevice statusDevice:
+            <StatusDeviceTabs TDevice="domain.Devices.StatusDevice.StatusDevice" Device="statusDevice"/>
+            break;
+            
         default:
             <MudAlert Severity="Severity.Warning">
                 Unknown device type: @Device.GetType().Name

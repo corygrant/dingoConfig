@@ -1,4 +1,5 @@
 using domain.Enums;
+using domain.Models;
 
 namespace domain.Common;
 
@@ -7,6 +8,14 @@ public class DbcSignalCodec
 
     #region Decoding (Extract)
 
+    /// <summary>
+    /// Extracts a signal value from CAN data using a DBC property
+    /// </summary>
+    public static double ExtractSignal(byte[] data, DbcProperty dbcProp)
+    {
+        return ExtractSignal(data, dbcProp.StartBit, dbcProp.Length, dbcProp.ByteOrder,  dbcProp.IsSigned, dbcProp.Factor, dbcProp.Offset);
+    }
+    
     /// <summary>
     /// Extracts a signal value from CAN data using DBC parameters
     /// </summary>

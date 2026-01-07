@@ -3,6 +3,7 @@ using application.Models;
 using domain.Devices.Canboard;
 using domain.Devices.dingoPdm;
 using domain.Devices.dingoPdmMax;
+using domain.Devices.StatusDevice;
 using domain.Interfaces;
 using domain.Models;
 using Microsoft.Extensions.Logging;
@@ -54,6 +55,7 @@ public class DeviceManager(ILogger<DeviceManager> logger, ILoggerFactory loggerF
             "pdm" => new PdmDevice(loggerFactory.CreateLogger<PdmDevice>(), name, baseId),
             "pdmmax" => new PdmMaxDevice(loggerFactory.CreateLogger<PdmMaxDevice>(), name, baseId),
             "canboard" => new CanboardDevice(loggerFactory.CreateLogger<CanboardDevice>(), name, baseId),
+            "statusdevice" => new StatusDevice(loggerFactory.CreateLogger<StatusDevice>(), name, baseId),
             _ => throw new ArgumentException($"Unknown device type: {deviceType}")
         };
 

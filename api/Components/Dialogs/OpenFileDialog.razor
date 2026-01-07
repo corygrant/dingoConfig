@@ -20,7 +20,7 @@
                 @if (files == null || !files.Any())
                 {
                     <MudAlert Severity="Severity.Info" Dense="true">
-                        No .json files found in the working directory.
+                        No @FileFilter files found in the working directory.
                     </MudAlert>
                 }
                 else
@@ -57,7 +57,7 @@
             @* Browse Files Tab *@
             <MudTabPanel Text="Browse..." Icon="@Icons.Material.Filled.Search">
                 <FileSystemBrowser InitialPath="@FileManager.WorkingDirectory"
-                                   FileFilter="*.json"
+                                   FileFilter=@FileFilter
                                    SelectedFile="@selectedFile"
                                    SelectedFileChanged="@((file) => selectedFile = file)" />
             </MudTabPanel>
@@ -75,6 +75,7 @@
 </MudDialog>
 
 @code {
+    [Parameter] public string? FileFilter { get; set; }
     [CascadingParameter]
     IMudDialogInstance MudDialog { get; set; } = null!;
 
@@ -85,7 +86,7 @@
 
     protected override void OnInitialized()
     {
-        files = FileManager.ListJsonFiles();
+        files = FileManager.ListFilesWithExtension(FileFilter ?? "*.json");
     }
 
     private void OnFileClick(string filePath)

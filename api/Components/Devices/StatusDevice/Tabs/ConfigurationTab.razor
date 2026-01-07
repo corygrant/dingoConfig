@@ -1,0 +1,39 @@
+@using domain.Devices.StatusDevice
+@inject IDialogService DialogService
+@typeparam TDevice where TDevice : StatusDevice
+
+<div style="overflow-y: auto; height: calc(100vh - 250px); padding: 24px; scrollbar-width: auto; scrollbar-color: #888 transparent;">
+    <MudButton Variant="Variant.Outlined"
+               Color="Color.Secondary"
+               StartIcon="@Icons.Material.Filled.FolderOpen"
+               OnClick="@OpenDbcFile"
+               FullWidth="true"
+               Class="mb-3">
+        Open Dbc File
+    </MudButton>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public TDevice Device { get; set; } = null!;
+    
+    private async Task OpenDbcFile()
+    {
+        var parameters = new DialogParameters
+        {
+            { nameof(OpenFileDialog.FileFilter), "*.dbc" }
+        };
+        var options = new DialogOptions
+        {
+            MaxWidth = MaxWidth.Medium,
+            FullWidth = true
+        };
+
+        var dialog = await DialogService.ShowAsync<OpenFileDialog>("Open DBC File", parameters, options);
+        var dialogResult = await dialog.Result;
+
+        if (dialogResult is { Canceled: false, Data: string fileName })
+        {
+            await Device.ParseDbcFile(fileName);
+        }
+    }
+}

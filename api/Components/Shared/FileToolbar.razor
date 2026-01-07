@@ -104,7 +104,11 @@
                 return;
         }
 
-        var parameters = new DialogParameters();
+        var parameters = new DialogParameters
+        {
+            { nameof(OpenFileDialog.FileFilter), "*.json" }
+        };
+
         var options = new DialogOptions
         {
             MaxWidth = MaxWidth.Medium,

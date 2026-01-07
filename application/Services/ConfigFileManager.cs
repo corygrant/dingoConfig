@@ -52,11 +52,11 @@ public class ConfigFileManager(ILogger<ConfigFileManager> logger)
         logger.LogInformation($"Created working directory: {_workingDirectory}");
     }
 
-    public List<FileInfo> ListJsonFiles()
+    public List<FileInfo> ListFilesWithExtension(string extension)
     {
         EnsureWorkingDirectoryExists();
         var directory = new DirectoryInfo(_workingDirectory);
-        return directory.GetFiles("*.json")
+        return directory.GetFiles(extension)
             .OrderByDescending(f => f.LastWriteTime)
             .ToList();
     }

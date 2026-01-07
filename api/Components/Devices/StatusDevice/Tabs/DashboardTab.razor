@@ -1,0 +1,35 @@
+@using domain.Devices.StatusDevice
+@typeparam TDevice where TDevice : StatusDevice
+
+<div style="overflow-y: auto; height: calc(100vh - 250px); padding: 24px; scrollbar-width: auto; scrollbar-color: #888 transparent;">
+    <MudText Typo="Typo.h6" Class="mb-2">Device</MudText>
+    
+    @if (Device.DbcProperties.Any())
+    {
+        <MudDivider Class="my-4"/>
+        <MudText Typo="Typo.h6" Class="mb-2">DBC Signals</MudText>
+        <MudGrid Spacing="2">
+            @foreach (var prop in Device.DbcProperties)
+            {
+                <MudItem>
+                    <MudCard>
+                        <MudCardContent>
+                            <MudStack AlignItems="AlignItems.Center" Spacing="1">
+                                <MudText Typo="Typo.body1">@prop.Name</MudText>
+                                <MudChip T="string" Variant="Variant.Outlined"
+                                         Color="@(prop.Value > 0.0 ? Color.Success : Color.Default)"
+                                         Size="Size.Small" Style="min-width: 100px;">
+                                    @prop.Value
+                                </MudChip>
+                            </MudStack>
+                        </MudCardContent>
+                    </MudCard>
+                </MudItem>
+            }
+        </MudGrid>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public TDevice Device { get; set; } = null!;
+}
