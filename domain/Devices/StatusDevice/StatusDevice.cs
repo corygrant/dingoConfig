@@ -12,7 +12,7 @@ public class StatusDevice : IDevice
     [JsonIgnore] protected readonly ILogger<StatusDevice> Logger;
     
     [JsonIgnore] public Guid Guid { get; }
-    [JsonIgnore] public string Type => "CANBoard";
+    [JsonIgnore] public string Type => "StatusDevice";
     [JsonPropertyName("name")] public string Name { get; set; }
     [JsonPropertyName("baseId")] public int BaseId { get; set; }
     [JsonIgnore] private DateTime LastRxTime { get; set; }

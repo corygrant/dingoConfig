@@ -130,6 +130,7 @@
                         <MudCardHeader>
                             <CardHeaderContent>
                                 <MudText Typo="Typo.h6">@device.Name</MudText>
+                                <MudIcon Icon="@GetDeviceIcon(device.GetType().Name)" Size="Size.Large"></MudIcon>
                             </CardHeaderContent>
                             <CardHeaderActions>
                                 <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="@(device.Connected ? Color.Success : Color.Error)">
@@ -314,6 +315,18 @@
     private void NavigateToDevice(Guid deviceId)
     {
         Navigation.NavigateTo($"/device/{deviceId}");
+    }
+    
+    private string GetDeviceIcon(string deviceType)
+    {
+        return deviceType switch
+        {
+            "PdmDevice" => Icons.Material.Filled.Bolt,
+            "PdmMaxDevice" => Icons.Material.Filled.OfflineBolt,
+            "CanboardDevice" => Icons.Material.Filled.DeveloperBoard,
+            "StatusDevice" => Icons.Material.Filled.FactCheck,
+            _ => Icons.Material.Filled.DeviceUnknown
+        };
     }
     
     public void Dispose()
