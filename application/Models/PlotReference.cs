@@ -39,6 +39,9 @@ public class PlotReference<T>(
         if (prop.PropertyType == typeof(double))
             return (double)value;
 
+        if (prop.PropertyType.IsEnum)
+            return Convert.ToInt32(value);
+
         return 0.0;
     }
 }

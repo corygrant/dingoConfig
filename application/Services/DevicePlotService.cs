@@ -44,9 +44,10 @@ public class DevicePlotService : IDisposable
         _logger = logger;
         
         _deviceManager.DeviceAdded += DeviceAddedHandler;
+        _deviceManager.DeviceRemoved += DeviceRemovedHandler;
     }
 
-    private void DeviceAddedHandler(object? sender, DeviceAddedEventArgs e)
+    private void DeviceAddedHandler(object? sender, DeviceEventArgs e)
     {
         if (_deviceProps.ContainsKey(e.Device.Guid))
         {
@@ -56,6 +57,15 @@ public class DevicePlotService : IDisposable
         }
         
         _deviceProps[e.Device.Guid] = CreatePlotReferencesFromObject(e.Device, e.Device.Name);
+    }
+
+    private void DeviceRemovedHandler(object? sender, DeviceEventArgs e)
+    {
+        if (_deviceProps.Remove(e.Device.Guid))
+            return;
+        
+        _logger.LogWarning("Device {Device} props already removed for {DeviceId}",
+            e.Device.Name, e.Device.Guid);
     }
 
     public List<IPlotReference> GetAvailableProps(Guid deviceId)
@@ -322,15 +332,16 @@ public class DevicePlotService : IDisposable
             // Check if this property itself is plotable
             if (plotableAttr?.DisplayName is { Length: > 0 })
             {
-                // Only include bool, int, double types
+                // Only include bool, int, double, and enum types
                 if (prop.PropertyType == typeof(bool) ||
                     prop.PropertyType == typeof(int) ||
-                    prop.PropertyType == typeof(double))
+                    prop.PropertyType == typeof(double) ||
+                    prop.PropertyType.IsEnum)
                 {
                     var plotLine = new PlotReference<T>(
-                        source, 
-                        prop, 
-                        $"{prefix}.{plotableAttr.DisplayName}", 
+                        source,
+                        prop,
+                        $"{plotableAttr.DisplayName}",
                         plotableAttr.Unit);
                     plotRefs.Add(plotLine);
                 }
@@ -356,17 +367,18 @@ public class DevicePlotService : IDisposable
                             var itemPlotableAttr = itemProp.GetCustomAttribute<PlotableAttribute>();
                             if (itemPlotableAttr?.DisplayName is not { Length: > 0 })
                                 continue;
-                            
-                            // Only include bool, int, double types
+
+                            // Only include bool, int, double, and enum types
                             if (itemProp.PropertyType != typeof(bool) &&
                                 itemProp.PropertyType != typeof(int) &&
-                                itemProp.PropertyType != typeof(double)) continue;
+                                itemProp.PropertyType != typeof(double) &&
+                                !itemProp.PropertyType.IsEnum) continue;
 
                             var plotRef = (IPlotReference)Activator.CreateInstance(
                                 typeof(PlotReference<>).MakeGenericType(itemType),
                                 item,
                                 itemProp,
-                                $"{prefix}.{prop.Name}[{index}].{itemPlotableAttr.DisplayName}",
+                                $"{prop.Name}[{index}].{itemPlotableAttr.DisplayName}",
                                 itemPlotableAttr.Unit)!;
                             plotRefs.Add(plotRef);
                         }
@@ -389,17 +401,18 @@ public class DevicePlotService : IDisposable
                 {
                     var nestedPlotableAttr = nestedProp.GetCustomAttribute<PlotableAttribute>();
                     if (nestedPlotableAttr?.DisplayName is not { Length: > 0 }) continue;
-                    
-                    // Only include bool, int, double types
+
+                    // Only include bool, int, double, and enum types
                     if (nestedProp.PropertyType != typeof(bool) &&
                         nestedProp.PropertyType != typeof(int) &&
-                        nestedProp.PropertyType != typeof(double)) continue;
+                        nestedProp.PropertyType != typeof(double) &&
+                        !nestedProp.PropertyType.IsEnum) continue;
 
                     var plotRef = (IPlotReference)Activator.CreateInstance(
                         typeof(PlotReference<>).MakeGenericType(nestedType),
                         nestedObject,
                         nestedProp,
-                        $"{prefix}.{prop.Name}.{nestedPlotableAttr.DisplayName}",
+                        $"{prop.Name}.{nestedPlotableAttr.DisplayName}",
                         nestedPlotableAttr.Unit)!;
                     plotRefs.Add(plotRef);
                 }
