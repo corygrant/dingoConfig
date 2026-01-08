@@ -3,7 +3,7 @@ using application.Models;
 using domain.Devices.Canboard;
 using domain.Devices.dingoPdm;
 using domain.Devices.dingoPdmMax;
-using domain.Devices.StatusDevice;
+using domain.Devices.Generic;
 using domain.Interfaces;
 using domain.Models;
 using Microsoft.Extensions.Logging;

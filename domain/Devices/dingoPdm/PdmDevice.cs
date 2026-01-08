@@ -59,6 +59,8 @@ public class PdmDevice : IDevice
     
     [JsonIgnore] private DateTime LastRxTime { get; set; }
     
+    [JsonIgnore] public bool Configurable { get; }
+    
     [JsonIgnore]
     public bool Connected
     {
@@ -81,6 +83,8 @@ public class PdmDevice : IDevice
         BaseId = baseId;
         Guid = Guid.NewGuid();
 
+        Configurable = true;
+        
         // ReSharper disable VirtualMemberCallInConstructor
         InitializeCollections();
 

@@ -5,7 +5,7 @@ using domain.Interfaces;
 using domain.Models;
 using Microsoft.Extensions.Logging;
 
-namespace domain.Devices.StatusDevice;
+namespace domain.Devices.Generic;
 
 public class StatusDevice : IDevice 
 {
@@ -32,6 +32,7 @@ public class StatusDevice : IDevice
         }
     }
 
+    [JsonIgnore] public bool Configurable { get; }
     [JsonIgnore] private string? DbcFilePath { get; set; }
     
     [JsonPropertyName("minId")] public int MinId { get; set; }
@@ -49,6 +50,8 @@ public class StatusDevice : IDevice
         Guid = Guid.NewGuid();
         Name = name;
         BaseId = baseId;
+
+        Configurable = false;
 
         Logger.LogDebug("StatusDevice {Name} created", Name);
     }

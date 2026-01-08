@@ -1,11 +1,12 @@
 @using api.Components.Devices.CANBoard
 @using api.Components.Devices.dingoPdm
-@using api.Components.Devices.StatusDevice
+@using api.Components.Devices.Generic
 @using application.Services
 @using api.Services
 @using domain.Devices.Canboard
 @using domain.Devices.dingoPdm
 @using domain.Devices.dingoPdmMax
+@using domain.Devices.Generic
 @inject DeviceManager DeviceManager
 @inject NotificationService Notification
 @typeparam TDevice where TDevice : domain.Interfaces.IDevice
@@ -19,16 +20,16 @@
                        Color="@(DeviceManager.GetDeviceUiState(Device.Guid).NeedsRead && Device.Connected ? Color.Warning : Color.Default)"
                        Size="Size.Small"
                        StartIcon="@Icons.Material.Filled.Download"
-                       Disabled="@(!Device.Connected || !AdapterConnected)"
+                       Disabled="@(!Device.Connected || !AdapterConnected || !Device.Configurable)"
                        OnClick="@OnReadDeviceAsync"
-                       Class="@(DeviceManager.GetDeviceUiState(Device.Guid).NeedsRead && Device.Connected ? "flash-button" : "")">
+                       Class="@(DeviceManager.GetDeviceUiState(Device.Guid).NeedsRead && Device.Connected && Device.Configurable ? "flash-button" : "")">
                 Read
             </MudButton>
             <MudButton Variant="Variant.Outlined"
                        Color="Color.Default"
                        Size="Size.Small"
                        StartIcon="@Icons.Material.Filled.Upload"
-                       Disabled="@(!Device.Connected || !AdapterConnected)"
+                       Disabled="@(!Device.Connected || !AdapterConnected || !Device.Configurable)"
                        OnClick="@OnWriteDeviceAsync">
                 Write
             </MudButton>
@@ -36,7 +37,7 @@
                        Color="Color.Default"
                        Size="Size.Small"
                        StartIcon="@Icons.Material.Filled.Save"
-                       Disabled="@(!Device.Connected || !AdapterConnected)"
+                       Disabled="@(!Device.Connected || !AdapterConnected || !Device.Configurable)"
                        OnClick="@OnBurnSettingsAsync">
                 Burn
             </MudButton>
@@ -44,7 +45,7 @@
                        Color="Color.Default"
                        Size="Size.Small"
                        StartIcon="@Icons.Material.Filled.Bedtime"
-                       Disabled="@(!Device.Connected || !AdapterConnected)"
+                       Disabled="@(!Device.Connected || !AdapterConnected || !Device.Configurable)"
                        OnClick="@OnSleepAsync">
                 Sleep
             </MudButton>
@@ -52,7 +53,7 @@
                        Color="Color.Default"
                        Size="Size.Small"
                        StartIcon="@Icons.Material.Filled.WbSunny"
-                       Disabled="@(Device.Connected || !AdapterConnected)"
+                       Disabled="@(Device.Connected || !AdapterConnected || !Device.Configurable)"
                        OnClick="@OnWakeupAsync">
                 Wakeup
             </MudButton>
@@ -60,7 +61,7 @@
                        Color="Color.Default"
                        Size="Size.Small"
                        StartIcon="@Icons.Material.Filled.DeveloperMode"
-                       Disabled="@(!Device.Connected || !AdapterConnected)"
+                       Disabled="@(!Device.Connected || !AdapterConnected || !Device.Configurable)"
                        OnClick="@OnEnterBootloaderAsync">
                 Bootloader
             </MudButton>
@@ -89,8 +90,8 @@
             <CanboardDeviceTabs TDevice="CanboardDevice" Device="canboardDevice" />
             break;
 
-        case domain.Devices.StatusDevice.StatusDevice statusDevice:
-            <StatusDeviceTabs TDevice="domain.Devices.StatusDevice.StatusDevice" Device="statusDevice"/>
+        case StatusDevice statusDevice:
+            <StatusDeviceTabs TDevice="StatusDevice" Device="statusDevice"/>
             break;
             
         default:

@@ -3,7 +3,7 @@
 @using domain.Devices.dingoPdm
 @using domain.Devices.dingoPdmMax
 @using domain.Devices.Canboard
-@using domain.Devices.StatusDevice
+@using domain.Devices.Generic
 @using application.Services
 @inject DeviceManager DeviceManager
 @inject ICommsAdapterManager AdapterManager
@@ -35,8 +35,8 @@
                                AdapterConnected="@AdapterManager.IsConnected" />
                 break;
                 
-            case domain.Devices.StatusDevice.StatusDevice statusDevice:
-                <BaseDeviceView TDevice="domain.Devices.StatusDevice.StatusDevice"
+            case StatusDevice statusDevice:
+                <BaseDeviceView TDevice="StatusDevice"
                                 Device="statusDevice"
                                 AdapterConnected="@AdapterManager.IsConnected"/>
                 break;

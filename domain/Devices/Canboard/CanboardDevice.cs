@@ -22,6 +22,8 @@ public class CanboardDevice : IDevice
     [JsonPropertyName("baseId")] public int BaseId { get; set; }
     [JsonIgnore] private DateTime LastRxTime { get; set; }
 
+    [JsonIgnore] public bool Configurable { get; }
+
     [JsonIgnore]
     public bool Connected
     {
@@ -51,6 +53,8 @@ public class CanboardDevice : IDevice
         Name = name;
         BaseId = baseId;
 
+        Configurable = false;
+        
         // ReSharper disable VirtualMemberCallInConstructor
         InitializeCollections();
 

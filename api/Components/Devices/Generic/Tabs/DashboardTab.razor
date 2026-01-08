@@ -1,4 +1,4 @@
-@using domain.Devices.StatusDevice
+@using domain.Devices.Generic
 @typeparam TDevice where TDevice : StatusDevice
 
 <div style="overflow-y: auto; height: calc(100vh - 250px); padding: 24px; scrollbar-width: auto; scrollbar-color: #888 transparent;">
@@ -19,7 +19,7 @@
                                 <MudChip T="string" Variant="Variant.Outlined"
                                          Color="@(prop.Value > 0.0 ? Color.Success : Color.Default)"
                                          Size="Size.Small" Style="min-width: 100px;">
-                                    @prop.Value
+                                    @prop.Value.ToString("F2")
                                 </MudChip>
                             </MudStack>
                         </MudCardContent>

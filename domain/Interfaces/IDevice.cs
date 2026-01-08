@@ -13,6 +13,7 @@ public interface IDevice
     public void UpdateIsConnected();
     void Read(int id, byte[] data, ref ConcurrentDictionary<(int BaseId, int Prefix, int Index), DeviceCanFrame> queue);
     bool InIdRange(int id);
+    bool Configurable { get; }
     List<DeviceCanFrame> GetReadMsgs();
     List<DeviceCanFrame> GetWriteMsgs();
     List<DeviceCanFrame> GetModifyMsgs(int newId);

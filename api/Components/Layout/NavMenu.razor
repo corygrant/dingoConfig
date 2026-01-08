@@ -18,7 +18,9 @@
 
     
 
-    <MudNavLink Href="devices" Icon="@Icons.Material.Filled.Memory">
+    <MudNavLink Href="devices" 
+                Icon="@Icons.Material.Filled.Memory"
+                IconColor= "@(AnyDeviceConnected() ? Color.Success : Color.Default)">
         Devices
     </MudNavLink>
 
@@ -130,6 +132,11 @@
             // Trigger graceful shutdown
             AppLifetime.StopApplication();
         }
+    }
+
+    private bool AnyDeviceConnected()
+    {
+        return DeviceManager.GetAllDevices().Any(dev => dev.Connected);
     }
 
     public void Dispose()

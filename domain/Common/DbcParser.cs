@@ -106,7 +106,7 @@ public static class DbcParser
         var format = lengthAndFormat[1];
         if (format.Length < 2) return null;
 
-        var byteOrder = format[0] == '1' ? ByteOrder.BigEndian : ByteOrder.LittleEndian;
+        var byteOrder = format[0] == '1' ? ByteOrder.LittleEndian : ByteOrder.BigEndian;
         var isSigned = format[1] == '-';
 
         // Parse factor and offset: "(0.1,0)"
