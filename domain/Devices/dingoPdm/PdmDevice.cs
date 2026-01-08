@@ -15,21 +15,21 @@ namespace domain.Devices.dingoPdm;
 
 public class PdmDevice : IDevice
 {
-    [JsonIgnore] protected ILogger Logger = NullLogger.Instance;
+    [JsonIgnore] protected ILogger<PdmDevice> Logger = null!;
 
-    [JsonIgnore] protected virtual int MinMajorVersion { get; } = 0;
-    [JsonIgnore] protected virtual int MinMinorVersion { get; } = 4;
-    [JsonIgnore] protected virtual int MinBuildVersion { get; } = 27;
+    [JsonIgnore] protected virtual int MinMajorVersion => 0;
+    [JsonIgnore] protected virtual int MinMinorVersion => 4;
+    [JsonIgnore] protected virtual int MinBuildVersion => 27;
 
-    [JsonIgnore] protected virtual int NumDigitalInputs { get; } = 2;
-    [JsonIgnore] protected virtual int NumOutputs { get; } = 8;
-    [JsonIgnore] protected virtual int NumCanInputs { get; } = 32;
-    [JsonIgnore] protected virtual int NumVirtualInputs { get; } = 16;
-    [JsonIgnore] protected virtual int NumFlashers { get; } = 4;
-    [JsonIgnore] protected virtual int NumCounters { get; } = 4;
-    [JsonIgnore] protected virtual int NumConditions { get; } = 32;
-    
-    [JsonIgnore] protected virtual int PdmType { get; } = 0; //0=dingoPDM, 1=dingoPDM-Max
+    [JsonIgnore] protected virtual int NumDigitalInputs => 2;
+    [JsonIgnore] protected virtual int NumOutputs => 8;
+    [JsonIgnore] protected virtual int NumCanInputs => 32;
+    [JsonIgnore] protected virtual int NumVirtualInputs => 16;
+    [JsonIgnore] protected virtual int NumFlashers => 4;
+    [JsonIgnore] protected virtual int NumCounters => 4;
+    [JsonIgnore] protected virtual int NumConditions => 32;
+
+    [JsonIgnore] protected virtual int PdmType => 0; //0=dingoPDM, 1=dingoPDM-Max
     [JsonIgnore] protected bool PdmTypeOk;
     
     [JsonIgnore] public Guid Guid { get; }
@@ -48,20 +48,20 @@ public class PdmDevice : IDevice
     [JsonIgnore] public bool CanFiltersEnabled { get; set; }
     [JsonIgnore] public CanBitRate BitRate { get; set; }
     
-    [JsonPropertyName("inputs")] public List<Input> Inputs { get; } = [];
-    [JsonPropertyName("outputs")] public List<Output> Outputs { get; } = [];
-    [JsonPropertyName("canInputs")] public List<CanInput> CanInputs { get; } = [];
-    [JsonPropertyName("virtualInputs")] public List<VirtualInput> VirtualInputs { get; } = [];
+    [JsonPropertyName("inputs")] public List<Input> Inputs { get; init; } = [];
+    [JsonPropertyName("outputs")] public List<Output> Outputs { get; init; } = [];
+    [JsonPropertyName("canInputs")] public List<CanInput> CanInputs { get; init; } = [];
+    [JsonPropertyName("virtualInputs")] public List<VirtualInput> VirtualInputs { get; init; } = [];
     [JsonPropertyName("wipers")] public Wiper Wipers { get; protected set; } = null!;
-    [JsonPropertyName("flashers")] public List<Flasher> Flashers { get; } = [];
+    [JsonPropertyName("flashers")] public List<Flasher> Flashers { get; init; } = [];
     [JsonPropertyName("starterDisable")] public StarterDisable StarterDisable { get; protected set; } = null!;
-    [JsonPropertyName("counters")] public List<Counter> Counters { get; } = [];
-    [JsonPropertyName("conditions")] public List<Condition> Conditions { get; } = [];
+    [JsonPropertyName("counters")] public List<Counter> Counters { get; init; } = [];
+    [JsonPropertyName("conditions")] public List<Condition> Conditions { get; init; } = [];
     
     [JsonIgnore] private DateTime LastRxTime { get; set; }
-    
-    [JsonIgnore] public bool Configurable { get; }
-    
+
+    [JsonIgnore] public bool Configurable => true;
+
     [JsonIgnore]
     public bool Connected
     {
@@ -76,45 +76,18 @@ public class PdmDevice : IDevice
             field = value;
         }
     }
-
-    /// <summary>
-    /// Parameterless constructor for JSON deserialization.
-    /// Name and BaseId will be set by the deserializer from JSON properties.
-    /// Logger must be set via SetLogger() after deserialization.
-    /// </summary>
-    [JsonConstructor]
-    public PdmDevice()
+    
+    public PdmDevice(string name, int baseId)
     {
-        Guid = Guid.NewGuid();
-        Name = "";
-        BaseId = 0;
-        Configurable = true;
-
-        InitializeCollections();
-    }
-
-    /// <summary>
-    /// Constructor for programmatic device creation with dependency injection
-    /// </summary>
-    public PdmDevice(ILogger logger, string name, int baseId)
-    {
-        Logger = logger;
         Name = name;
         BaseId = baseId;
         Guid = Guid.NewGuid();
 
-        Configurable = true;
-
         // ReSharper disable VirtualMemberCallInConstructor
         InitializeCollections();
-
-        Logger.LogDebug("PDM {Name} created", Name);
     }
 
-    /// <summary>
-    /// Sets the logger instance (used after JSON deserialization)
-    /// </summary>
-    public void SetLogger(ILogger logger)
+    public void SetLogger(ILogger<PdmDevice> logger)
     {
         Logger = logger;
     }

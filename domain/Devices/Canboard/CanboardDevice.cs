@@ -11,7 +11,7 @@ namespace domain.Devices.Canboard;
 
 public class CanboardDevice : IDevice
 {
-    [JsonIgnore] protected ILogger<CanboardDevice> Logger = NullLogger<CanboardDevice>.Instance;
+    [JsonIgnore] protected ILogger<CanboardDevice> Logger = null!;
 
     [JsonIgnore] protected virtual int NumAnalogInputs { get; } = 5; //Also serve as rotary switches and analog/dig inputs
     [JsonIgnore] protected virtual int NumDigitalInputs { get; } = 8;
@@ -23,7 +23,7 @@ public class CanboardDevice : IDevice
     [JsonPropertyName("baseId")] public int BaseId { get; set; }
     [JsonIgnore] private DateTime LastRxTime { get; set; }
 
-    [JsonIgnore] public bool Configurable { get; }
+    [JsonIgnore] public bool Configurable { get; } = false;
 
     [JsonIgnore]
     public bool Connected
@@ -40,50 +40,23 @@ public class CanboardDevice : IDevice
         }
     }
 
-    [JsonPropertyName("analogIn")] public List<AnalogInput> AnalogInputs { get; } = [];
-    [JsonPropertyName("digitalIn")] public List<DigitalInput> DigitalInputs { get; } = [];
-    [JsonPropertyName("digitalOut")] public List<DigitalOutput> DigitalOutputs { get; } = [];
+    [JsonPropertyName("analogIn")] public List<AnalogInput> AnalogInputs { get; init; } = [];
+    [JsonPropertyName("digitalIn")] public List<DigitalInput> DigitalInputs { get; init; } = [];
+    [JsonPropertyName("digitalOut")] public List<DigitalOutput> DigitalOutputs { get; init; } = [];
     
     [JsonIgnore] public double BoardTempC { get; private set; }
     [JsonIgnore] public int Heartbeat { get; private set; }
-
-    /// <summary>
-    /// Parameterless constructor for JSON deserialization.
-    /// Name and BaseId will be set by the deserializer from JSON properties.
-    /// Logger must be set via SetLogger() after deserialization.
-    /// </summary>
-    [JsonConstructor]
-    public CanboardDevice()
+    
+    public CanboardDevice(string name, int baseId)
     {
-        Guid = Guid.NewGuid();
-        Name = "";
-        BaseId = 0;
-        Configurable = false;
-
-        InitializeCollections();
-    }
-
-    /// <summary>
-    /// Constructor for programmatic device creation with dependency injection
-    /// </summary>
-    public CanboardDevice(ILogger<CanboardDevice> logger, string name, int baseId)
-    {
-        Logger = logger;
         Guid = Guid.NewGuid();
         Name = name;
         BaseId = baseId;
-
-        Configurable = false;
-
+        
         // ReSharper disable VirtualMemberCallInConstructor
         InitializeCollections();
-
-        Logger.LogDebug("CANBoard {Name} created", Name);
     }
-
-    /// <summary>
-    /// Sets the logger instance (used after JSON deserialization)
-    /// </summary>
+    
     public void SetLogger(ILogger<CanboardDevice> logger)
     {
         Logger = logger;

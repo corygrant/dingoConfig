@@ -25,7 +25,7 @@
       ],
       "outputs": [
         {
-          "enabled": false,
+          "enabled": true,
           "name": "output0",
           "number": 1,
           "currentLimit": 0,
@@ -1366,8 +1366,6 @@
     {
       "name": "CurrentSensor",
       "baseId": 964,
-      "minId": 964,
-      "maxId": 964,
       "dbcSignal": [
         {
           "name": "Current",
@@ -1387,8 +1385,6 @@
     {
       "name": "Proteus",
       "baseId": 512,
-      "minId": 512,
-      "maxId": 521,
       "dbcSignal": [
         {
           "name": "WarningCounter",

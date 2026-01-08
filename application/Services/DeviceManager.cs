@@ -48,16 +48,30 @@ public class DeviceManager(ILogger<DeviceManager> logger, ILoggerFactory loggerF
     /// <summary>
     /// Create and add a device of the specified type
     /// </summary>
-    public IDevice AddDevice(string deviceType, string name, int baseId)
+    public void AddDevice(string deviceType, string name, int baseId)
     {
         IDevice device = deviceType.ToLower() switch
         {
-            "pdm" => new PdmDevice(loggerFactory.CreateLogger<PdmDevice>(), name, baseId),
-            "pdmmax" => new PdmMaxDevice(loggerFactory.CreateLogger<PdmMaxDevice>(), name, baseId),
-            "canboard" => new CanboardDevice(loggerFactory.CreateLogger<CanboardDevice>(), name, baseId),
-            "dbcdevice" => new DbcDevice(loggerFactory.CreateLogger<DbcDevice>(), name, baseId),
+            "pdm" => new PdmDevice(name, baseId),
+            "pdmmax" => new PdmMaxDevice(name, baseId),
+            "canboard" => new CanboardDevice(name, baseId),
+            "dbcdevice" => new DbcDevice(name, baseId),
             _ => throw new ArgumentException($"Unknown device type: {deviceType}")
         };
+        
+        // Inject logger based on device type
+        switch (device)
+        {
+            case PdmDevice pdmDevice:
+                pdmDevice.SetLogger(loggerFactory.CreateLogger<PdmDevice>());
+                break;
+            case CanboardDevice canboardDevice:
+                canboardDevice.SetLogger(loggerFactory.CreateLogger<CanboardDevice>());
+                break;
+            case DbcDevice dbcDevice:
+                dbcDevice.SetLogger(loggerFactory.CreateLogger<DbcDevice>());
+                break;
+        }
 
         _devices[device.Guid] = device;
         GetDeviceUiState(device.Guid).NeedsRead = true;
@@ -65,8 +79,6 @@ public class DeviceManager(ILogger<DeviceManager> logger, ILoggerFactory loggerF
             deviceType, name, baseId, device.Guid);
 
         OnDeviceAdded(this, new DeviceEventArgs(device));
-        
-        return device;
     }
 
     /// <summary>
@@ -134,8 +146,8 @@ public class DeviceManager(ILogger<DeviceManager> logger, ILoggerFactory loggerF
     }
 
     /// <summary>
-    /// Add multiple devices (typically loaded from JSON file).
-    /// Injects loggers into devices that were deserialized without them.
+    /// Add multiple devices
+    /// Injects loggers into devices
     /// </summary>
     public void AddDevices(List<IDevice> devices)
     {

@@ -8,14 +8,14 @@ using Microsoft.Extensions.Logging.Abstractions;
 
 namespace domain.Devices.Generic;
 
-public class DbcDevice : IDevice
+public class DbcDevice(string name, int baseId) : IDevice
 {
-    [JsonIgnore] protected ILogger<DbcDevice> Logger = NullLogger<DbcDevice>.Instance;
+    [JsonIgnore] protected ILogger<DbcDevice> Logger = null!;
     
-    [JsonIgnore] public Guid Guid { get; }
+    [JsonIgnore] public Guid Guid { get; } = Guid.NewGuid();
     [JsonIgnore] public string Type => "DbcDevice";
-    [JsonPropertyName("name")] public string Name { get; set; }
-    [JsonPropertyName("baseId")] public int BaseId { get; set; }
+    [JsonPropertyName("name")] public string Name { get; set; } = name;
+    [JsonPropertyName("baseId")] public int BaseId { get; set; } = baseId;
     [JsonIgnore] private DateTime LastRxTime { get; set; }
 
     [JsonIgnore]
@@ -33,46 +33,13 @@ public class DbcDevice : IDevice
         }
     }
 
-    [JsonIgnore] public bool Configurable { get; }
-    [JsonIgnore] public string? DbcFilePath { get; set; }
-    
-    [JsonPropertyName("minId")] public int MinId { get; set; }
-    [JsonPropertyName("maxId")] public int MaxId { get; set; }
-    
-    [JsonPropertyName("dbcSignal")][Plotable(displayName:"DbcSignal")] public List<DbcSignal> DbcSignals { get; } = [];
 
-    /// <summary>
-    /// Parameterless constructor for JSON deserialization.
-    /// Name and BaseId will be set by the deserializer from JSON properties.
-    /// Logger must be set via SetLogger() after deserialization.
-    /// </summary>
-    [JsonConstructor]
-    public DbcDevice()
-    {
-        Guid = Guid.NewGuid();
-        Name = "";
-        BaseId = 0;
-        Configurable = false;
-    }
+    [JsonIgnore] private string? DbcFilePath { get; set; }
+    [JsonPropertyName("minId")] private int MinId { get; set; }
+    [JsonPropertyName("maxId")] private int MaxId { get; set; }
+    [JsonPropertyName("dbcSignal")][Plotable(displayName:"DbcSignal")] public List<DbcSignal> DbcSignals { get; init; } = [];
+    [JsonIgnore] public bool Configurable => false;
 
-    /// <summary>
-    /// Constructor for programmatic device creation with dependency injection
-    /// </summary>
-    public DbcDevice(ILogger<DbcDevice> logger, string name, int baseId)
-    {
-        Logger = logger;
-        Guid = Guid.NewGuid();
-        Name = name;
-        BaseId = baseId;
-
-        Configurable = false;
-
-        Logger.LogDebug("StatusDevice {Name} created", Name);
-    }
-
-    /// <summary>
-    /// Sets the logger instance (used after JSON deserialization)
-    /// </summary>
     public void SetLogger(ILogger<DbcDevice> logger)
     {
         Logger = logger;

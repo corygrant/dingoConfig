@@ -29,7 +29,10 @@
     @if (!Device.DbcSignals.Any())
     {
         <MudAlert Severity="Severity.Warning">
-            No DBC signals configured. Click "Configuration" and open a DBC file.
+            No DBC signals configured
+        </MudAlert>
+        <MudAlert Severity="Severity.Info">
+            Click "Configuration" to open a DBC file or add custom signals
         </MudAlert>
     }
 </div>

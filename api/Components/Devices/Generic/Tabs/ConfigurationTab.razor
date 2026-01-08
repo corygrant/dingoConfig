@@ -11,9 +11,6 @@
             <MudCardHeader>
                 <CardHeaderContent>
                     <MudText Typo="Typo.h6">Open DBC File</MudText>
-                    <MudText Typo="Typo.body2" Color="Color.Secondary">
-                        @GetStatusText()
-                    </MudText>
                 </CardHeaderContent>
             </MudCardHeader>
             <MudCardContent>
@@ -143,16 +140,6 @@
 
             _dbcFile = fileName;
         }
-    }
-
-    private string GetStatusText()
-    {
-        if (string.IsNullOrEmpty(Device.DbcFilePath))
-        {
-            return "No file open";
-        }
-
-        return $"{Device.DbcFilePath}";
     }
 
     private async Task AddCustomSignal()
