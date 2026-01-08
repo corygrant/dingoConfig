@@ -1,21 +1,127 @@
 @using domain.Devices.Generic
+@using domain.Enums
+@using domain.Models
 @inject IDialogService DialogService
-@typeparam TDevice where TDevice : StatusDevice
+@typeparam TDevice where TDevice : DbcDevice
 
-<div style="overflow-y: auto; height: calc(100vh - 250px); padding: 24px; scrollbar-width: auto; scrollbar-color: #888 transparent;">
-    <MudButton Variant="Variant.Outlined"
-               Color="Color.Secondary"
-               StartIcon="@Icons.Material.Filled.FolderOpen"
-               OnClick="@OpenDbcFile"
-               FullWidth="true"
-               Class="mb-3">
-        Open Dbc File
-    </MudButton>
+<div
+    style="overflow-y: auto; height: calc(100vh - 250px); padding: 24px; scrollbar-width: auto; scrollbar-color: #888 transparent;">
+    <MudStack AlignItems="AlignItems.Center" Spacing="2">
+        <MudCard Style="max-width: 500px">
+            <MudCardHeader>
+                <CardHeaderContent>
+                    <MudText Typo="Typo.h6">Open DBC File</MudText>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">
+                        @GetStatusText()
+                    </MudText>
+                </CardHeaderContent>
+            </MudCardHeader>
+            <MudCardContent>
+                <MudStack AlignItems="AlignItems.Center" Spacing="1">
+                    <MudButton Variant="Variant.Outlined"
+                               Color="Color.Secondary"
+                               StartIcon="@Icons.Material.Filled.FolderOpen"
+                               OnClick="@OpenDbcFile"
+                               Size="Size.Medium"
+                               Class="mb-3">
+                        Open
+                    </MudButton>
+                </MudStack>
+            </MudCardContent>
+        </MudCard>
+        <MudCard>
+            <MudCardHeader>
+                <CardHeaderContent>
+                    <MudText Typo="Typo.h6">Custom Signal</MudText>
+                </CardHeaderContent>
+            </MudCardHeader>
+            <MudCardContent>
+                <MudGrid Spacing="5">
+                    <MudItem>
+                        <MudStack AlignItems="AlignItems.Center" Spacing="2">
+                            <MudTextField @bind-Value="_customSignal.Name"
+                                          Label="Name"
+                                          Required="false"
+                                          Placeholder="Enter a name"
+                                          Variant="Variant.Outlined"/>
+                            <MudTextField @bind-Value="_customSignal.Unit"
+                                          Label="Unit"
+                                          Required="false"
+                                          Placeholder="Unit optional"
+                                          Variant="Variant.Outlined"/>
+                        </MudStack>
+                    </MudItem>
+                    <MudItem>
+                        <MudStack AlignItems="AlignItems.Center" Spacing="2">
+                            <MudNumericField @bind-Value="_customSignal.Id"
+                                             Label="ID"
+                                             Min="0"
+                                             Max="536870912"
+                                             Required="true"/>
+                            <MudNumericField @bind-Value="_customSignal.StartBit"
+                                             Label="Start Bit"
+                                             Min="0"
+                                             Max="63"
+                                             Required="true"/>
+                            <MudNumericField @bind-Value="_customSignal.Length"
+                                             Label="Length"
+                                             Min="0"
+                                             Max="64"
+                                             Required="true"/>
+                            <MudSelect T="ByteOrder" @bind-Value="_customSignal.ByteOrder" Variant="Variant.Outlined"
+                                       Dense="true">
+                                @foreach (ByteOrder byteOrder in Enum.GetValues(typeof(ByteOrder)))
+                                {
+                                    <MudSelectItem T="ByteOrder" Value="@byteOrder">@byteOrder</MudSelectItem>
+                                }
+                            </MudSelect>
+                        </MudStack>
+                    </MudItem>
+                    <MudItem>
+                        <MudStack AlignItems="AlignItems.Center" Spacing="2">
+                            <MudNumericField @bind-Value="_customSignal.Factor"
+                                             Label="Factor"
+                                             Min="0.000001"
+                                             Required="false"/>
+                            <MudNumericField @bind-Value="_customSignal.Offset"
+                                             Label="Offset"
+                                             Required="false"/>
+                            <MudCheckBox @bind-Value="_customSignal.IsSigned" Label="Signed" Dense="true"/>
+                        </MudStack>
+                    </MudItem>
+                    <MudItem>
+                        <MudStack AlignItems="AlignItems.Center" Spacing="2">
+                            <MudNumericField @bind-Value="_customSignal.Min"
+                                             Label="Min"
+                                             Required="false"/>
+                            <MudNumericField @bind-Value="_customSignal.Max"
+                                             Label="Max"
+                                             Required="false"/>
+                        </MudStack>
+                    </MudItem>
+                </MudGrid>
+            </MudCardContent>
+            <MudCardActions>
+                <MudButton Variant="Variant.Outlined"
+                           Color="Color.Secondary"
+                           StartIcon="@Icons.Material.Filled.Add"
+                           OnClick="@AddCustomSignal"
+                           Size="Size.Medium"
+                           Disabled="@(!CustomSignalReady())"
+                           Class="mb-3">
+                    Add Signal
+                </MudButton>
+            </MudCardActions>
+        </MudCard>
+    </MudStack>
 </div>
 
 @code {
     [Parameter, EditorRequired] public TDevice Device { get; set; } = null!;
-    
+
+    private string? _dbcFile;
+    private DbcSignal _customSignal = new DbcSignal();
+
     private async Task OpenDbcFile()
     {
         var parameters = new DialogParameters
@@ -34,6 +140,29 @@
         if (dialogResult is { Canceled: false, Data: string fileName })
         {
             await Device.ParseDbcFile(fileName);
+
+            _dbcFile = fileName;
         }
     }
+
+    private string GetStatusText()
+    {
+        if (string.IsNullOrEmpty(Device.DbcFilePath))
+        {
+            return "No file open";
+        }
+
+        return $"{Device.DbcFilePath}";
+    }
+
+    private async Task AddCustomSignal()
+    {
+        if (_customSignal != null) await Device.AddCustomSignal(_customSignal);
+    }
+
+    private bool CustomSignalReady()
+    {
+        return _customSignal is { Id: > 0, Length: > 0, Name.Length: > 0, Factor: > 0 };
+    }
+
 }

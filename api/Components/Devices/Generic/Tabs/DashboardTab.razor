@@ -1,25 +1,23 @@
 @using domain.Devices.Generic
-@typeparam TDevice where TDevice : StatusDevice
+@typeparam TDevice where TDevice : DbcDevice
 
 <div style="overflow-y: auto; height: calc(100vh - 250px); padding: 24px; scrollbar-width: auto; scrollbar-color: #888 transparent;">
-    <MudText Typo="Typo.h6" Class="mb-2">Device</MudText>
-    
-    @if (Device.DbcProperties.Any())
+    @if (Device.DbcSignals.Any())
     {
         <MudDivider Class="my-4"/>
         <MudText Typo="Typo.h6" Class="mb-2">DBC Signals</MudText>
         <MudGrid Spacing="2">
-            @foreach (var prop in Device.DbcProperties)
+            @foreach (var signal in Device.DbcSignals)
             {
-                <MudItem>
+                <MudItem Style="width: 200px; height: 100%">
                     <MudCard>
                         <MudCardContent>
                             <MudStack AlignItems="AlignItems.Center" Spacing="1">
-                                <MudText Typo="Typo.body1">@prop.Name</MudText>
+                                <MudText Typo="Typo.body1">@signal.Name</MudText>
                                 <MudChip T="string" Variant="Variant.Outlined"
-                                         Color="@(prop.Value > 0.0 ? Color.Success : Color.Default)"
+                                         Color="@GetChipColor(signal.Value)"
                                          Size="Size.Small" Style="min-width: 100px;">
-                                    @prop.Value.ToString("F2")
+                                    @signal.Value.ToString("F2") @signal.Unit
                                 </MudChip>
                             </MudStack>
                         </MudCardContent>
@@ -28,8 +26,24 @@
             }
         </MudGrid>
     }
+    @if (!Device.DbcSignals.Any())
+    {
+        <MudAlert Severity="Severity.Warning">
+            No DBC signals configured. Click "Configuration" and open a DBC file.
+        </MudAlert>
+    }
 </div>
 
 @code {
     [Parameter, EditorRequired] public TDevice Device { get; set; } = null!;
+
+    private Color GetChipColor(double val)
+    {
+        return val switch
+        {
+            > 0.0 => Color.Success,
+            < 0.0 => Color.Error,
+            _ => Color.Default
+        };
+    }
 }

@@ -4,15 +4,16 @@ using domain.Common;
 using domain.Interfaces;
 using domain.Models;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace domain.Devices.Generic;
 
-public class StatusDevice : IDevice 
+public class DbcDevice : IDevice
 {
-    [JsonIgnore] protected readonly ILogger<StatusDevice> Logger;
+    [JsonIgnore] protected ILogger<DbcDevice> Logger = NullLogger<DbcDevice>.Instance;
     
     [JsonIgnore] public Guid Guid { get; }
-    [JsonIgnore] public string Type => "StatusDevice";
+    [JsonIgnore] public string Type => "DbcDevice";
     [JsonPropertyName("name")] public string Name { get; set; }
     [JsonPropertyName("baseId")] public int BaseId { get; set; }
     [JsonIgnore] private DateTime LastRxTime { get; set; }
@@ -33,18 +34,31 @@ public class StatusDevice : IDevice
     }
 
     [JsonIgnore] public bool Configurable { get; }
-    [JsonIgnore] private string? DbcFilePath { get; set; }
+    [JsonIgnore] public string? DbcFilePath { get; set; }
     
     [JsonPropertyName("minId")] public int MinId { get; set; }
     [JsonPropertyName("maxId")] public int MaxId { get; set; }
     
-    [JsonPropertyName("dbcProp")][Plotable(displayName:"DbcProp")] public List<DbcProperty> DbcProperties { get; } = [];
+    [JsonPropertyName("dbcSignal")][Plotable(displayName:"DbcSignal")] public List<DbcSignal> DbcSignals { get; } = [];
 
-    
     /// <summary>
-    /// Must set DbcFilePath before calling constructor
+    /// Parameterless constructor for JSON deserialization.
+    /// Name and BaseId will be set by the deserializer from JSON properties.
+    /// Logger must be set via SetLogger() after deserialization.
     /// </summary>
-    public StatusDevice(ILogger<StatusDevice> logger, string name, int baseId)
+    [JsonConstructor]
+    public DbcDevice()
+    {
+        Guid = Guid.NewGuid();
+        Name = "";
+        BaseId = 0;
+        Configurable = false;
+    }
+
+    /// <summary>
+    /// Constructor for programmatic device creation with dependency injection
+    /// </summary>
+    public DbcDevice(ILogger<DbcDevice> logger, string name, int baseId)
     {
         Logger = logger;
         Guid = Guid.NewGuid();
@@ -55,6 +69,14 @@ public class StatusDevice : IDevice
 
         Logger.LogDebug("StatusDevice {Name} created", Name);
     }
+
+    /// <summary>
+    /// Sets the logger instance (used after JSON deserialization)
+    /// </summary>
+    public void SetLogger(ILogger<DbcDevice> logger)
+    {
+        Logger = logger;
+    }
     
     public void UpdateIsConnected()
     {
@@ -64,14 +86,17 @@ public class StatusDevice : IDevice
 
     private void Clear()
     {
-        DbcProperties.Clear(); 
+        foreach (var signal in DbcSignals)
+        {
+            signal.Value = 0.0;
+        }
     }
 
     public void Read(int id, byte[] data, ref ConcurrentDictionary<(int BaseId, int Prefix, int Index), DeviceCanFrame> queue)
     {
-        if (DbcProperties.Count == 0) return;
+        if (DbcSignals.Count == 0) return;
 
-        foreach (var dbcProp in DbcProperties)
+        foreach (var dbcProp in DbcSignals)
         {
             if (id == dbcProp.Id)
             {
@@ -97,13 +122,28 @@ public class StatusDevice : IDevice
             return await Task.FromResult(false);
         }
 
-        DbcProperties.Clear();
+        DbcSignals.Clear();
         
-        DbcProperties.AddRange(DbcParser.ParseFile(DbcFilePath, Logger));
+        DbcSignals.AddRange(DbcParser.ParseFile(DbcFilePath, Logger));
         UpdateIdRange();
 
-        Logger.LogInformation("StatusDevice {Name} loaded {Count} signals. ID range: {MinId}-{MaxId}",
-            Name, DbcProperties.Count, MinId, MaxId);
+        Logger.LogInformation("{Name} loaded {Count} signals. ID range: {MinId}-{MaxId}",
+            Name, DbcSignals.Count, MinId, MaxId);
+        
+        return await Task.FromResult(true);
+    }
+
+    public async Task<bool> AddCustomSignal(DbcSignal signal)
+    {
+        if(signal.Id == 0) return await Task.FromResult(false);
+        if(signal.Length == 0) return await Task.FromResult(false);
+        
+        DbcSignals.Add(signal);
+        
+        UpdateIdRange();
+        
+        Logger.LogInformation("{Name} added {SignalName} signal",
+            Name, signal.Name);
         
         return await Task.FromResult(true);
     }
@@ -113,15 +153,15 @@ public class StatusDevice : IDevice
     /// </summary>
     private void UpdateIdRange()
     {
-        if (DbcProperties.Count == 0)
+        if (DbcSignals.Count == 0)
         {
             MinId = int.MaxValue;
             MaxId = int.MinValue;
             return;
         }
 
-        MinId = DbcProperties.Min(p => p.Id);
-        MaxId = DbcProperties.Max(p => p.Id);
+        MinId = DbcSignals.Min(p => p.Id);
+        MaxId = DbcSignals.Max(p => p.Id);
     }
 
     #region Unused IDevice methods

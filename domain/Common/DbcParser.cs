@@ -15,9 +15,9 @@ public static class DbcParser
     /// <param name="filePath">Path to the DBC file</param>
     /// <param name="logger">Optional logger for diagnostic messages</param>
     /// <returns>List of parsed DbcProperty objects</returns>
-    public static List<DbcProperty> ParseFile(string filePath, ILogger? logger = null)
+    public static List<DbcSignal> ParseFile(string filePath, ILogger? logger = null)
     {
-        var properties = new List<DbcProperty>();
+        var properties = new List<DbcSignal>();
 
         if (string.IsNullOrEmpty(filePath))
         {
@@ -83,7 +83,7 @@ public static class DbcParser
     /// <param name="line">Signal line to parse</param>
     /// <param name="messageId">ID of the parent message</param>
     /// <returns>DbcProperty if parsing succeeds, null otherwise</returns>
-    private static DbcProperty? ParseSignalLine(string line, int messageId)
+    private static DbcSignal? ParseSignalLine(string line, int messageId)
     {
         // Example: SG_ Speed : 0|16@1+ (0.1,0) [0|655.35] "km/h" ECU2
         var parts = line.Split(new[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries);
@@ -112,11 +112,16 @@ public static class DbcParser
         // Parse factor and offset: "(0.1,0)"
         double factor = 1.0;
         double offset = 0.0;
+        double min = 0.0;
+        double max = 0.0;
+        string unit = "";
 
-        if (parts.Length > 4)
+        // Find and parse factor/offset in parentheses
+        var factorStartIdx = line.IndexOf('(');
+        var factorEndIdx = line.IndexOf(')');
+        if (factorStartIdx >= 0 && factorEndIdx > factorStartIdx)
         {
-            var factorOffset = string.Join("", parts.Skip(4).TakeWhile(p => !p.StartsWith("[")));
-            factorOffset = factorOffset.Trim('(', ')');
+            var factorOffset = line.Substring(factorStartIdx + 1, factorEndIdx - factorStartIdx - 1);
             var factorOffsetParts = factorOffset.Split(',');
 
             if (factorOffsetParts.Length == 2)
@@ -126,15 +131,42 @@ public static class DbcParser
             }
         }
 
-        return new DbcProperty(signalName)
+        // Find and parse min/max in brackets: [<Min>|<Max>]
+        var minMaxStartIdx = line.IndexOf('[');
+        var minMaxEndIdx = line.IndexOf(']');
+        if (minMaxStartIdx >= 0 && minMaxEndIdx > minMaxStartIdx)
         {
+            var minMaxStr = line.Substring(minMaxStartIdx + 1, minMaxEndIdx - minMaxStartIdx - 1);
+            var minMaxParts = minMaxStr.Split('|');
+
+            if (minMaxParts.Length == 2)
+            {
+                double.TryParse(minMaxParts[0], out min);
+                double.TryParse(minMaxParts[1], out max);
+            }
+        }
+
+        // Find and parse unit in quotes: "<Unit>"
+        var unitStartIdx = line.IndexOf('"');
+        var unitEndIdx = line.LastIndexOf('"');
+        if (unitStartIdx >= 0 && unitEndIdx > unitStartIdx)
+        {
+            unit = line.Substring(unitStartIdx + 1, unitEndIdx - unitStartIdx - 1);
+        }
+
+        return new DbcSignal()
+        {
+            Name = signalName,
             Id = messageId,
             StartBit = startBit,
             Length = length,
             ByteOrder = byteOrder,
             IsSigned = isSigned,
             Factor = factor,
-            Offset = offset
+            Offset = offset,
+            Min = min,
+            Max = max,
+            Unit = unit
         };
     }
 }

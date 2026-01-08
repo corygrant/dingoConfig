@@ -5,12 +5,13 @@ using domain.Devices.Canboard.Functions;
 using domain.Interfaces;
 using domain.Models;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace domain.Devices.Canboard;
 
 public class CanboardDevice : IDevice
 {
-    [JsonIgnore] protected readonly ILogger<CanboardDevice> Logger;
+    [JsonIgnore] protected ILogger<CanboardDevice> Logger = NullLogger<CanboardDevice>.Instance;
 
     [JsonIgnore] protected virtual int NumAnalogInputs { get; } = 5; //Also serve as rotary switches and analog/dig inputs
     [JsonIgnore] protected virtual int NumDigitalInputs { get; } = 8;
@@ -46,6 +47,25 @@ public class CanboardDevice : IDevice
     [JsonIgnore] public double BoardTempC { get; private set; }
     [JsonIgnore] public int Heartbeat { get; private set; }
 
+    /// <summary>
+    /// Parameterless constructor for JSON deserialization.
+    /// Name and BaseId will be set by the deserializer from JSON properties.
+    /// Logger must be set via SetLogger() after deserialization.
+    /// </summary>
+    [JsonConstructor]
+    public CanboardDevice()
+    {
+        Guid = Guid.NewGuid();
+        Name = "";
+        BaseId = 0;
+        Configurable = false;
+
+        InitializeCollections();
+    }
+
+    /// <summary>
+    /// Constructor for programmatic device creation with dependency injection
+    /// </summary>
     public CanboardDevice(ILogger<CanboardDevice> logger, string name, int baseId)
     {
         Logger = logger;
@@ -54,11 +74,19 @@ public class CanboardDevice : IDevice
         BaseId = baseId;
 
         Configurable = false;
-        
+
         // ReSharper disable VirtualMemberCallInConstructor
         InitializeCollections();
 
         Logger.LogDebug("CANBoard {Name} created", Name);
+    }
+
+    /// <summary>
+    /// Sets the logger instance (used after JSON deserialization)
+    /// </summary>
+    public void SetLogger(ILogger<CanboardDevice> logger)
+    {
+        Logger = logger;
     }
 
     protected virtual void InitializeCollections()

@@ -3,6 +3,7 @@ using application.Models;
 using domain.Devices.Canboard;
 using domain.Devices.dingoPdm;
 using domain.Devices.dingoPdmMax;
+using domain.Devices.Generic;
 using domain.Interfaces;
 using Microsoft.Extensions.Logging;
 
@@ -93,7 +94,8 @@ public class ConfigFileManager(ILogger<ConfigFileManager> logger)
             {
                 PdmDevices = devices.OfType<PdmDevice>().ToList(),
                 PdmMaxDevices = devices.OfType<PdmMaxDevice>().ToList(),
-                CanboardDevices = devices.OfType<CanboardDevice>().ToList()
+                CanboardDevices = devices.OfType<CanboardDevice>().ToList(),
+                DbcDevices = devices.OfType<DbcDevice>().ToList()
             };
 
             var jsonString = JsonSerializer.Serialize(config, _options);
@@ -139,6 +141,7 @@ public class ConfigFileManager(ILogger<ConfigFileManager> logger)
             allDevices.AddRange(config.PdmDevices);
             allDevices.AddRange(config.PdmMaxDevices);
             allDevices.AddRange(config.CanboardDevices);
+            allDevices.AddRange(config.DbcDevices);
 
             logger.LogInformation($"Loaded {allDevices.Count} devices from {fileName}");
             return allDevices;

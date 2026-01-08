@@ -7,6 +7,7 @@ using domain.Enums;
 using domain.Interfaces;
 using domain.Models;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using static domain.Common.DbcSignalCodec;
 // ReSharper disable MemberCanBePrivate.Global
 
@@ -14,7 +15,7 @@ namespace domain.Devices.dingoPdm;
 
 public class PdmDevice : IDevice
 {
-    [JsonIgnore] protected readonly ILogger Logger;
+    [JsonIgnore] protected ILogger Logger = NullLogger.Instance;
 
     [JsonIgnore] protected virtual int MinMajorVersion { get; } = 0;
     [JsonIgnore] protected virtual int MinMinorVersion { get; } = 4;
@@ -75,7 +76,26 @@ public class PdmDevice : IDevice
             field = value;
         }
     }
-    
+
+    /// <summary>
+    /// Parameterless constructor for JSON deserialization.
+    /// Name and BaseId will be set by the deserializer from JSON properties.
+    /// Logger must be set via SetLogger() after deserialization.
+    /// </summary>
+    [JsonConstructor]
+    public PdmDevice()
+    {
+        Guid = Guid.NewGuid();
+        Name = "";
+        BaseId = 0;
+        Configurable = true;
+
+        InitializeCollections();
+    }
+
+    /// <summary>
+    /// Constructor for programmatic device creation with dependency injection
+    /// </summary>
     public PdmDevice(ILogger logger, string name, int baseId)
     {
         Logger = logger;
@@ -84,11 +104,19 @@ public class PdmDevice : IDevice
         Guid = Guid.NewGuid();
 
         Configurable = true;
-        
+
         // ReSharper disable VirtualMemberCallInConstructor
         InitializeCollections();
 
         Logger.LogDebug("PDM {Name} created", Name);
+    }
+
+    /// <summary>
+    /// Sets the logger instance (used after JSON deserialization)
+    /// </summary>
+    public void SetLogger(ILogger logger)
+    {
+        Logger = logger;
     }
 
     protected virtual void InitializeCollections()

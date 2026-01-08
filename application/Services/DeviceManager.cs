@@ -55,7 +55,7 @@ public class DeviceManager(ILogger<DeviceManager> logger, ILoggerFactory loggerF
             "pdm" => new PdmDevice(loggerFactory.CreateLogger<PdmDevice>(), name, baseId),
             "pdmmax" => new PdmMaxDevice(loggerFactory.CreateLogger<PdmMaxDevice>(), name, baseId),
             "canboard" => new CanboardDevice(loggerFactory.CreateLogger<CanboardDevice>(), name, baseId),
-            "statusdevice" => new StatusDevice(loggerFactory.CreateLogger<StatusDevice>(), name, baseId),
+            "dbcdevice" => new DbcDevice(loggerFactory.CreateLogger<DbcDevice>(), name, baseId),
             _ => throw new ArgumentException($"Unknown device type: {deviceType}")
         };
 
@@ -134,12 +134,27 @@ public class DeviceManager(ILogger<DeviceManager> logger, ILoggerFactory loggerF
     }
 
     /// <summary>
-    /// Add multiple devices
+    /// Add multiple devices (typically loaded from JSON file).
+    /// Injects loggers into devices that were deserialized without them.
     /// </summary>
     public void AddDevices(List<IDevice> devices)
     {
         foreach (var device in devices)
         {
+            // Inject logger based on device type
+            switch (device)
+            {
+                case PdmDevice pdmDevice:
+                    pdmDevice.SetLogger(loggerFactory.CreateLogger<PdmDevice>());
+                    break;
+                case CanboardDevice canboardDevice:
+                    canboardDevice.SetLogger(loggerFactory.CreateLogger<CanboardDevice>());
+                    break;
+                case DbcDevice dbcDevice:
+                    dbcDevice.SetLogger(loggerFactory.CreateLogger<DbcDevice>());
+                    break;
+            }
+
             _devices[device.Guid] = device;
             GetDeviceUiState(device.Guid).NeedsRead = true;
             OnDeviceAdded(this, new DeviceEventArgs(device));
