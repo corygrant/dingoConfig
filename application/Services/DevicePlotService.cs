@@ -4,6 +4,7 @@ using System.Text.Json.Serialization;
 using application.Common;
 using application.Models;
 using domain.Common;
+using domain.Devices.Generic;
 using Microsoft.Extensions.Logging;
 
 namespace application.Services;
@@ -16,9 +17,10 @@ public class DevicePlotService : IDisposable
 {
     private readonly DeviceManager _deviceManager;
     private readonly ILogger<DevicePlotService> _logger;
-        
+
     private readonly Dictionary<Guid, DevicePlotData> _devicePlots = new();
     private readonly Dictionary<Guid, List<IPlotReference>> _deviceProps = new();
+    private readonly Dictionary<Guid, EventHandler> _signalsChangedHandlers = new();
 
     private const int SamplesPerSecond = 20;
     private const int WindowSeconds = 60;
@@ -41,17 +43,42 @@ public class DevicePlotService : IDisposable
                 e.Device.Name, e.Device.Guid);
             return;
         }
-        
+
         _deviceProps[e.Device.Guid] = CreatePlotReferencesFromObject(e.Device, e.Device.Name);
+
+        // Subscribe to SignalsChanged event for DbcDevice
+        if (e.Device is DbcDevice dbcDevice)
+        {
+            EventHandler handler = (s, args) =>
+            {
+                RefreshPlotReferences(dbcDevice.Guid, dbcDevice, dbcDevice.Name);
+            };
+
+            _signalsChangedHandlers[e.Device.Guid] = handler;
+            dbcDevice.SignalsChanged += handler;
+        }
     }
 
     private void DeviceRemovedHandler(object? sender, DeviceEventArgs e)
     {
-        if (_deviceProps.Remove(e.Device.Guid))
-            return;
-        
-        _logger.LogWarning("Device {Device} props already removed for {DeviceId}",
-            e.Device.Name, e.Device.Guid);
+        _deviceProps.Remove(e.Device.Guid);
+
+        // Unsubscribe from SignalsChanged event for DbcDevice
+        if (e.Device is DbcDevice dbcDevice && _signalsChangedHandlers.TryGetValue(e.Device.Guid, out var handler))
+        {
+            dbcDevice.SignalsChanged -= handler;
+            _signalsChangedHandlers.Remove(e.Device.Guid);
+        }
+    }
+
+    /// <summary>
+    /// Refreshes plot references for a device (e.g., after DbcSignals are added)
+    /// </summary>
+    public void RefreshPlotReferences(Guid deviceId, object device, string deviceName)
+    {
+        _deviceProps[deviceId] = CreatePlotReferencesFromObject(device, deviceName);
+        _logger.LogInformation("Refreshed plot references for device {DeviceName} ({DeviceId})",
+            deviceName, deviceId);
     }
 
     public List<IPlotReference> GetAvailableProps(Guid deviceId)
@@ -335,7 +362,7 @@ public class DevicePlotService : IDisposable
                 prop.PropertyType.GetGenericTypeDefinition() == typeof(List<>))
             {
                 if (prop.GetValue(source) is not IEnumerable list) continue;
-                
+
                 var index = 0;
                 foreach (var item in list)
                 {
@@ -357,12 +384,28 @@ public class DevicePlotService : IDisposable
                                 itemProp.PropertyType != typeof(double) &&
                                 !itemProp.PropertyType.IsEnum) continue;
 
+                            // Special handling for DbcSignal: use signal.Name instead of displayName
+                            string signalName;
+                            string signalUnit;
+                            if (itemType.Name == "DbcSignal")
+                            {
+                                var nameProp = itemType.GetProperty("Name");
+                                var unitProp = itemType.GetProperty("Unit");
+                                signalName = nameProp?.GetValue(item)?.ToString() ?? $"Signal{index}";
+                                signalUnit = unitProp?.GetValue(item)?.ToString() ?? itemPlotableAttr.Unit;
+                            }
+                            else
+                            {
+                                signalName = $"{prop.Name}[{index}].{itemPlotableAttr.DisplayName}";
+                                signalUnit = itemPlotableAttr.Unit;
+                            }
+
                             var plotRef = (IPlotReference)Activator.CreateInstance(
                                 typeof(PlotReference<>).MakeGenericType(itemType),
                                 item,
                                 itemProp,
-                                $"{prop.Name}[{index}].{itemPlotableAttr.DisplayName}",
-                                itemPlotableAttr.Unit)!;
+                                signalName,
+                                signalUnit)!;
                             plotRefs.Add(plotRef);
                         }
                     }

@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using domain.Common;
 using domain.Enums;
 
 namespace domain.Models;
@@ -16,5 +17,5 @@ public class DbcSignal
     [JsonPropertyName("unit")] public string Unit { get; set; } = "";
     [JsonPropertyName("min")] public double Min { get; set; }
     [JsonPropertyName("max")] public double Max { get; set; }
-    [JsonIgnore] public double Value { get; set; }
+    [JsonIgnore] [Plotable(displayName: "Value")] public double Value { get; set; }
 }

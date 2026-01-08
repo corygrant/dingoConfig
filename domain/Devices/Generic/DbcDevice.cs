@@ -11,12 +11,14 @@ namespace domain.Devices.Generic;
 public class DbcDevice(string name, int baseId) : IDevice
 {
     [JsonIgnore] protected ILogger<DbcDevice> Logger = null!;
-    
+
     [JsonIgnore] public Guid Guid { get; } = Guid.NewGuid();
     [JsonIgnore] public string Type => "DbcDevice";
     [JsonPropertyName("name")] public string Name { get; set; } = name;
     [JsonPropertyName("baseId")] public int BaseId { get; set; } = baseId;
     [JsonIgnore] private DateTime LastRxTime { get; set; }
+    
+    public event EventHandler? SignalsChanged;
 
     [JsonIgnore]
     public bool Connected
@@ -37,7 +39,7 @@ public class DbcDevice(string name, int baseId) : IDevice
     [JsonIgnore] private string? DbcFilePath { get; set; }
     [JsonPropertyName("minId")] private int MinId { get; set; }
     [JsonPropertyName("maxId")] private int MaxId { get; set; }
-    [JsonPropertyName("dbcSignal")][Plotable(displayName:"DbcSignal")] public List<DbcSignal> DbcSignals { get; init; } = [];
+    [JsonPropertyName("dbcSignal")] public List<DbcSignal> DbcSignals { get; init; } = [];
     [JsonIgnore] public bool Configurable => false;
 
     public void SetLogger(ILogger<DbcDevice> logger)
@@ -82,7 +84,7 @@ public class DbcDevice(string name, int baseId) : IDevice
     public async Task<bool> ParseDbcFile(string dbcFilePath)
     {
         DbcFilePath = dbcFilePath;
-        
+
         if (string.IsNullOrEmpty(DbcFilePath))
         {
             Logger.LogError("StatusDevice {Name} DbcFilePath empty", Name);
@@ -90,13 +92,15 @@ public class DbcDevice(string name, int baseId) : IDevice
         }
 
         DbcSignals.Clear();
-        
+
         DbcSignals.AddRange(DbcParser.ParseFile(DbcFilePath, Logger));
         UpdateIdRange();
 
         Logger.LogInformation("{Name} loaded {Count} signals. ID range: {MinId}-{MaxId}",
             Name, DbcSignals.Count, MinId, MaxId);
         
+        SignalsChanged?.Invoke(this, EventArgs.Empty);
+
         return await Task.FromResult(true);
     }
 
@@ -104,14 +108,16 @@ public class DbcDevice(string name, int baseId) : IDevice
     {
         if(signal.Id == 0) return await Task.FromResult(false);
         if(signal.Length == 0) return await Task.FromResult(false);
-        
+
         DbcSignals.Add(signal);
-        
+
         UpdateIdRange();
-        
+
         Logger.LogInformation("{Name} added {SignalName} signal",
             Name, signal.Name);
         
+        SignalsChanged?.Invoke(this, EventArgs.Empty);
+
         return await Task.FromResult(true);
     }
 

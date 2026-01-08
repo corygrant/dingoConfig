@@ -1,7 +1,9 @@
+@using api.Services
 @using domain.Devices.Generic
 @using domain.Enums
 @using domain.Models
 @inject IDialogService DialogService
+@inject NotificationService Notification
 @typeparam TDevice where TDevice : DbcDevice
 
 <div
@@ -144,7 +146,9 @@
 
     private async Task AddCustomSignal()
     {
-        if (_customSignal != null) await Device.AddCustomSignal(_customSignal);
+        await Device.AddCustomSignal(_customSignal);
+
+        Notification.NewSuccess($"{Device.Name} added custom signal {_customSignal.Name}");
     }
 
     private bool CustomSignalReady()
