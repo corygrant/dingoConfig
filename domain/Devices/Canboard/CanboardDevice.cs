@@ -47,6 +47,7 @@ public class CanboardDevice : IDevice
     [JsonIgnore] public double BoardTempC { get; private set; }
     [JsonIgnore] public int Heartbeat { get; private set; }
     
+    [JsonConstructor]
     public CanboardDevice(string name, int baseId)
     {
         Guid = Guid.NewGuid();

@@ -8,14 +8,14 @@ using Microsoft.Extensions.Logging.Abstractions;
 
 namespace domain.Devices.Generic;
 
-public class DbcDevice(string name, int baseId) : IDevice
+public class DbcDevice : IDevice
 {
     [JsonIgnore] protected ILogger<DbcDevice> Logger = null!;
 
-    [JsonIgnore] public Guid Guid { get; } = Guid.NewGuid();
+    [JsonIgnore] public Guid Guid { get; }
     [JsonIgnore] public string Type => "DbcDevice";
-    [JsonPropertyName("name")] public string Name { get; set; } = name;
-    [JsonPropertyName("baseId")] public int BaseId { get; set; } = baseId;
+    [JsonPropertyName("name")] public string Name { get; set; }
+    [JsonPropertyName("baseId")] public int BaseId { get; set; }
     [JsonIgnore] private DateTime LastRxTime { get; set; }
     
     public event EventHandler? SignalsChanged;
@@ -42,6 +42,14 @@ public class DbcDevice(string name, int baseId) : IDevice
     [JsonPropertyName("dbcSignal")] public List<DbcSignal> DbcSignals { get; init; } = [];
     [JsonIgnore] public bool Configurable => false;
 
+    [JsonConstructor]
+    public DbcDevice(string name, int baseId)
+    {
+        Name = name;
+        BaseId = baseId;
+        Guid =  Guid.NewGuid();
+    }
+    
     public void SetLogger(ILogger<DbcDevice> logger)
     {
         Logger = logger;
@@ -124,7 +132,7 @@ public class DbcDevice(string name, int baseId) : IDevice
     /// <summary>
     /// Updates MinId and MaxId based on the IDs in DbcProperties
     /// </summary>
-    private void UpdateIdRange()
+    public void UpdateIdRange()
     {
         if (DbcSignals.Count == 0)
         {

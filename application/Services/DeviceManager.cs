@@ -59,19 +59,7 @@ public class DeviceManager(ILogger<DeviceManager> logger, ILoggerFactory loggerF
             _ => throw new ArgumentException($"Unknown device type: {deviceType}")
         };
         
-        // Inject logger based on device type
-        switch (device)
-        {
-            case PdmDevice pdmDevice:
-                pdmDevice.SetLogger(loggerFactory.CreateLogger<PdmDevice>());
-                break;
-            case CanboardDevice canboardDevice:
-                canboardDevice.SetLogger(loggerFactory.CreateLogger<CanboardDevice>());
-                break;
-            case DbcDevice dbcDevice:
-                dbcDevice.SetLogger(loggerFactory.CreateLogger<DbcDevice>());
-                break;
-        }
+        SetLoggers(device);
 
         _devices[device.Guid] = device;
         GetDeviceUiState(device.Guid).NeedsRead = true;
@@ -153,19 +141,7 @@ public class DeviceManager(ILogger<DeviceManager> logger, ILoggerFactory loggerF
     {
         foreach (var device in devices)
         {
-            // Inject logger based on device type
-            switch (device)
-            {
-                case PdmDevice pdmDevice:
-                    pdmDevice.SetLogger(loggerFactory.CreateLogger<PdmDevice>());
-                    break;
-                case CanboardDevice canboardDevice:
-                    canboardDevice.SetLogger(loggerFactory.CreateLogger<CanboardDevice>());
-                    break;
-                case DbcDevice dbcDevice:
-                    dbcDevice.SetLogger(loggerFactory.CreateLogger<DbcDevice>());
-                    break;
-            }
+            SetLoggers(device);
 
             _devices[device.Guid] = device;
             GetDeviceUiState(device.Guid).NeedsRead = true;
@@ -209,6 +185,23 @@ public class DeviceManager(ILogger<DeviceManager> logger, ILoggerFactory loggerF
             {
                 device.Read(frame.Id, frame.Payload, ref _requestQueue);
             }
+        }
+    }
+
+    private void SetLoggers(IDevice device)
+    {
+        switch (device)
+        {
+            case PdmDevice pdmDevice:
+                pdmDevice.SetLogger(loggerFactory.CreateLogger<PdmDevice>());
+                break;
+            case CanboardDevice canboardDevice:
+                canboardDevice.SetLogger(loggerFactory.CreateLogger<CanboardDevice>());
+                break;
+            case DbcDevice dbcDevice:
+                dbcDevice.SetLogger(loggerFactory.CreateLogger<DbcDevice>());
+                dbcDevice.UpdateIdRange();
+                break;
         }
     }
 

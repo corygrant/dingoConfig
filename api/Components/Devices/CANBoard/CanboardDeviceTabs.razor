@@ -3,7 +3,7 @@
 @using domain.Devices.Canboard
 @typeparam TDevice where TDevice : CanboardDevice
 
-<MudTabs Elevation="2" Rounded="true" ApplyEffectsToContainer="true">
+<MudTabs Elevation="2" Rounded="true" ApplyEffectsToContainer="true" KeepPanelsAlive="true">
     <MudTabPanel Text="Dashboard" Icon="@Icons.Material.Filled.Dashboard">
         <DashboardTab TDevice="TDevice" Device="Device" />
     </MudTabPanel>

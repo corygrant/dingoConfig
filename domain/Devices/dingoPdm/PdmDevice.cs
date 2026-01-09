@@ -77,6 +77,7 @@ public class PdmDevice : IDevice
         }
     }
     
+    [JsonConstructor]
     public PdmDevice(string name, int baseId)
     {
         Name = name;
