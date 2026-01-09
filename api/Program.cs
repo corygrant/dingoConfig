@@ -11,6 +11,7 @@ using Microsoft.AspNetCore.Components;
 using MudBlazor;
 using Microsoft.AspNetCore.Connections;
 using System.Runtime.InteropServices;
+using Microsoft.AspNetCore.DataProtection;
 
 // Hide console window on Windows
 if (OperatingSystem.IsWindows())
@@ -20,6 +21,17 @@ if (OperatingSystem.IsWindows())
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Configure data protection keys to persist across app restarts
+var keysDirectory = Path.Combine(
+    Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+    "Documents",
+    "dingoConfig",
+    ".keys"
+);
+Directory.CreateDirectory(keysDirectory);
+builder.Services.AddDataProtection()
+    .PersistKeysToFileSystem(new DirectoryInfo(keysDirectory));
+
 // Configure host shutdown timeout
 builder.Host.ConfigureHostOptions(opts =>
 {
@@ -28,7 +40,10 @@ builder.Host.ConfigureHostOptions(opts =>
 
 // Add Blazor services
 builder.Services.AddRazorComponents()
-    .AddInteractiveServerComponents();
+    .AddInteractiveServerComponents(options =>
+    {
+        options.DetailedErrors = true;
+    });
 builder.Services.AddMudServices(config =>
 {
     config.SnackbarConfiguration.PositionClass = Defaults.Classes.Position.BottomRight;

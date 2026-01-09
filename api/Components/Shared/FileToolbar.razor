@@ -69,8 +69,16 @@
     {
         if (firstRender)
         {
-            var result = await ProtectedLocalStore.GetAsync<string>("workingDirectory");
-            if (result is { Success: true, Value: not null }) FileManager.WorkingDirectory = result.Value;
+            try
+            {
+                var result = await ProtectedLocalStore.GetAsync<string>("workingDirectory");
+                if (result is { Success: true, Value: not null }) FileManager.WorkingDirectory = result.Value;
+            }
+            catch (System.Security.Cryptography.CryptographicException)
+            {
+                // Data protection keys changed (app restart) - ignore old encrypted data
+                // The working directory will use the default value
+            }
         }
     }
 

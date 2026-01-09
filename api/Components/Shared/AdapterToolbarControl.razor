@@ -203,14 +203,22 @@
     {
         if (firstRender)
         {
-            var result = await ProtectedLocalStore.GetAsync<string>("selectedAdapter");
-            if (result is { Success: true, Value: not null }) _selectedAdapterType = result.Value;
-            
-            result = await ProtectedLocalStore.GetAsync<string>("selectedPort");
-            if (result is { Success: true, Value: not null }) _selectedPort = result.Value;
-            
-            result = await ProtectedLocalStore.GetAsync<string>("selectedBitrate");
-            if (result is { Success: true, Value: not null }) _selectedBitrate = result.Value;
+            try
+            {
+                var result = await ProtectedLocalStore.GetAsync<string>("selectedAdapter");
+                if (result is { Success: true, Value: not null }) _selectedAdapterType = result.Value;
+
+                result = await ProtectedLocalStore.GetAsync<string>("selectedPort");
+                if (result is { Success: true, Value: not null }) _selectedPort = result.Value;
+
+                result = await ProtectedLocalStore.GetAsync<string>("selectedBitrate");
+                if (result is { Success: true, Value: not null }) _selectedBitrate = result.Value;
+            }
+            catch (System.Security.Cryptography.CryptographicException)
+            {
+                // Data protection keys changed (app restart) - ignore old encrypted data
+                // The adapter settings will use default values
+            }
         }
     }
     
