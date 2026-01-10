@@ -12,6 +12,11 @@ dingoConfig is a .NET application with a Blazor Server web UI for managing [ding
 
 A special DbcDevice type can also be used to load DBC files to monitor and integrate CAN traffic from other devices. 
 
+dingoConfig is fully cross platform: 
+- `Windows`
+- `Linux`
+- `Mac`
+
 # [**Releases**](https://github.com/corygrant/dingoConfig/releases/)
 
 # [**Documentation**](https://corygrant.github.io/dingoPDM/software/introduction/)
