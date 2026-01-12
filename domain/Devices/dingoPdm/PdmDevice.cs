@@ -10,6 +10,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using static domain.Common.DbcSignalCodec;
 // ReSharper disable MemberCanBePrivate.Global
+// ReSharper disable VirtualMemberCallInConstructor
 
 namespace domain.Devices.dingoPdm;
 
@@ -84,7 +85,6 @@ public class PdmDevice : IDevice
         BaseId = baseId;
         Guid = Guid.NewGuid();
 
-        // ReSharper disable VirtualMemberCallInConstructor
         InitializeCollections();
     }
 

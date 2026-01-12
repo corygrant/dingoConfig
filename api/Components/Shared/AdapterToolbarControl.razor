@@ -1,5 +1,4 @@
 @using api.Services
-@using api.Components.Dialogs
 @using application.Services
 @using domain.Interfaces
 @using domain.Enums
@@ -16,13 +15,13 @@
           Dot="true"
           Overlap="true"
           Bordered="true"
-          Visible="@(_available.Ports?.Length == 0)">
+          Visible="@(_available.Ports.Length == 0)">
     <MudChip T="string"
              Icon="@Icons.Material.Filled.Cable"
              Color="@GetAdapterChipColor()"
              Variant="Variant.Outlined"
              Size="Size.Medium"
-             OnClick="@((e) => TogglePopover(e))"
+             OnClick="@((_) => TogglePopover())"
              Style="cursor: pointer;">
         @GetAdapterText()
     </MudChip>
@@ -76,12 +75,9 @@
                            Dense="true"
                            Class="mb-2"
                            T="string">
-                    @if (_available.Adapters != null)
+                    @foreach (var adapter in _available.Adapters)
                     {
-                        @foreach (var adapter in _available.Adapters)
-                        {
-                            <MudSelectItem T="string" Value="@adapter">@adapter</MudSelectItem>
-                        }
+                        <MudSelectItem T="string" Value="@adapter">@adapter</MudSelectItem>
                     }
                 </MudSelect>
 
@@ -94,12 +90,9 @@
                                Dense="true"
                                Class="mb-2"
                                T="string">
-                        @if (_available.Ports != null)
+                        @foreach (var port in _available.Ports)
                         {
-                            @foreach (var port in _available.Ports)
-                            {
-                                <MudSelectItem T="string" Value="@port">@port</MudSelectItem>
-                            }
+                            <MudSelectItem T="string" Value="@port">@port</MudSelectItem>
                         }
                     </MudSelect>
                 }
@@ -125,14 +118,14 @@
                     <div class="mb-3"></div>
                 }
 
-                @if (_available.Adapters?.Length == 0 || _available.Ports?.Length == 0)
+                @if (_available.Adapters.Length == 0 || _available.Ports.Length == 0)
                 {
                     <MudAlert Severity="Severity.Warning" Class="mb-3" Dense="true">
-                        @if (_available.Adapters?.Length == 0)
+                        @if (_available.Adapters.Length == 0)
                         {
                             <MudText Typo="Typo.caption">No adapters available</MudText>
                         }
-                        @if (_available.Ports?.Length == 0)
+                        @if (_available.Ports.Length == 0)
                         {
                             <MudText Typo="Typo.caption">No ports detected</MudText>
                         }
@@ -176,9 +169,9 @@
     private (bool IsConnected, string? ActiveAdapter, string? ActivePort) _status;
     private (string[] Adapters, string[] Ports) _available;
     private bool _loading = true;
-    private bool _connecting = false;
-    private bool _disconnecting = false;
-    private System.Threading.Timer? _refreshTimer;
+    private bool _connecting;
+    private bool _disconnecting;
+    private Timer? _refreshTimer;
 
     private string _selectedAdapterType = string.Empty;
     private string _selectedPort = string.Empty;
@@ -189,7 +182,7 @@
         LoadData();
 
         // Refresh status every second
-        _refreshTimer = new System.Threading.Timer(_ =>
+        _refreshTimer = new Timer(_ =>
         {
             InvokeAsync(() =>
             {
@@ -222,7 +215,7 @@
         }
     }
     
-    private void TogglePopover(MouseEventArgs e)
+    private void TogglePopover()
     {
         _isOpen = !_isOpen;
     }
@@ -235,16 +228,14 @@
             _status = CommsAdapterManager.GetStatus();
             _available = CommsAdapterManager.GetAvailable();
 
-            if (!_status.IsConnected)
+            if (_status.IsConnected) return;
+            if (string.IsNullOrEmpty(_selectedAdapterType) && _available.Adapters.Length > 0)
             {
-                if (string.IsNullOrEmpty(_selectedAdapterType) && _available.Adapters?.Length > 0)
-                {
-                    _selectedAdapterType = _available.Adapters[0];
-                }
-                if (string.IsNullOrEmpty(_selectedPort) && _available.Ports?.Length > 0)
-                {
-                    _selectedPort = _available.Ports[0];
-                }
+                _selectedAdapterType = _available.Adapters[0];
+            }
+            if (string.IsNullOrEmpty(_selectedPort) && _available.Ports.Length > 0)
+            {
+                _selectedPort = _available.Ports[0];
             }
         }
         catch
@@ -408,7 +399,7 @@
             var (success, error) = await SimPlayback.LoadFile(fileName);
             if (success)
             {
-                Notification.NewSuccess($"Loaded {System.IO.Path.GetFileName(fileName)}");
+                Notification.NewSuccess($"Loaded {Path.GetFileName(fileName)}");
             }
             else
             {

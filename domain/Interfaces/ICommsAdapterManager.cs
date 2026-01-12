@@ -14,5 +14,6 @@ public interface ICommsAdapterManager
     Task<bool> DisconnectAsync();
 
     event EventHandler<CanFrameEventArgs>? DataReceived;
-    public event EventHandler? Connected;
+    event EventHandler? Connected;
+    event EventHandler? Disconnected;
 }

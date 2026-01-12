@@ -11,9 +11,9 @@ public interface ICommsAdapter
     Task<bool>  StartAsync(CancellationToken ct);
     Task<bool>  StopAsync();
     Task<bool>  WriteAsync(CanFrame frame, CancellationToken ct);
-    
-    event DataReceivedHandler? DataReceived;
 
-    TimeSpan RxTimeDelta { get; }
+    event DataReceivedHandler? DataReceived;
+    event EventHandler? Disconnected;
+    
     bool IsConnected { get;}
 }

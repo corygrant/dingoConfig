@@ -8,8 +8,6 @@ namespace infrastructure.Adapters;
 
 public class SimAdapter(SimPlayback playback) : ICommsAdapter
 {
-    private TimeSpan _rxTimeDelta = TimeSpan.FromMilliseconds(50);
-
     public string Name => "Sim";
 
     public Task<bool> InitAsync(string port, CanBitRate bitRate, CancellationToken ct)
@@ -40,18 +38,11 @@ public class SimAdapter(SimPlayback playback) : ICommsAdapter
 
     private void OnMessageReady(CanFrame frame, DataDirection direction)
     {
-        _rxTimeDelta = TimeSpan.FromMilliseconds(50); // Simulate 20 Hz
         DataReceived?.Invoke(this, new CanFrameEventArgs(frame));
     }
 
     public event DataReceivedHandler? DataReceived;
-
-    public TimeSpan RxTimeDelta()
-    {
-        return _rxTimeDelta;
-    }
-
-    TimeSpan ICommsAdapter.RxTimeDelta => _rxTimeDelta;
+    public event EventHandler? Disconnected;
 
     public bool IsConnected { get; private set; }
 }

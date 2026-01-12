@@ -78,6 +78,9 @@
 
     protected override void OnInitialized()
     {
+        // Subscribe to adapter disconnection events
+        AdapterManager.Disconnected += OnAdapterDisconnected;
+
         // Poll adapter status to show/hide SimPlaybackToolbar
         _adapterStatusTimer = new System.Threading.Timer(_ =>
         {
@@ -93,6 +96,16 @@
     private void ToggleDrawer()
     {
         _drawerOpen = !_drawerOpen;
+    }
+
+    private void OnAdapterDisconnected(object? sender, EventArgs e)
+    {
+        InvokeAsync(() =>
+        {
+            var status = AdapterManager.GetStatus();
+            Notification.NewError($"Adapter disconnected: {status.activeAdapter ?? "Unknown"}");
+            StateHasChanged();
+        });
     }
 
     private async Task HandleNew()
@@ -158,6 +171,7 @@
 
     public void Dispose()
     {
+        AdapterManager.Disconnected -= OnAdapterDisconnected;
         _adapterStatusTimer?.Dispose();
     }
 }

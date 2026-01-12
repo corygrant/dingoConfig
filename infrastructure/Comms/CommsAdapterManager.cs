@@ -20,6 +20,7 @@ public class CommsAdapterManager(IServiceProvider serviceProvider, ILogger<Comms
 
     public event EventHandler<CanFrameEventArgs>? DataReceived;
     public event EventHandler? Connected;
+    public event EventHandler? Disconnected;
     
 
     public (string[] adapters, string[] ports) GetAvailable()
@@ -60,26 +61,29 @@ public class CommsAdapterManager(IServiceProvider serviceProvider, ILogger<Comms
         
         _activeAdapter = commsAdapter;
         _activePort = port;
-        
+
         OnConnect(commsAdapter);
-        
+
         _activeAdapter.DataReceived += OnDataReceived;
+        _activeAdapter.Disconnected += OnDisconnected;
 
         var result = await _activeAdapter.InitAsync(port, bitRate, ct);
 
         if (result == false)
         {
             _activeAdapter.DataReceived -= OnDataReceived;
+            _activeAdapter.Disconnected -= OnDisconnected;
             _activeAdapter = null;
             logger.LogError("Failed to initialize comms adapter");
             return await Task.FromResult(false);
         }
-        
+
         result = await _activeAdapter.StartAsync(ct);
 
         if (!result)
         {
             _activeAdapter.DataReceived -= OnDataReceived;
+            _activeAdapter.Disconnected -= OnDisconnected;
             _activeAdapter = null;
             logger.LogError("Failed to start comms adapter");
             return await Task.FromResult(false);
@@ -96,6 +100,7 @@ public class CommsAdapterManager(IServiceProvider serviceProvider, ILogger<Comms
         if (_activeAdapter != null)
         {
             _activeAdapter.DataReceived -= OnDataReceived;
+            _activeAdapter.Disconnected -= OnDisconnected;
             await _activeAdapter.StopAsync();
 
             logger.LogInformation("Adapter disconnected: {AdapterName}", nameof(_activeAdapter));
@@ -115,5 +120,11 @@ public class CommsAdapterManager(IServiceProvider serviceProvider, ILogger<Comms
     {
         Connected?.Invoke(this, EventArgs.Empty);
     }
-    
+
+    private void OnDisconnected(object? sender, EventArgs e)
+    {
+        logger.LogWarning("Adapter disconnected: {AdapterName}", _activeAdapter?.Name ?? "Unknown");
+        Disconnected?.Invoke(this, EventArgs.Empty);
+    }
+
 }
