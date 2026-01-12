@@ -1,0 +1,65 @@
+@using domain.Enums
+@using domain.Models
+<MudPaper  Style="max-width: 2000px">
+<MudDataGrid Items="@Signals" Dense="true" Hover="true" Striped="false" EditMode="DataGridEditMode.Cell" ReadOnly="false"
+             SortMode="SortMode.None" ColumnResizeMode="ResizeMode.Container" Virtualize="true" 
+             FixedHeader="true" HorizontalScrollbar="true">
+    <Columns>
+        <PropertyColumn Property="x => x.Name" StickyLeft="true">
+            <EditTemplate>
+                <MudTextField @bind-Value="context.Item.Name" Variant="Variant.Outlined" Margin="Margin.Dense" />
+            </EditTemplate>
+        </PropertyColumn>
+        <PropertyColumn Property="x => x.Value" Title="Value" Editable="false" CellStyle="max-width: 300px">
+            <CellTemplate>
+                <MudChip T="string" Variant="Variant.Outlined"
+                         Color="@GetChipColor(context.Item.Value)"
+                         Size="Size.Small" Style="min-width: 100px;">
+                    @context.Item.Value.ToString("F2") @context.Item.Unit
+                </MudChip>
+            </CellTemplate>
+        </PropertyColumn>
+        <PropertyColumn Property="x => x.Id" Title="ID" CellStyle="max-width: 100px" />
+        <PropertyColumn Property="x => x.StartBit" Title="Start Bit" CellStyle="max-width: 100px"/>
+        <PropertyColumn Property="x => x.Length" Title="Length (bits)" CellStyle="max-width: 150px"/>
+        <PropertyColumn Property="x => x.ByteOrder" Title="Byte Order" CellStyle="max-width: 200px">
+            <EditTemplate>
+                <MudSelect T="ByteOrder" @bind-Value="context.Item.ByteOrder" Variant="Variant.Outlined" Dense="true">
+                    @foreach (ByteOrder bo in Enum.GetValues(typeof(ByteOrder)))
+                    {
+                        <MudSelectItem T="ByteOrder" Value="@bo">@bo</MudSelectItem>
+                    }
+                </MudSelect>
+            </EditTemplate>
+        </PropertyColumn>
+        <PropertyColumn Property="x => x.IsSigned" Title="Signed" CellStyle="max-width: 100px">
+            <EditTemplate>
+                <MudCheckBox @bind-Value="context.Item.IsSigned" Dense="true" />
+            </EditTemplate>
+        </PropertyColumn>
+        <PropertyColumn Property="x => x.Factor" Title="Factor" CellStyle="max-width: 100px"/>
+        <PropertyColumn Property="x => x.Offset" Title="Offset" CellStyle="max-width: 100px"/>
+        <PropertyColumn Property="x => x.Min" Title="Min Value" CellStyle="max-width: 100px"/>
+        <PropertyColumn Property="x => x.Max" Title="Max Value" CellStyle="max-width: 100px"/>
+        <PropertyColumn Property="x => x.Unit" Title="Unit" CellStyle="max-width: 100px">
+            <EditTemplate>
+                <MudTextField @bind-Value="context.Item.Unit" Variant="Variant.Outlined" Margin="Margin.Dense" />
+            </EditTemplate>
+        </PropertyColumn>
+    </Columns>
+</MudDataGrid>
+</MudPaper>
+@code {
+    [Parameter, EditorRequired]
+    public List<DbcSignal> Signals { get; set; } = null!;
+    
+    private Color GetChipColor(double val)
+    {
+        return val switch
+        {
+            > 0.0 => Color.Success,
+            < 0.0 => Color.Error,
+            _ => Color.Default
+        };
+    }
+}

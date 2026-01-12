@@ -135,7 +135,7 @@ public class ConfigFileManager(ILogger<ConfigFileManager> logger)
                 return null;
             }
 
-            CurrentFileName = fileName;
+            CurrentFileName = Path.GetFileName(fileName);
 
             var allDevices = new List<IDevice>();
             allDevices.AddRange(config.PdmDevices);

@@ -8,26 +8,21 @@
 
 <div
     style="overflow-y: auto; height: calc(100vh - 250px); padding: 24px; scrollbar-width: auto; scrollbar-color: #888 transparent;">
-    <MudStack AlignItems="AlignItems.Center" Spacing="2">
-        <MudCard Style="max-width: 500px">
-            <MudCardHeader>
-                <CardHeaderContent>
-                    <MudText Typo="Typo.h6">Open DBC File</MudText>
-                </CardHeaderContent>
-            </MudCardHeader>
+    <MudStack AlignItems="AlignItems.Stretch" Spacing="2">
+        <MudCard>
             <MudCardContent>
-                <MudStack AlignItems="AlignItems.Center" Spacing="1">
-                    <MudButton Variant="Variant.Outlined"
-                               Color="Color.Secondary"
-                               StartIcon="@Icons.Material.Filled.FolderOpen"
-                               OnClick="@OpenDbcFile"
-                               Size="Size.Medium"
-                               Class="mb-3">
-                        Open
-                    </MudButton>
-                </MudStack>
+                <MudButton Variant="Variant.Outlined"
+                           Color="Color.Secondary"
+                           StartIcon="@Icons.Material.Filled.FolderOpen"
+                           OnClick="@OpenDbcFile"
+                           Size="Size.Large"
+                           Style="max-width: 300px"
+                           Class="mb-3">
+                    Open DBC File
+                </MudButton>
             </MudCardContent>
         </MudCard>
+        <MudDivider Vertical="false"/>
         <MudCard>
             <MudCardHeader>
                 <CardHeaderContent>
@@ -112,7 +107,11 @@
                 </MudButton>
             </MudCardActions>
         </MudCard>
+
+        <MudDivider Vertical="false"/>
+        <DbcSignalGrid Signals="Device.DbcSignals"/>
     </MudStack>
+
 </div>
 
 @code {
