@@ -1,108 +1,127 @@
 @using api.Services
+@using application.Models
+@using domain.Devices.dingoPdm
 @using domain.Devices.dingoPdm.Functions
 @using domain.Devices.dingoPdm.Enums
 @inject NotificationService Notification
+@inject IDialogService DialogService
+@inject application.Services.DeviceSignalService SignalService
+@typeparam TDevice where TDevice : domain.Interfaces.IDevice
 
 <MudPaper MaxHeight="400">
-<MudDataGrid Items="@CanInputs" Dense="true" Hover="true" Striped="false" EditMode="DataGridEditMode.Cell" ReadOnly="false"
-             SortMode="SortMode.None" ColumnResizeMode="ResizeMode.Container" Virtualize="true" 
-             FixedHeader="true" HorizontalScrollbar="true" Style="max-height: 400px;">
-    <Columns>
-        <PropertyColumn Property="x => x.Number" Title="#" StickyLeft="true" Editable="false" CellStyle="max-width: 100px"/>
-        <PropertyColumn Property="x => x.Enabled" CellStyle="max-width: 100px">
-            <EditTemplate>
-                <MudCheckBox @bind-Value="context.Item.Enabled" Dense="true" />
-            </EditTemplate>
-        </PropertyColumn>
-        <PropertyColumn Property="x => x.Name" CellStyle="max-width: 200px">
-            <EditTemplate>
-                <MudTextField @bind-Value="context.Item.Name" Variant="Variant.Outlined" Margin="Margin.Dense" />
-            </EditTemplate>
-        </PropertyColumn>
-        <PropertyColumn Property="x => x.Output" Title="Value" Editable="false" CellStyle="max-width: 100px">
-            <CellTemplate>
-                <MudChip T="string"
-                         Variant="Variant.Outlined"
-                         Color="@(context.Item.Output ? Color.Success : Color.Default)"
-                         Size="Size.Small" Style="min-width: 50px;">
-                    @context.Item.Value
-                </MudChip>
-            </CellTemplate>
-        </PropertyColumn>
-        <TemplateColumn Title="CAN ID" Resizable="true" CellStyle="max-width: 100px">
-            <EditTemplate>
-                <MudNumericField @key="@($"id-{context.Item.Number}-{_refreshCounter}")"
-                                 Value="@context.Item.Id"
-                                 ValueChanged="@((int val) => OnIdChanged(context.Item, val))"
-                                 Step="1"/>
-            </EditTemplate>
-        </TemplateColumn>
-        <PropertyColumn Property="x => x.Ide" Title="Extended" CellStyle="max-width: 100px">
-            <EditTemplate>
-                <MudCheckBox @bind-Value="context.Item.Ide" Disabled="true" Dense="true" />
-            </EditTemplate>
-        </PropertyColumn>
-        <TemplateColumn Title="Num Bytes" Resizable="true" CellStyle="max-width: 100px">
-            <EditTemplate>
-                <MudNumericField @key="@($"dlc-{context.Item.Number}-{_refreshCounter}")"
-                                 Value="@context.Item.Dlc"
-                                 ValueChanged="@((int val) => OnDlcChanged(context.Item, val))"
-                                 Step="1"/>
-            </EditTemplate>
-        </TemplateColumn>
-        <TemplateColumn Title="Start Byte" Resizable="true" CellStyle="max-width: 100px">
-            <EditTemplate>
-                <MudNumericField @key="@($"startByte-{context.Item.Number}-{_refreshCounter}")"
-                                 Value="@context.Item.StartingByte"
-                                 ValueChanged="@((int val) => OnStartByteChanged(context.Item, val))"
-                                 Step="1"/>
-            </EditTemplate>
-        </TemplateColumn>
-        <PropertyColumn Property="x => x.Operator" CellStyle="max-width: 200px">
-            <EditTemplate>
-                <MudSelect T="Operator" @bind-Value="context.Item.Operator" Variant="Variant.Outlined" Dense="true">
-                    @foreach (Operator op in Enum.GetValues(typeof(Operator)))
-                    {
-                        <MudSelectItem T="Operator" Value="@op">@op</MudSelectItem>
-                    }
-                </MudSelect>
-            </EditTemplate>
-        </PropertyColumn>
-        <TemplateColumn Title="On Value" Resizable="true" CellStyle="max-width: 100px">
-            <EditTemplate>
-                <MudNumericField @key="@($"onVal-{context.Item.Number}-{_refreshCounter}")"
-                                 Value="@context.Item.OnVal"
-                                 ValueChanged="@((int val) => OnValueChanged(context.Item, val))"/>
-            </EditTemplate>
-        </TemplateColumn>
-        <PropertyColumn Property="x => x.Mode" CellStyle="max-width: 200px">
-            <EditTemplate>
-                <MudSelect T="domain.Enums.InputMode" @bind-Value="context.Item.Mode" Variant="Variant.Outlined" Dense="true">
-                    @foreach (domain.Enums.InputMode mode in Enum.GetValues(typeof(domain.Enums.InputMode)))
-                    {
-                        <MudSelectItem T="domain.Enums.InputMode" Value="@mode">@mode</MudSelectItem>
-                    }
-                </MudSelect>
-            </EditTemplate>
-        </PropertyColumn>
-        <PropertyColumn Property="x => x.TimeoutEnabled" Title="Timeout En" CellStyle="max-width: 100px">
-            <EditTemplate>
-                <MudCheckBox @bind-Value="context.Item.TimeoutEnabled" Dense="true" />
-            </EditTemplate>
-        </PropertyColumn>
-        <TemplateColumn Title="Timeout (s)" Resizable="true" CellStyle="max-width: 150px">
-            <EditTemplate>
-                <MudNumericField @key="@($"timeout-{context.Item.Number}-{_refreshCounter}")"
-                                 Value="@context.Item.Timeout"
-                                 ValueChanged="@((int val) => OnTimeoutChanged(context.Item, val))"/>
-            </EditTemplate>
-        </TemplateColumn>
-    </Columns>
-</MudDataGrid>
+    <MudDataGrid Items="@CanInputs" Dense="true" Hover="true" Striped="false" EditMode="DataGridEditMode.Cell"
+                 ReadOnly="false"
+                 SortMode="SortMode.None" ColumnResizeMode="ResizeMode.Container" Virtualize="true"
+                 FixedHeader="true" HorizontalScrollbar="true" Style="max-height: 400px;">
+        <Columns>
+            <PropertyColumn Property="x => x.Number" Title="#" StickyLeft="true" Editable="false"
+                            CellStyle="max-width: 100px"/>
+            <PropertyColumn Property="x => x.Enabled" CellStyle="max-width: 100px">
+                <EditTemplate>
+                    <MudCheckBox @bind-Value="context.Item.Enabled" Dense="true"/>
+                </EditTemplate>
+            </PropertyColumn>
+            <PropertyColumn Property="x => x.Name" CellStyle="max-width: 200px">
+                <EditTemplate>
+                    <MudTextField @bind-Value="context.Item.Name" Variant="Variant.Outlined" Margin="Margin.Dense"/>
+                </EditTemplate>
+            </PropertyColumn>
+            <TemplateColumn Title="Signals" StickyLeft="false" Sortable="false" Filterable="false"
+                            CellStyle="max-width: 100px">
+                <EditTemplate>
+                    <MudIconButton Icon="@Icons.Material.Filled.Add"
+                                   Color="Color.Primary"
+                                   Size="Size.Small"
+                                   OnClick="@(() => OpenSignalSelectorAsync(context.Item))"
+                                   Title="Select signal from device"/>
+                </EditTemplate>
+            </TemplateColumn>
+            <PropertyColumn Property="x => x.Output" Title="Value" Editable="false" CellStyle="max-width: 100px">
+                <CellTemplate>
+                    <MudChip T="string"
+                             Variant="Variant.Outlined"
+                             Color="@(context.Item.Output ? Color.Success : Color.Default)"
+                             Size="Size.Small" Style="min-width: 50px;">
+                        @context.Item.Value
+                    </MudChip>
+                </CellTemplate>
+            </PropertyColumn>
+            <TemplateColumn Title="CAN ID" Resizable="true" CellStyle="max-width: 100px">
+                <EditTemplate>
+                    <MudNumericField @key="@($"id-{context.Item.Number}-{_refreshCounter}")"
+                                     Value="@context.Item.Id"
+                                     ValueChanged="@((int val) => OnIdChanged(context.Item, val))"
+                                     Step="1"/>
+                </EditTemplate>
+            </TemplateColumn>
+            <PropertyColumn Property="x => x.Ide" Title="Extended" CellStyle="max-width: 100px">
+                <EditTemplate>
+                    <MudCheckBox @bind-Value="context.Item.Ide" Disabled="true" Dense="true"/>
+                </EditTemplate>
+            </PropertyColumn>
+            <TemplateColumn Title="Num Bytes" Resizable="true" CellStyle="max-width: 100px">
+                <EditTemplate>
+                    <MudNumericField @key="@($"dlc-{context.Item.Number}-{_refreshCounter}")"
+                                     Value="@context.Item.Dlc"
+                                     ValueChanged="@((int val) => OnDlcChanged(context.Item, val))"
+                                     Step="1"/>
+                </EditTemplate>
+            </TemplateColumn>
+            <TemplateColumn Title="Start Byte" Resizable="true" CellStyle="max-width: 100px">
+                <EditTemplate>
+                    <MudNumericField @key="@($"startByte-{context.Item.Number}-{_refreshCounter}")"
+                                     Value="@context.Item.StartingByte"
+                                     ValueChanged="@((int val) => OnStartByteChanged(context.Item, val))"
+                                     Step="1"/>
+                </EditTemplate>
+            </TemplateColumn>
+            <PropertyColumn Property="x => x.Operator" CellStyle="max-width: 200px">
+                <EditTemplate>
+                    <MudSelect T="Operator" @bind-Value="context.Item.Operator" Variant="Variant.Outlined" Dense="true">
+                        @foreach (Operator op in Enum.GetValues(typeof(Operator)))
+                        {
+                            <MudSelectItem T="Operator" Value="@op">@op</MudSelectItem>
+                        }
+                    </MudSelect>
+                </EditTemplate>
+            </PropertyColumn>
+            <TemplateColumn Title="On Value" Resizable="true" CellStyle="max-width: 100px">
+                <EditTemplate>
+                    <MudNumericField @key="@($"onVal-{context.Item.Number}-{_refreshCounter}")"
+                                     Value="@context.Item.OnVal"
+                                     ValueChanged="@((int val) => OnValueChanged(context.Item, val))"/>
+                </EditTemplate>
+            </TemplateColumn>
+            <PropertyColumn Property="x => x.Mode" CellStyle="max-width: 200px">
+                <EditTemplate>
+                    <MudSelect T="domain.Enums.InputMode" @bind-Value="context.Item.Mode" Variant="Variant.Outlined"
+                               Dense="true">
+                        @foreach (domain.Enums.InputMode mode in Enum.GetValues(typeof(domain.Enums.InputMode)))
+                        {
+                            <MudSelectItem T="domain.Enums.InputMode" Value="@mode">@mode</MudSelectItem>
+                        }
+                    </MudSelect>
+                </EditTemplate>
+            </PropertyColumn>
+            <PropertyColumn Property="x => x.TimeoutEnabled" Title="Timeout En" CellStyle="max-width: 100px">
+                <EditTemplate>
+                    <MudCheckBox @bind-Value="context.Item.TimeoutEnabled" Dense="true"/>
+                </EditTemplate>
+            </PropertyColumn>
+            <TemplateColumn Title="Timeout (s)" Resizable="true" CellStyle="max-width: 150px">
+                <EditTemplate>
+                    <MudNumericField @key="@($"timeout-{context.Item.Number}-{_refreshCounter}")"
+                                     Value="@context.Item.Timeout"
+                                     ValueChanged="@((int val) => OnTimeoutChanged(context.Item, val))"/>
+                </EditTemplate>
+            </TemplateColumn>
+        </Columns>
+    </MudDataGrid>
 </MudPaper>
+
 @code {
-    [Parameter, EditorRequired]
-    public List<CanInput> CanInputs { get; set; } = null!;
+    [Parameter, EditorRequired] public List<CanInput> CanInputs { get; set; } = null!;
+    [Parameter, EditorRequired] public TDevice Device { get; set; } = default!;
 
     private int _refreshCounter = 0;
 
@@ -114,6 +133,7 @@
         {
             Notification.NewWarning($"{item.Name}.Id must be {min} to {max}");
         }
+
         item.Id = Math.Clamp(value, min, max);
         _refreshCounter++;
     }
@@ -126,6 +146,7 @@
         {
             Notification.NewWarning($"{item.Name}.Dlc must be {min} to {max}");
         }
+
         item.Dlc = Math.Clamp(value, min, max);
         _refreshCounter++;
     }
@@ -138,6 +159,7 @@
         {
             Notification.NewWarning($"{item.Name}.StartingByte must be {min} to {max}");
         }
+
         item.StartingByte = Math.Clamp(value, min, max);
         _refreshCounter++;
     }
@@ -150,6 +172,7 @@
         {
             Notification.NewWarning($"{item.Name}.OnVal must be {min} to {max}");
         }
+
         item.OnVal = Math.Clamp(value, min, max);
         _refreshCounter++;
     }
@@ -162,7 +185,39 @@
         {
             Notification.NewWarning($"{item.Name}.Timeout must be {min} to {max}");
         }
+
         item.Timeout = Math.Clamp(value, min, max);
         _refreshCounter++;
     }
+
+    private async Task OpenSignalSelectorAsync(CanInput canInput)
+    {
+        var parameters = new DialogParameters<DbcSignalSelectionDialog>
+        {
+            { x => x.Device, Device}
+        };
+        
+        var dialog = await DialogService.ShowAsync<DbcSignalSelectionDialog>("Select Signal", parameters);
+        var result = await dialog.Result;
+
+        if (!result.Canceled && result.Data is (DeviceSignalNode deviceNode, SignalNode signalNode))
+        {
+            MapSignalToCanInput(canInput, deviceNode, signalNode);
+        }
+    }
+
+    private void MapSignalToCanInput(CanInput canInput, DeviceSignalNode deviceNode, SignalNode signalNode)
+    {
+        var signal = signalNode.Signal;
+
+        canInput.Id = signal.Id;
+        canInput.StartingByte = signal.StartBit / 8;
+        canInput.Dlc = signal.Length / 8;
+        canInput.Name = $"{deviceNode.DeviceName}.{signal.Name}";
+        
+        // Trigger UI refresh
+        _refreshCounter++;
+        StateHasChanged();
+    }
+
 }

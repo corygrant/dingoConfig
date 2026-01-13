@@ -1,0 +1,175 @@
+@using application.Services
+@using application.Models
+@using domain.Interfaces
+@using domain.Models
+@inject DeviceSignalService SignalService
+
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Filled.Sensors" Class="mr-2"/>
+            Select DBC Signal
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudText Typo="Typo.caption" Class="mb-3">
+            Select a signal from device status messages to populate CAN Input parameters
+        </MudText>
+
+        @* Search Box *@
+        <MudTextField @bind-Value="_searchText"
+                      Label="Search signals"
+                      Variant="Variant.Outlined"
+                      Immediate="true"
+                      Adornment="Adornment.Start"
+                      AdornmentIcon="@Icons.Material.Filled.Search"
+                      Clearable="true"
+                      Margin="Margin.Dense"
+                      Class="mb-3"/>
+
+        @* Nested List Hierarchy *@
+        @if (_hierarchy == null || !_hierarchy.Devices.Any())
+        {
+            <MudAlert Severity="Severity.Info" Dense="true">
+                No devices with status signals found. Add a device to begin.
+            </MudAlert>
+        }
+        else
+        {
+            <MudPaper Elevation="0" MaxHeight="500px" Style="overflow-y: auto;">
+                @foreach (var device in GetFilteredDevices())
+                {
+                    <MudList T="string" Dense="true" Clickable="false">
+                        @* Device Level *@
+                        <MudListItem T="string"
+                                     Icon="@Icons.Material.Filled.DeviceHub"
+                                     IconColor="Color.Primary"
+                                     InitiallyExpanded="@(_hierarchy.Devices.Count == 1)">
+                            <ChildContent>
+                                <MudText Typo="Typo.body1">
+                                    <b>@device.DeviceName</b> (@device.DeviceType)
+                                </MudText>
+                            </ChildContent>
+                            <NestedList>
+                                @foreach (var message in device.Messages)
+                                {
+                                    <MudListItem T="string"
+                                                 Icon="@Icons.Material.Filled.Message"
+                                                 IconColor="Color.Secondary"
+                                                 InitiallyExpanded="false">
+                                        <ChildContent>
+                                            <MudText Typo="Typo.body2">
+                                                CAN ID: @message.MessageIdHex (@message.Signals.Count signals)
+                                            </MudText>
+                                        </ChildContent>
+                                        <NestedList>
+                                            @foreach (var signalNode in message.Signals)
+                                            {
+                                                <MudListItem T="string"
+                                                             OnClick="@(() => OnSignalSelected(device, signalNode))"
+                                                             Style="@(IsSelected(signalNode) ? "background-color: var(--mud-palette-action-default-hover);" : "")">
+                                                    <MudText Typo="Typo.body2">
+                                                        @signalNode.DisplayName
+                                                        <MudText Typo="Typo.caption" Color="Color.Secondary"
+                                                                 Inline="true">
+                                                            (Bit @signalNode.Signal.StartBit, @signalNode.Signal.Length bits)
+                                                        </MudText>
+                                                    </MudText>
+                                                </MudListItem>
+                                            }
+                                        </NestedList>
+                                    </MudListItem>
+                                }
+                            </NestedList>
+                        </MudListItem>
+                    </MudList>
+                }
+            </MudPaper>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton Variant="Variant.Outlined" OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary"
+                   Variant="Variant.Outlined"
+                   OnClick="Submit"
+                   Disabled="@(_selectedSignal == null)">
+            Select
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = null!;
+    [Parameter, EditorRequired] public IDevice Device { get; set; }
+
+    private DeviceSignalHierarchy? _hierarchy;
+    private DeviceSignalNode? _selectedDevice;
+    private SignalNode? _selectedSignal;
+    private string? _searchText;
+
+    protected override void OnInitialized()
+    {
+        _hierarchy = SignalService.BuildSignalHierarchy();
+        foreach (var dev in _hierarchy.Devices.FindAll(device => device.DeviceGuid == Device.Guid))
+        {
+            _hierarchy.Devices.Remove(dev);
+        }
+    }
+
+    private IEnumerable<DeviceSignalNode> GetFilteredDevices()
+    {
+        if (_hierarchy == null) return Enumerable.Empty<DeviceSignalNode>();
+
+        if (string.IsNullOrWhiteSpace(_searchText))
+            return _hierarchy.Devices;
+
+        var searchLower = _searchText.ToLower();
+
+        return _hierarchy.Devices
+            .Select(device => new DeviceSignalNode
+            {
+                DeviceGuid = device.DeviceGuid,
+                DeviceName = device.DeviceName,
+                DeviceType = device.DeviceType,
+                Messages = device.Messages
+                    .Select(msg => new MessageSignalNode
+                    {
+                        MessageId = msg.MessageId,
+                        Signals = msg.Signals
+                            .Where(s => s.Signal.Name.ToLower().Contains(searchLower) ||
+                                        s.Signal.Unit.ToLower().Contains(searchLower))
+                            .ToList()
+                    })
+                    .Where(msg => msg.Signals.Any())
+                    .ToList()
+            })
+            .Where(device => device.Messages.Any())
+            .ToList();
+    }
+
+    private bool IsSelected(SignalNode signalNode)
+    {
+        return _selectedSignal?.Signal.Id == signalNode.Signal.Id &&
+               _selectedSignal?.Signal.StartBit == signalNode.Signal.StartBit;
+    }
+
+    private void OnSignalSelected( DeviceSignalNode device, SignalNode signalNode)
+    {
+        _selectedDevice = device;
+        _selectedSignal = signalNode;
+    }
+
+    private void Submit()
+    {
+        if (_selectedSignal != null)
+        {
+            MudDialog.Close(DialogResult.Ok((_selectedDevice, _selectedSignal)));
+        }
+    }
+
+    private void Cancel()
+    {
+        MudDialog.Cancel();
+    }
+
+}

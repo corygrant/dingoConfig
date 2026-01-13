@@ -63,7 +63,7 @@
                            ExpandedChanged="@((bool expanded) => _canInputsExpanded = expanded)">
             @if (_canInputsExpanded)
             {
-                <CanInputsGrid CanInputs="Device.CanInputs"/>
+                <CanInputsGrid CanInputs="Device.CanInputs" Device="Device"/>
             }
         </MudExpansionPanel>
 

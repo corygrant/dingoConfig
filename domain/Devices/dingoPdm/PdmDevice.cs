@@ -340,6 +340,33 @@ public class PdmDevice : IDevice
         LastRxTime = DateTime.Now;
     }
 
+    public IEnumerable<(int MessageId, DbcSignal Signal)> GetStatusSignals()
+    {
+        foreach (var kvp in StatusMessageSignals)
+        {
+            int messageId = BaseId + kvp.Key;
+            foreach (var (signal, _) in kvp.Value)
+            {
+                // Create a copy with the ID populated
+                var signalCopy = new DbcSignal
+                {
+                    Name = signal.Name,
+                    Id = messageId,
+                    StartBit = signal.StartBit,
+                    Length = signal.Length,
+                    ByteOrder = signal.ByteOrder,
+                    IsSigned = signal.IsSigned,
+                    Factor = signal.Factor,
+                    Offset = signal.Offset,
+                    Unit = signal.Unit,
+                    Min = signal.Min,
+                    Max = signal.Max
+                };
+                yield return (messageId, signalCopy);
+            }
+        }
+    }
+
     protected void ReadSettingsResponse(byte[] data, ConcurrentDictionary<(int BaseId, int Prefix, int Index), DeviceCanFrame> queue)
     {
         //Response is prefix + 128

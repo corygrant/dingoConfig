@@ -4,7 +4,6 @@ using domain.Common;
 using domain.Interfaces;
 using domain.Models;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 
 namespace domain.Devices.Generic;
 
@@ -145,8 +144,17 @@ public class DbcDevice : IDevice
         MaxId = DbcSignals.Max(p => p.Id);
     }
 
+    public IEnumerable<(int MessageId, DbcSignal Signal)> GetStatusSignals()
+    {
+        // DbcSignals already have Id populated from DBC file
+        foreach (var signal in DbcSignals)
+        {
+            yield return (signal.Id, signal);
+        }
+    }
+
     #region Unused IDevice methods
-    
+
     public List<DeviceCanFrame> GetReadMsgs()
     {
         //No read configuration messages on Status Devices

@@ -5,7 +5,6 @@ using domain.Devices.Canboard.Functions;
 using domain.Interfaces;
 using domain.Models;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 
 namespace domain.Devices.Canboard;
 
@@ -84,32 +83,33 @@ public class CanboardDevice : IDevice
 
         // Message 0 (BaseId + 0): Analog inputs 0-3 millivolts
         StatusMessageSignals[0] = new List<(DbcSignal, Action<double>)>();
-        for (int i = 0; i < 4 && i < NumAnalogInputs; i++)
+        for (var i = 0; i < 4 && i < NumAnalogInputs; i++)
         {
-            int index = i;
+            var index = i;
             StatusMessageSignals[0].Add((
-                new DbcSignal { Name = $"AnalogInput{index}Millivolts", StartBit = index * 16, Length = 16 },
+                new DbcSignal { Name = $"AnalogInput{index}Millivolts", StartBit = index * 16, Length = 16, Unit = "mV"},
                 val => AnalogInputs[index].Millivolts = val
             ));
         }
 
         // Message 1 (BaseId + 1): Analog input 4 millivolts + board temperature
-        StatusMessageSignals[1] = new List<(DbcSignal, Action<double>)>
-        {
-            (new DbcSignal { Name = "AnalogInput4Millivolts", StartBit = 0, Length = 16 },
+        StatusMessageSignals[1] =
+        [
+            (new DbcSignal { Name = "AnalogInput4Millivolts", StartBit = 0, Length = 16, Unit = "mV"},
                 val => AnalogInputs[4].Millivolts = val),
 
-            (new DbcSignal { Name = "BoardTempC", StartBit = 48, Length = 16, Factor = 0.01 },
+
+            (new DbcSignal { Name = "BoardTempC", StartBit = 48, Length = 16, Factor = 0.01, Unit = "degC"},
                 val => BoardTempC = val)
-        };
+        ];
 
         // Message 2 (BaseId + 2): Complex message with rotary switches, digital I/O, heartbeat
-        StatusMessageSignals[2] = new List<(DbcSignal, Action<double>)>();
+        StatusMessageSignals[2] = [];
 
         // Rotary switch positions (4-bit each)
-        for (int i = 0; i < NumAnalogInputs; i++)
+        for (var i = 0; i < NumAnalogInputs; i++)
         {
-            int index = i;
+            var index = i;
             StatusMessageSignals[2].Add((
                 new DbcSignal { Name = $"RotarySwitch{index}Pos", StartBit = index * 4, Length = 4 },
                 val => AnalogInputs[index].RotarySwitchPos = (short)val
@@ -117,9 +117,9 @@ public class CanboardDevice : IDevice
         }
 
         // Digital inputs (1-bit each starting at bit 32)
-        for (int i = 0; i < NumDigitalInputs; i++)
+        for (var i = 0; i < NumDigitalInputs; i++)
         {
-            int index = i;
+            var index = i;
             StatusMessageSignals[2].Add((
                 new DbcSignal { Name = $"DigitalInput{index}State", StartBit = 32 + index, Length = 1 },
                 val => DigitalInputs[index].State = val != 0
@@ -127,9 +127,9 @@ public class CanboardDevice : IDevice
         }
 
         // Analog inputs digital mode (1-bit each starting at bit 40)
-        for (int i = 0; i < NumAnalogInputs; i++)
+        for (var i = 0; i < NumAnalogInputs; i++)
         {
-            int index = i;
+            var index = i;
             StatusMessageSignals[2].Add((
                 new DbcSignal { Name = $"AnalogInput{index}DigitalMode", StartBit = 40 + index, Length = 1 },
                 val => AnalogInputs[index].DigitalIn = val != 0
@@ -137,9 +137,9 @@ public class CanboardDevice : IDevice
         }
 
         // Digital outputs (1-bit each starting at bit 48)
-        for (int i = 0; i < NumDigitalOutputs; i++)
+        for (var i = 0; i < NumDigitalOutputs; i++)
         {
-            int index = i;
+            var index = i;
             StatusMessageSignals[2].Add((
                 new DbcSignal { Name = $"DigitalOutput{index}State", StartBit = 48 + index, Length = 1 },
                 val => DigitalOutputs[index].State = val != 0
@@ -155,7 +155,7 @@ public class CanboardDevice : IDevice
 
     public void UpdateIsConnected()
     {
-        TimeSpan timeSpan = DateTime.Now - LastRxTime;
+        var timeSpan = DateTime.Now - LastRxTime;
         Connected = timeSpan.TotalMilliseconds < 500;
     }
 
@@ -195,6 +195,33 @@ public class CanboardDevice : IDevice
         }
 
         LastRxTime = DateTime.Now;
+    }
+
+    public IEnumerable<(int MessageId, DbcSignal Signal)> GetStatusSignals()
+    {
+        foreach (var kvp in StatusMessageSignals)
+        {
+            var messageId = BaseId + kvp.Key;
+            foreach (var (signal, _) in kvp.Value)
+            {
+                // Create a copy with the ID populated
+                var signalCopy = new DbcSignal
+                {
+                    Name = signal.Name,
+                    Id = messageId,
+                    StartBit = signal.StartBit,
+                    Length = signal.Length,
+                    ByteOrder = signal.ByteOrder,
+                    IsSigned = signal.IsSigned,
+                    Factor = signal.Factor,
+                    Offset = signal.Offset,
+                    Unit = signal.Unit,
+                    Min = signal.Min,
+                    Max = signal.Max
+                };
+                yield return (messageId, signalCopy);
+            }
+        }
     }
 
     public List<DeviceCanFrame> GetReadMsgs()
