@@ -1,5 +1,7 @@
+@using api.Services
 @using domain.Devices.dingoPdm.Functions
 @using domain.Devices.dingoPdm.Enums
+@inject NotificationService Notification
 
 <MudDataGrid Items="@Flashers" Dense="true" Hover="true" Striped="false" EditMode="DataGridEditMode.Cell" ReadOnly="false"
              SortMode="SortMode.None" ColumnResizeMode="ResizeMode.Container" Virtualize="true" 
@@ -43,18 +45,16 @@
         </PropertyColumn>
         <TemplateColumn Title="On Time (s)" Resizable="true" CellStyle="max-width: 100px">
             <EditTemplate>
-                <MudNumericField @bind-Value="@context.Item.OnTime" 
-                                 Min="0"
-                                 Max="2550"
-                                 Step="1"/>
+                <MudNumericField @key="@($"onTime-{context.Item.Number}-{_refreshCounter}")"
+                                 Value="@context.Item.OnTime"
+                                 ValueChanged="@((int val) => OnTimeChanged(context.Item, val))"/>
             </EditTemplate>
         </TemplateColumn>
         <TemplateColumn Title="Off Time (s)" Resizable="true" CellStyle="max-width: 100px">
             <EditTemplate>
-                <MudNumericField @bind-Value="@context.Item.OffTime" 
-                                 Min="0"
-                                 Max="2550"
-                                 Step="1"/>
+                <MudNumericField @key="@($"offTime-{context.Item.Number}-{_refreshCounter}")"
+                                 Value="@context.Item.OffTime"
+                                 ValueChanged="@((int val) => OffTimeChanged(context.Item, val))"/>
             </EditTemplate>
         </TemplateColumn>
     </Columns>
@@ -63,4 +63,30 @@
 @code {
     [Parameter, EditorRequired]
     public List<Flasher> Flashers { get; set; } = null!;
+
+    private int _refreshCounter = 0;
+
+    private void OnTimeChanged(Flasher item, int value)
+    {
+        const int min = 0;
+        const int max = 25;
+        if (value < min || value > max)
+        {
+            Notification.NewWarning($"{item.Name}.OnTime must be {min} to {max}");
+        }
+        item.OnTime = Math.Clamp(value, min, max);
+        _refreshCounter++;
+    }
+
+    private void OffTimeChanged(Flasher item, int value)
+    {
+        const int min = 0;
+        const int max = 25;
+        if (value < min || value > max)
+        {
+            Notification.NewWarning($"{item.Name}.OffTime must be {min} to {max}");
+        }
+        item.OffTime = Math.Clamp(value, min, max);
+        _refreshCounter++;
+    }
 }

@@ -1,5 +1,7 @@
+@using api.Services
 @using domain.Devices.dingoPdm.Functions
 @using domain.Devices.dingoPdm.Enums
+@inject NotificationService Notification
 
 <MudDataGrid Items="@Outputs" Dense="true" Hover="true" Striped="false" EditMode="DataGridEditMode.Cell" ReadOnly="false" 
              SortMode="SortMode.None" ColumnResizeMode="ResizeMode.Container" Virtualize="true" 
@@ -28,15 +30,15 @@
         </PropertyColumn>
         <TemplateColumn Title="Freq (Hz)" Resizable="true" CellStyle="max-width: 100px">
             <EditTemplate>
-                <MudNumericField @bind-Value="@context.Item.Frequency" 
-                                 Min="0"
-                                 Max="511"
-                                 Step="1"/>
+                <MudNumericField @key="@($"freq-{context.Item.Number}-{_refreshCounter}")"
+                                 Value="@context.Item.Frequency"
+                                 ValueChanged="@((int val) => OnFrequencyChanged(context.Item, val))"/>
             </EditTemplate>
         </TemplateColumn>
         <TemplateColumn Title="Fixed DC (%)" Resizable="true" CellStyle="max-width: 100px">
             <EditTemplate>
-                <MudNumericField Value="@context.Item.FixedDutyCycle" 
+                <MudNumericField @key="@($"dc-{context.Item.Number}-{_refreshCounter}")"
+                                 Value="@context.Item.FixedDutyCycle"
                                  ValueChanged="@((int val) => OnDutyCycleChanged(context.Item, val))"/>
             </EditTemplate>
         </TemplateColumn>
@@ -57,10 +59,9 @@
         </PropertyColumn>
         <TemplateColumn Title="Variable DC Denom" Resizable="true" CellStyle="max-width: 100px">
             <EditTemplate>
-                <MudNumericField @bind-Value="@context.Item.DutyCycleDenominator" 
-                                 Min="0"
-                                 Max="255"
-                                 Step="1"/>
+                <MudNumericField @key="@($"dcDenom-{context.Item.Number}-{_refreshCounter}")"
+                                 Value="@context.Item.DutyCycleDenominator"
+                                 ValueChanged="@((int val) => OnDutyCycleDenominatorChanged(context.Item, val))"/>
             </EditTemplate>
         </TemplateColumn>
         <PropertyColumn Property="x => x.SoftStartEnabled" Title="Soft Start" CellStyle="max-width: 100px">
@@ -70,10 +71,9 @@
         </PropertyColumn>
         <TemplateColumn Title="SS Duration (ms)" Resizable="true" CellStyle="max-width: 100px">
             <EditTemplate>
-                <MudNumericField @bind-Value="@context.Item.SoftStartRampTime" 
-                                 Min="0"
-                                 Max="65535"
-                                 Step="1"/>
+                <MudNumericField @key="@($"ssRampTime-{context.Item.Number}-{_refreshCounter}")"
+                                 Value="@context.Item.SoftStartRampTime"
+                                 ValueChanged="@((int val) => OnSoftStartRampTimeChanged(context.Item, val))"/>
             </EditTemplate>
         </TemplateColumn>
     </Columns>
@@ -82,14 +82,54 @@
 @code {
     [Parameter, EditorRequired]
     public List<Output> Outputs { get; set; } = null!;
-    
+
+    private int _refreshCounter = 0;
+
+    private void OnFrequencyChanged(Output item, int value)
+    {
+        const int min = 0;
+        const int max = 400;
+        if (value < min || value > max)
+        {
+            Notification.NewWarning($"{item.Name}.Frequency must be {min} to {max}");
+        }
+        item.Frequency = Math.Clamp(value, min, max);
+        _refreshCounter++;
+    }
+
     private void OnDutyCycleChanged(Output item, int value)
     {
-        if (value < 0 || value > 100)
+        const int min = 0;
+        const int max = 100;
+        if (value < min || value > max)
         {
-            //Snackbar.Add("Value must be between 0 and 100", Severity.Warning);
+            Notification.NewWarning($"{item.Name}.DutyCycle must be {min} to {max}");
         }
-        item.FixedDutyCycle = Math.Clamp(value, 0, 100);
-        StateHasChanged(); // Force UI update to show clamped value
+        item.FixedDutyCycle = Math.Clamp(value, min, max);
+        _refreshCounter++;
+    }
+
+    private void OnDutyCycleDenominatorChanged(Output item, int value)
+    {
+        const int min = 0;
+        const int max = 255;
+        if (value < min || value > max)
+        {
+            Notification.NewWarning($"{item.Name}.DutyCycleDenominator must be {min} to {max}");
+        }
+        item.DutyCycleDenominator = Math.Clamp(value, min, max);
+        _refreshCounter++;
+    }
+
+    private void OnSoftStartRampTimeChanged(Output item, int value)
+    {
+        const int min = 0;
+        const int max = 65535;
+        if (value < min || value > max)
+        {
+            Notification.NewWarning($"{item.Name}.SoftStartRampTime must be {min} to {max}");
+        }
+        item.SoftStartRampTime = Math.Clamp(value, min, max);
+        _refreshCounter++;
     }
 }

@@ -1,5 +1,7 @@
+@using api.Services
 @using domain.Devices.dingoPdm.Functions
 @using domain.Devices.dingoPdm.Enums
+@inject NotificationService Notification
 
 <MudDataGrid Items="@Counters" Dense="true" Hover="true" Striped="false" EditMode="DataGridEditMode.Cell" ReadOnly="false"
              SortMode="SortMode.None" ColumnResizeMode="ResizeMode.Container" Virtualize="true" 
@@ -28,18 +30,16 @@
         </PropertyColumn>
         <TemplateColumn Title="Min" Resizable="true" CellStyle="max-width: 100px">
             <EditTemplate>
-                <MudNumericField @bind-Value="@context.Item.MinCount" 
-                                 Min="0"
-                                 Max="16"
-                                 Step="1"/>
+                <MudNumericField @key="@($"minCount-{context.Item.Number}-{_refreshCounter}")"
+                                 Value="@context.Item.MinCount"
+                                 ValueChanged="@((int val) => OnMinCountChanged(context.Item, val))"/>
             </EditTemplate>
         </TemplateColumn>
         <TemplateColumn Title="Max" Resizable="true" CellStyle="max-width: 100px">
             <EditTemplate>
-                <MudNumericField @bind-Value="@context.Item.MaxCount" 
-                                 Min="0"
-                                 Max="16"
-                                 Step="1"/>
+                <MudNumericField @key="@($"maxCount-{context.Item.Number}-{_refreshCounter}")"
+                                 Value="@context.Item.MaxCount"
+                                 ValueChanged="@((int val) => OnMaxCountChanged(context.Item, val))"/>
             </EditTemplate>
         </TemplateColumn>
         <PropertyColumn Property="x => x.WrapAround" Title="Wrap" CellStyle="max-width: 100px">
@@ -113,4 +113,30 @@
 @code {
     [Parameter, EditorRequired]
     public List<Counter> Counters { get; set; } = null!;
+
+    private int _refreshCounter = 0;
+
+    private void OnMinCountChanged(Counter item, int value)
+    {
+        const int min = 0;
+        const int max = 16;
+        if (value < min || value > max)
+        {
+            Notification.NewWarning($"{item.Name}.MinCount must be {min} to {max}");
+        }
+        item.MinCount = Math.Clamp(value, min, max);
+        _refreshCounter++;
+    }
+
+    private void OnMaxCountChanged(Counter item, int value)
+    {
+        const int min = 0;
+        const int max = 16;
+        if (value < min || value > max)
+        {
+            Notification.NewWarning($"{item.Name}.MaxCount must be {min} to {max}");
+        }
+        item.MaxCount = Math.Clamp(value, min, max);
+        _refreshCounter++;
+    }
 }

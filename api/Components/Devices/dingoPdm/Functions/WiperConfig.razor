@@ -1,5 +1,7 @@
+@using api.Services
 @using domain.Devices.dingoPdm.Functions
 @using domain.Devices.dingoPdm.Enums
+@inject NotificationService Notification
 
 <MudCard Outlined="true" Class="mb-2">
     <MudCardContent>
@@ -28,7 +30,7 @@
                     <MudCardContent>
                         <MudSelect @bind-Value="Wiper.Mode"
                                    Label="Wiper Mode"
-                                   SelectedValueChanged="OnModeSelected"
+                                   SelectedValueChanged="@OnModeSelected"
                                    Variant="Variant.Outlined">
                             @foreach (WiperMode mode in Enum.GetValues(typeof(WiperMode)))
                             {
@@ -38,11 +40,11 @@
                         <MudSwitch @bind-Value="Wiper.ParkStopLevel"
                                    Label="Park Stop Level"
                                    Color="Color.Primary"/>
-                        <MudNumericField @bind-Value="Wiper.WashWipeCycles"
+                        <MudNumericField @key="@($"washWipeCycles-{_refreshCounter}")"
+                                         Value= "Wiper.WashWipeCycles"
                                          Label="Wash Wipe Cycles"
                                          Variant="Variant.Outlined"
-                                         Min="0"
-                                         Max="15"/>
+                                         ValueChanged="@((int val) => OnWashWipeCyclesChanged(Wiper, val))"/>
                     </MudCardContent>
                 </MudCard>
             </MudItem>
@@ -209,11 +211,11 @@
                         @for (int i = 0; i < 3; i++)
                         {
                             var index = i; // Capture for lambda
-                            <MudNumericField @bind-Value="Wiper.IntermitTime[index]"
+                            <MudNumericField @key="@($"inrushLimit-{index}-{_refreshCounter}")"
+                                             Value= "Wiper.IntermitTime[index]"
                                              Label="@($"Delay {index}")"
                                              Variant="Variant.Outlined"
-                                             Min="0"
-                                             Step="0.1"/>
+                                             ValueChanged="@((double val) => OnIntermitTimeChanged(Wiper, index, val))"/>
                         }
                     </MudCardContent>
                 </MudCard>
@@ -228,11 +230,11 @@
                         @for (int i = 3; i < 6; i++)
                         {
                             var index = i; // Capture for lambda
-                            <MudNumericField @bind-Value="Wiper.IntermitTime[index]"
+                            <MudNumericField @key="@($"inrushLimit-{index}-{_refreshCounter}")"
+                                             Value= "Wiper.IntermitTime[index]"
                                              Label="@($"Delay {index}")"
                                              Variant="Variant.Outlined"
-                                             Min="0"
-                                             Step="0.1"/>
+                                             ValueChanged="@((double val) => OnIntermitTimeChanged(Wiper, index, val))"/>
                         }
                     </MudCardContent>
                 </MudCard>
@@ -250,6 +252,8 @@
     private bool _onInputDisabled;
     private bool _speedInputDisabled;
 
+    private int _refreshCounter;
+    
     protected override void OnParametersSet()
     {
         base.OnParametersSet();
@@ -290,7 +294,33 @@
                 _onInputDisabled = false;
                 _speedInputDisabled = false;
                 break;
+            default:
+                throw new ArgumentOutOfRangeException();
         }
+    }
+    
+    private void OnIntermitTimeChanged(Wiper wiper, int index, double value)
+    {
+        const double min = 0;
+        const double max = 25;
+        if (value < min || value > max)
+        {
+            Notification.NewWarning($"{Wiper.Name}.IntermitTime[{index}] must be {min} to {max}");
+        }
+        wiper.IntermitTime[index] = Math.Clamp(value, min, max);
+        _refreshCounter++;
+    }
+    
+    private void OnWashWipeCyclesChanged(Wiper wiper, int value)
+    {
+        const int min = 0;
+        const int max = 15;
+        if (value < min || value > max)
+        {
+            Notification.NewWarning($"{Wiper.Name}.WashWipeCycles must be {min} to {max}");
+        }
+        wiper.WashWipeCycles = Math.Clamp(value, min, max);
+        _refreshCounter++;
     }
 
 }

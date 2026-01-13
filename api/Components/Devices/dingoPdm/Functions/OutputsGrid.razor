@@ -1,5 +1,7 @@
+@using api.Services
 @using domain.Devices.dingoPdm.Functions
 @using domain.Devices.dingoPdm.Enums
+@inject NotificationService Notification
 
 <MudDataGrid Items="@Outputs" Dense="true" Hover="true" Striped="false" EditMode="DataGridEditMode.Cell" ReadOnly="false" 
              SortMode="SortMode.None" ColumnResizeMode="ResizeMode.Container" Virtualize="true" 
@@ -37,26 +39,23 @@
         </PropertyColumn>
         <TemplateColumn Title="Current Limit (A)" Resizable="true" CellStyle="max-width: 100px">
             <EditTemplate>
-                <MudNumericField @bind-Value="@context.Item.CurrentLimit" 
-                                 Min="0"
-                                 Max="255"
-                                 Step="1.0"/>
+                <MudNumericField @key="@($"currentLimit-{context.Item.Number}-{_refreshCounter}")"
+                                 Value="@context.Item.CurrentLimit"
+                                 ValueChanged="@((double val) => OnCurrentLimitChanged(context.Item, val))"/>
             </EditTemplate>
         </TemplateColumn>
         <TemplateColumn Title="Inrush Limit (A)" Resizable="true" CellStyle="max-width: 100px">
             <EditTemplate>
-                <MudNumericField @bind-Value="@context.Item.InrushCurrentLimit" 
-                                 Min="0"
-                                 Max="255"
-                                 Step="1.0"/>
+                <MudNumericField @key="@($"inrushLimit-{context.Item.Number}-{_refreshCounter}")"
+                                 Value="@context.Item.InrushCurrentLimit"
+                                 ValueChanged="@((double val) => OnInrushLimitChanged(context.Item, val))"/>
             </EditTemplate>
         </TemplateColumn>
         <TemplateColumn Title="Inrush Time (s)" Resizable="true" CellStyle="max-width: 100px">
             <EditTemplate>
-                <MudNumericField @bind-Value="@context.Item.InrushTime"
-                                 Min ="0"
-                                 Max="25"
-                                 Step="1"/>
+                <MudNumericField @key="@($"inrushTime-{context.Item.Number}-{_refreshCounter}")"
+                                 Value="@context.Item.InrushTime"
+                                 ValueChanged="@((int val) => OnInrushTimeChanged(context.Item, val))"/>
             </EditTemplate>
         </TemplateColumn>
         <PropertyColumn Property="x => x.ResetMode" Title="Reset Mode" CellStyle="max-width: 150px">
@@ -71,18 +70,16 @@
         </PropertyColumn>
         <TemplateColumn Title="Reset Count Limit" Resizable="true" CellStyle="max-width: 70px">
             <EditTemplate>
-                <MudNumericField @bind-Value="@context.Item.ResetCountLimit"
-                                 Min ="0"
-                                 Max="15"
-                                 Step="1"/>
+                <MudNumericField @key="@($"resetCount-{context.Item.Number}-{_refreshCounter}")"
+                                 Value="@context.Item.ResetCountLimit"
+                                 ValueChanged="@((int val) => OnResetCountChanged(context.Item, val))"/>
             </EditTemplate>
         </TemplateColumn>
         <TemplateColumn Title="Reset Time (s)" Resizable="true" CellStyle="max-width: 70px">
             <EditTemplate>
-                <MudNumericField @bind-Value="@context.Item.ResetTime"
-                                 Min ="0"
-                                 Max="25"
-                                 Step="1"/>
+                <MudNumericField @key="@($"resetTime-{context.Item.Number}-{_refreshCounter}")"
+                                 Value="@context.Item.ResetTime"
+                                 ValueChanged="@((int val) => OnResetTimeChanged(context.Item, val))"/>
             </EditTemplate>
         </TemplateColumn>
     </Columns>
@@ -91,7 +88,69 @@
 @code {
     [Parameter, EditorRequired]
     public List<Output> Outputs { get; set; } = null!;
-    
+
+    private int _refreshCounter = 0;
+
+    private void OnCurrentLimitChanged(Output item, double value)
+    {
+        const int min = 0;
+        const int max = 255;
+        if (value < min || value > max)
+        {
+            Notification.NewWarning($"{item.Name}.CurrentLimit must be {min} to {max}");
+        }
+        item.CurrentLimit = Math.Clamp(value, min, max);
+        _refreshCounter++;
+    }
+
+    private void OnInrushLimitChanged(Output item, double value)
+    {
+        const int min = 0;
+        const int max = 255;
+        if (value < min || value > max)
+        {
+            Notification.NewWarning($"{item.Name}.InrushCurrentLimit must be {min} to {max}");
+        }
+        item.InrushCurrentLimit = Math.Clamp(value, min, max);
+        _refreshCounter++;
+    }
+
+    private void OnInrushTimeChanged(Output item, int value)
+    {
+        const int min = 0;
+        const int max = 25;
+        if (value < min || value > max)
+        {
+            Notification.NewWarning($"{item.Name}.InrushTime must be {min} to {max}");
+        }
+        item.InrushTime = Math.Clamp(value, min, max);
+        _refreshCounter++;
+    }
+
+    private void OnResetCountChanged(Output item, int value)
+    {
+        const int min = 0;
+        const int max = 15;
+        if (value < min || value > max)
+        {
+            Notification.NewWarning($"{item.Name}.ResetCountLimit must be {min} to {max}");
+        }
+        item.ResetCountLimit = Math.Clamp(value, min, max);
+        _refreshCounter++;
+    }
+
+    private void OnResetTimeChanged(Output item, int value)
+    {
+        const int min = 0;
+        const int max = 25;
+        if (value < min || value > max)
+        {
+            Notification.NewWarning($"{item.Name}.ResetTime must be {min} to {max}");
+        }
+        item.ResetTime = Math.Clamp(value, min, max);
+        _refreshCounter++;
+    }
+
     private static Color GetOutputColor(OutState state) => state switch
     {
         OutState.On => Color.Success,

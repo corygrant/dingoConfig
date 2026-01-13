@@ -1,5 +1,7 @@
+@using api.Services
 @using domain.Devices.dingoPdm.Functions
 @using domain.Enums
+@inject NotificationService Notification
 
 <MudDataGrid Items="@Inputs" Dense="true" Hover="true" Striped="false" EditMode="DataGridEditMode.Cell" ReadOnly="false"
              SortMode="SortMode.None" ColumnResizeMode="ResizeMode.Container" Virtualize="true" 
@@ -53,10 +55,9 @@
         </PropertyColumn>
         <TemplateColumn Title="Debounce (ms)" Resizable="true" CellStyle="max-width: 100px">
             <EditTemplate>
-                <MudNumericField @bind-Value="@context.Item.DebounceTime" 
-                                 Min="0"
-                                 Max="2550"
-                                 Step="1"/>
+                <MudNumericField @key="@($"debounce-{context.Item.Number}-{_refreshCounter}")"
+                                 Value="@context.Item.DebounceTime"
+                                 ValueChanged="@((int val) => OnDebounceChanged(context.Item, val))"/>
             </EditTemplate>
         </TemplateColumn>
     </Columns>
@@ -65,4 +66,18 @@
 @code {
     [Parameter, EditorRequired]
     public List<Input> Inputs { get; set; } = null!;
+
+    private int _refreshCounter = 0;
+
+    private void OnDebounceChanged(Input item, int value)
+    {
+        const int min = 0;
+        const int max = 2550;
+        if (value < min || value > max)
+        {
+            Notification.NewWarning($"{item.Name}.DebounceTime must be {min} to {max}");
+        }
+        item.DebounceTime = Math.Clamp(value, min, max);
+        _refreshCounter++;
+    }
 }

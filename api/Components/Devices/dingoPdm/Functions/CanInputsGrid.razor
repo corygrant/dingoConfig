@@ -1,5 +1,7 @@
+@using api.Services
 @using domain.Devices.dingoPdm.Functions
 @using domain.Devices.dingoPdm.Enums
+@inject NotificationService Notification
 
 <MudPaper MaxHeight="400">
 <MudDataGrid Items="@CanInputs" Dense="true" Hover="true" Striped="false" EditMode="DataGridEditMode.Cell" ReadOnly="false"
@@ -29,30 +31,30 @@
         </PropertyColumn>
         <TemplateColumn Title="CAN ID" Resizable="true" CellStyle="max-width: 100px">
             <EditTemplate>
-                <MudNumericField @bind-Value="@context.Item.Id" 
-                                 Min="0"
-                                 Max="536870912"
+                <MudNumericField @key="@($"id-{context.Item.Number}-{_refreshCounter}")"
+                                 Value="@context.Item.Id"
+                                 ValueChanged="@((int val) => OnIdChanged(context.Item, val))"
                                  Step="1"/>
             </EditTemplate>
         </TemplateColumn>
         <PropertyColumn Property="x => x.Ide" Title="Extended" CellStyle="max-width: 100px">
             <EditTemplate>
-                <MudCheckBox @bind-Value="context.Item.Ide" Dense="true" />
+                <MudCheckBox @bind-Value="context.Item.Ide" Disabled="true" Dense="true" />
             </EditTemplate>
         </PropertyColumn>
         <TemplateColumn Title="Num Bytes" Resizable="true" CellStyle="max-width: 100px">
             <EditTemplate>
-                <MudNumericField @bind-Value="@context.Item.Dlc" 
-                                 Min="1"
-                                 Max="2"
+                <MudNumericField @key="@($"dlc-{context.Item.Number}-{_refreshCounter}")"
+                                 Value="@context.Item.Dlc"
+                                 ValueChanged="@((int val) => OnDlcChanged(context.Item, val))"
                                  Step="1"/>
             </EditTemplate>
         </TemplateColumn>
         <TemplateColumn Title="Start Byte" Resizable="true" CellStyle="max-width: 100px">
             <EditTemplate>
-                <MudNumericField @bind-Value="@context.Item.StartingByte" 
-                                 Min="0"
-                                 Max="8"
+                <MudNumericField @key="@($"startByte-{context.Item.Number}-{_refreshCounter}")"
+                                 Value="@context.Item.StartingByte"
+                                 ValueChanged="@((int val) => OnStartByteChanged(context.Item, val))"
                                  Step="1"/>
             </EditTemplate>
         </TemplateColumn>
@@ -68,10 +70,9 @@
         </PropertyColumn>
         <TemplateColumn Title="On Value" Resizable="true" CellStyle="max-width: 100px">
             <EditTemplate>
-                <MudNumericField @bind-Value="@context.Item.OnVal" 
-                                 Min="0"
-                                 Max="65536"
-                                 Step="1"/>
+                <MudNumericField @key="@($"onVal-{context.Item.Number}-{_refreshCounter}")"
+                                 Value="@context.Item.OnVal"
+                                 ValueChanged="@((int val) => OnValueChanged(context.Item, val))"/>
             </EditTemplate>
         </TemplateColumn>
         <PropertyColumn Property="x => x.Mode" CellStyle="max-width: 200px">
@@ -91,10 +92,9 @@
         </PropertyColumn>
         <TemplateColumn Title="Timeout (s)" Resizable="true" CellStyle="max-width: 150px">
             <EditTemplate>
-                <MudNumericField @bind-Value="@context.Item.Timeout" 
-                                 Min="0"
-                                 Max="25"
-                                 Step="1"/>
+                <MudNumericField @key="@($"timeout-{context.Item.Number}-{_refreshCounter}")"
+                                 Value="@context.Item.Timeout"
+                                 ValueChanged="@((int val) => OnTimeoutChanged(context.Item, val))"/>
             </EditTemplate>
         </TemplateColumn>
     </Columns>
@@ -103,4 +103,66 @@
 @code {
     [Parameter, EditorRequired]
     public List<CanInput> CanInputs { get; set; } = null!;
+
+    private int _refreshCounter = 0;
+
+    private void OnIdChanged(CanInput item, int value)
+    {
+        const int min = 0;
+        const int max = 536870912;
+        if (value < min || value > max)
+        {
+            Notification.NewWarning($"{item.Name}.Id must be {min} to {max}");
+        }
+        item.Id = Math.Clamp(value, min, max);
+        _refreshCounter++;
+    }
+
+    private void OnDlcChanged(CanInput item, int value)
+    {
+        const int min = 1;
+        const int max = 2;
+        if (value < min || value > max)
+        {
+            Notification.NewWarning($"{item.Name}.Dlc must be {min} to {max}");
+        }
+        item.Dlc = Math.Clamp(value, min, max);
+        _refreshCounter++;
+    }
+
+    private void OnStartByteChanged(CanInput item, int value)
+    {
+        const int min = 0;
+        const int max = 8;
+        if (value < min || value > max)
+        {
+            Notification.NewWarning($"{item.Name}.StartingByte must be {min} to {max}");
+        }
+        item.StartingByte = Math.Clamp(value, min, max);
+        _refreshCounter++;
+    }
+
+    private void OnValueChanged(CanInput item, int value)
+    {
+        const int min = 0;
+        const int max = 65536;
+        if (value < min || value > max)
+        {
+            Notification.NewWarning($"{item.Name}.OnVal must be {min} to {max}");
+        }
+        item.OnVal = Math.Clamp(value, min, max);
+        _refreshCounter++;
+    }
+
+    private void OnTimeoutChanged(CanInput item, int value)
+    {
+        const int min = 0;
+        const int max = 25;
+        if (value < min || value > max)
+        {
+            Notification.NewWarning($"{item.Name}.Timeout must be {min} to {max}");
+        }
+        item.Timeout = Math.Clamp(value, min, max);
+        _refreshCounter++;
+    }
 }

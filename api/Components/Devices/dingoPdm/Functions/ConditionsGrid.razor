@@ -1,5 +1,7 @@
+@using api.Services
 @using domain.Devices.dingoPdm.Functions
 @using domain.Devices.dingoPdm.Enums
+@inject NotificationService Notification
 
 <MudDataGrid Items="@Conditions" Dense="true" Hover="true" Striped="false" EditMode="DataGridEditMode.Cell" ReadOnly="false"
              SortMode="SortMode.None" ColumnResizeMode="ResizeMode.Container" Virtualize="true" 
@@ -48,10 +50,9 @@
         </PropertyColumn>
         <TemplateColumn Title="Argument" Resizable="true" CellStyle="max-width: 200px">
             <EditTemplate>
-                <MudNumericField @bind-Value="@context.Item.Arg" 
-                                 Min="0"
-                                 Max="65536"
-                                 Step="1"/>
+                <MudNumericField @key="@($"arg-{context.Item.Number}-{_refreshCounter}")"
+                                 Value="@context.Item.Arg"
+                                 ValueChanged="@((int val) => OnArgChanged(context.Item, val))"/>
             </EditTemplate>
         </TemplateColumn>
     </Columns>
@@ -60,4 +61,18 @@
 @code {
     [Parameter, EditorRequired]
     public List<Condition> Conditions { get; set; } = null!;
+
+    private int _refreshCounter = 0;
+
+    private void OnArgChanged(Condition item, int value)
+    {
+        const int min = 0;
+        const int max = 65536;
+        if (value < min || value > max)
+        {
+            Notification.NewWarning($"{item.Name}.Arg must be {min} to {max}");
+        }
+        item.Arg = Math.Clamp(value, min, max);
+        _refreshCounter++;
+    }
 }
