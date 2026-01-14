@@ -10,31 +10,29 @@
         </MudText>
     </TitleContent>
     <DialogContent>
-        <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
-            @switch (Location)
-            {
-                case "":
-                    <HomeHelpDialog/>
-                    break;
-                case "device":
-                    <DeviceHelpDialog/>
-                    break;
-                case "devices":
-                    <DevicesHelpDialog/>
-                    break;
-                case "can-log":
-                    <CanLogHelpDialog/>
-                    break;
-                case "system-log":
-                    <MessagesHelpDialog/>
-                    break;
-                default:
-                    <MudAlert Severity="Severity.Warning">
-                        Unknown page type: @Location
-                    </MudAlert>
-                    break;
-            }
-        </MudContainer>
+        @switch (Location)
+        {
+            case "":
+                <HomeHelpDialog/>
+                break;
+            case "device":
+                <DeviceHelpDialog/>
+                break;
+            case "devices":
+                <DevicesHelpDialog/>
+                break;
+            case "can-log":
+                <CanLogHelpDialog/>
+                break;
+            case "system-log":
+                <MessagesHelpDialog/>
+                break;
+            default:
+                <MudAlert Severity="Severity.Warning">
+                    Unknown page type: @Location
+                </MudAlert>
+                break;
+        }
     </DialogContent>
 
     <DialogActions>

@@ -1,6 +1,95 @@
-<MudContainer MaxWidth="MaxWidth.False" Style="width: 100%; padding: 0;">
-    <h3>CAN Log</h3>
+<MudContainer>
+    <MudSimpleTable Elevation="3" Dense="true">
+        <thead>
+        <tr>
+            <th>Item</th>
+            <th>Description</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr>
+            <td>
+                ID Format
+            </td>
+            <td>
+                <ul>
+                    <li>Hex = Display ID in hexadecimal (0x7D0)</li>
+                    <li>Dec = Display ID in decimal (2000)</li>
+                </ul>
+            </td>
+        </tr>
+        <tr>
+            <td>
+                Data Format
+            </td>
+            <td>
+                <ul>
+                    <li>Hex =Display data bytes in hexadecimal (0xB3)</li>
+                    <li>Dec = Display data bytes in decimal (179)</li>
+                </ul>
+            </td>
+        </tr>
+        <tr>
+            <td>
+                <MudIcon Color="Color.Primary" Icon="@Icons.Material.Filled.ViewList"/>
+                <br/>Message Summary
+            </td>
+            <td>
+                <ul>
+                    <li>Displays a table of all CAN messages grouped by CAN ID</li>
+                </ul>
+            </td>
+        </tr>
+        <tr>
+            <td>
+                Dir
+            </td>
+            <td>
+                <ul>
+                    <li>RX = message received by the adapter</li>
+                    <li>TX = message transmitted by the adapter</li>
+                </ul>
+            </td>
+        </tr>
+        <tr>
+            <td>
+                <MudIcon Color="Color.Primary" Icon="@Icons.Material.Filled.History"/>
+                <br/>Full History
+            </td>
+            <td>
+                <ul>
+                    <li>Displays a table of all CAN messages transmitted or received</li>
+                    <li>By default the table is ordered by time, but can be modified using the header</li>
+                </ul>
+            </td>
+        </tr>
+        <tr>
+            <td>
+                Log To File
+            </td>
+            <td>
+                <ul>
+                    <li>Logs all CAN messages to a CSV file</li>
+                    <li>Log file saved in application folder</li>
+                    <li>File named: canlog_<i>DateTime</i>.csv</li>
+                </ul>
+            </td>
+        </tr>
+        <tr>
+            <td>
+                <MudIcon Color="Color.Error" Icon="@Icons.Material.Filled.Delete"/>
+                <br/>Clear
+            </td>
+            <td>
+                <ul>
+                    <li>Clears all stored CAN messages from the log</li>
+                </ul>
+            </td>
+        </tr>
+        </tbody>
+    </MudSimpleTable>
 </MudContainer>
+
 @code {
-    
+
 }
