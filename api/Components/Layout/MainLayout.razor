@@ -2,6 +2,7 @@
 @using domain.Interfaces
 @using MudBlazor.Utilities
 @inherits LayoutComponentBase
+@inject IDialogService DialogService
 @implements IDisposable
 
 @* Required *@
@@ -34,8 +35,7 @@
         <AdapterToolbarControl />
         <MudIconButton Icon="@Icons.Material.Filled.Help"
                        Color="Color.Inherit"
-                       Href="https://corygrant.github.io/dingoPDM/software/introduction/"
-                       Target="_blank" />
+                       OnClick="HandleShowHelp" />
     </MudAppBar>
 
     <MudDrawer @bind-Open="_drawerOpen" ClipMode="DrawerClipMode.Always" Elevation="2">
@@ -58,7 +58,10 @@
     [Inject] private application.Services.DeviceManager DeviceManager { get; set; } = null!;
     [Inject] private NotificationService Notification { get; set; } = null!;
     [Inject] private ICommsAdapterManager AdapterManager { get; set; } = null!;
+    [Inject] private NavigationManager Nav { get; set; } = null!;
 
+    private string _locationUri = "";
+    
     private bool _drawerOpen = true;
     private bool _showSimPlayback;
     private Timer? _adapterStatusTimer;
@@ -77,6 +80,9 @@
 
     protected override void OnInitialized()
     {
+        _locationUri = Nav.Uri;
+        Nav.LocationChanged += NavOnLocationChanged;
+        
         // Subscribe to adapter disconnection events
         AdapterManager.Disconnected += OnAdapterDisconnected;
 
@@ -90,6 +96,11 @@
                 StateHasChanged();
             });
         }, null, TimeSpan.FromMilliseconds(500), TimeSpan.FromMilliseconds(500));
+    }
+
+    private void NavOnLocationChanged(object? sender, LocationChangedEventArgs e)
+    {
+        _locationUri = Nav.Uri;
     }
 
     private void ToggleDrawer()
@@ -168,8 +179,27 @@
         }
     }
 
+    private async Task HandleShowHelp()
+    {
+        var location = GetPageFromUri(_locationUri);
+        
+        var parameters = new DialogParameters
+        {
+            ["Location"] = location 
+        };
+        
+        await DialogService.ShowAsync<HelpDialog>($"Help {location}", parameters);
+    }
+
+    private static string GetPageFromUri(string uri)
+    {
+        var currentPath = new Uri(uri).AbsolutePath; 
+        return currentPath.TrimStart('/').Split('/')[0];
+    }
+
     public void Dispose()
     {
+        Nav.LocationChanged -= NavOnLocationChanged;
         AdapterManager.Disconnected -= OnAdapterDisconnected;
         _adapterStatusTimer?.Dispose();
     }

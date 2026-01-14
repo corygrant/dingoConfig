@@ -1,0 +1,71 @@
+@using api.Components.Dialogs.Help
+@inject NavigationManager Nav
+@inject IDialogService Dialog
+
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Filled.Help" Class="mr-2"/>
+            @GetTitleText()
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
+            @switch (Location)
+            {
+                case "":
+                    <HomeHelpDialog/>
+                    break;
+                case "device":
+                    <DeviceHelpDialog/>
+                    break;
+                case "devices":
+                    <DevicesHelpDialog/>
+                    break;
+                case "can-log":
+                    <CanLogHelpDialog/>
+                    break;
+                case "system-log":
+                    <MessagesHelpDialog/>
+                    break;
+                default:
+                    <MudAlert Severity="Severity.Warning">
+                        Unknown page type: @Location
+                    </MudAlert>
+                    break;
+            }
+        </MudContainer>
+    </DialogContent>
+
+    <DialogActions>
+        <MudButton StartIcon="@Icons.Material.Filled.Help"
+                   Variant="Variant.Outlined"
+                   Color="Color.Primary"
+                   FullWidth="true"
+                   Href="https://corygrant.github.io/dingoPDM/software/introduction/"
+                   Target="_blank">Docs
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@{
+    return;
+
+    string GetTitleText()
+    {
+        return Location switch
+        {
+            "" => "Help",
+            "device" => "Device Help",
+            "devices" => "Devices Help",
+            "can-log" => "CAN Log Help",
+            "system-log" => "Messages Help",
+            _ => "Unknown"
+        };
+    }
+}
+
+@code {
+    [Parameter, EditorRequired] public string? Location { get; set; }
+
+}
