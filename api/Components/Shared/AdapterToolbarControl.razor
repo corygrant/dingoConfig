@@ -192,28 +192,31 @@
         }, null, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(1));
     }
 
-    protected override async Task OnAfterRenderAsync(bool firstRender)
+protected override async Task OnAfterRenderAsync(bool firstRender)
+{
+    if (firstRender)
     {
-        if (firstRender)
+        try
         {
-            try
-            {
-                var result = await ProtectedLocalStore.GetAsync<string>("selectedAdapter");
-                if (result is { Success: true, Value: not null }) _selectedAdapterType = result.Value;
+            var result = await ProtectedLocalStore.GetAsync<string>("selectedAdapter");
+            if (result is { Success: true, Value: not null }) _selectedAdapterType = result.Value;
 
-                result = await ProtectedLocalStore.GetAsync<string>("selectedPort");
-                if (result is { Success: true, Value: not null }) _selectedPort = result.Value;
+            result = await ProtectedLocalStore.GetAsync<string>("selectedPort");
+            if (result is { Success: true, Value: not null }) _selectedPort = result.Value;
 
-                result = await ProtectedLocalStore.GetAsync<string>("selectedBitrate");
-                if (result is { Success: true, Value: not null }) _selectedBitrate = result.Value;
-            }
-            catch (System.Security.Cryptography.CryptographicException)
-            {
-                // Data protection keys changed (app restart) - ignore old encrypted data
-                // The adapter settings will use default values
-            }
+            result = await ProtectedLocalStore.GetAsync<string>("selectedBitrate");
+            if (result is { Success: true, Value: not null }) _selectedBitrate = result.Value;
+        }
+        catch (JSDisconnectedException)
+        {
+            // Circuit is gone — ignore
+        }
+        catch (System.Security.Cryptography.CryptographicException)
+        {
+            // Data protection keys changed — ignore old encrypted data
         }
     }
+}
     
     private void TogglePopover()
     {
