@@ -16,4 +16,8 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+<PropertyGroup Condition="'$(TargetPlatformIdentifier)' == 'linux'">
+  <DefineConstants>LINUX;$(DefineConstants)</DefineConstants>
+</PropertyGroup>
+
 </Project>
