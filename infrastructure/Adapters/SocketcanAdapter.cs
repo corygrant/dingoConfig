@@ -34,6 +34,8 @@ public unsafe class SocketCanAdapter : ICommsAdapter
         _rxStopwatch = Stopwatch.StartNew();
         return Task.FromResult(true);
     }
+    
+    public event EventHandler? Disconnected;
 
     public Task<bool> StartAsync(CancellationToken ct)
     {
@@ -78,6 +80,8 @@ public unsafe class SocketCanAdapter : ICommsAdapter
             Libc.close(_fd);
             _fd = -1;
         }
+        
+        Disconnected?.Invoke(this, EventArgs.Empty);
 
         return Task.FromResult(true);
     }
