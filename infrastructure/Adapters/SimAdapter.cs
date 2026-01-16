@@ -42,7 +42,10 @@ public class SimAdapter(SimPlayback playback) : ICommsAdapter
     }
 
     public event DataReceivedHandler? DataReceived;
+
+#pragma warning disable CS0067 // Event is never used - SimAdapter does not disconnect unexpectedly
     public event EventHandler? Disconnected;
+#pragma warning restore CS0067
 
     public bool IsConnected { get; private set; }
 }

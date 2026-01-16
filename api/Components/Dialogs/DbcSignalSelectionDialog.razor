@@ -39,12 +39,12 @@
             <MudPaper Elevation="0" MaxHeight="500px" Style="overflow-y: auto;">
                 @foreach (var device in GetFilteredDevices())
                 {
-                    <MudList T="string" Dense="true" Clickable="false">
+                    <MudList T="string" Dense="true">
                         @* Device Level *@
                         <MudListItem T="string"
                                      Icon="@Icons.Material.Filled.DeviceHub"
                                      IconColor="Color.Primary"
-                                     InitiallyExpanded="@(_hierarchy.Devices.Count == 1)">
+                                     Expanded="@(_hierarchy.Devices.Count == 1)">
                             <ChildContent>
                                 <MudText Typo="Typo.body1">
                                     <b>@device.DeviceName</b> (@device.DeviceType)
@@ -56,7 +56,7 @@
                                     <MudListItem T="string"
                                                  Icon="@Icons.Material.Filled.Message"
                                                  IconColor="Color.Secondary"
-                                                 InitiallyExpanded="false">
+                                                 Expanded="false">
                                         <ChildContent>
                                             <MudText Typo="Typo.body2">
                                                 CAN ID: @message.MessageIdHex (@message.Signals.Count signals)

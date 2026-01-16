@@ -32,8 +32,7 @@
                     <MudIconButton Icon="@Icons.Material.Filled.Add"
                                    Color="Color.Primary"
                                    Size="Size.Small"
-                                   OnClick="@(() => OpenSignalSelectorAsync(context.Item))"
-                                   Title="Select signal from device"/>
+                                   OnClick="@(() => OpenSignalSelectorAsync(context.Item))"/>
                 </EditTemplate>
             </TemplateColumn>
             <PropertyColumn Property="x => x.Output" Title="Value" Editable="false" CellStyle="max-width: 100px">
@@ -200,7 +199,7 @@
         var dialog = await DialogService.ShowAsync<DbcSignalSelectionDialog>("Select Signal", parameters);
         var result = await dialog.Result;
 
-        if (!result.Canceled && result.Data is (DeviceSignalNode deviceNode, SignalNode signalNode))
+        if (result is not null && !result.Canceled && result.Data is (DeviceSignalNode deviceNode, SignalNode signalNode))
         {
             MapSignalToCanInput(canInput, deviceNode, signalNode);
         }
