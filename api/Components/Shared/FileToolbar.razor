@@ -1,9 +1,8 @@
 @using application.Services
-@using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage
 @inject ConfigFileManager FileManager
 @inject DeviceManager DeviceManager
+@inject UserPreferencesManager UserPrefs
 @inject IDialogService DialogService
-@inject ProtectedLocalStorage ProtectedLocalStore
 @implements IDisposable
 
 <MudToolBar Dense="true" Class="mb-3">
@@ -62,24 +61,15 @@
 
     protected override void OnInitialized()
     {
-        FileManager.OnStateChanged += StateHasChanged;
+        FileManager.OnStateChanged += OnFileManagerStateChanged;
+
+        // Sync working directory from user preferences
+        FileManager.WorkingDirectory = UserPrefs.Preferences.WorkingDirectory;
     }
-    
-    protected override async Task OnAfterRenderAsync(bool firstRender)
+
+    private void OnFileManagerStateChanged()
     {
-        if (firstRender)
-        {
-            try
-            {
-                var result = await ProtectedLocalStore.GetAsync<string>("workingDirectory");
-                if (result is { Success: true, Value: not null }) FileManager.WorkingDirectory = result.Value;
-            }
-            catch (System.Security.Cryptography.CryptographicException)
-            {
-                // Data protection keys changed (app restart) - ignore old encrypted data
-                // The working directory will use the default value
-            }
-        }
+        InvokeAsync(StateHasChanged);
     }
 
     private string GetStatusText()
@@ -184,12 +174,13 @@
         if (dialogResult is { Canceled: false, Data: string newDirectory })
         {
             FileManager.WorkingDirectory = newDirectory;
-            await ProtectedLocalStore.SetAsync("workingDirectory", FileManager.WorkingDirectory);
+            UserPrefs.Preferences.WorkingDirectory = newDirectory;
+            UserPrefs.Save();
         }
     }
 
     public void Dispose()
     {
-        FileManager.OnStateChanged -= StateHasChanged;
+        FileManager.OnStateChanged -= OnFileManagerStateChanged;
     }
 }

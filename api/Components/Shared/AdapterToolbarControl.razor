@@ -2,12 +2,11 @@
 @using application.Services
 @using domain.Interfaces
 @using domain.Enums
-@using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage
 @inject ICommsAdapterManager CommsAdapterManager
 @inject NotificationService Notification
 @inject SimPlayback SimPlayback
+@inject UserPreferencesManager UserPrefs
 @inject IDialogService DialogService
-@inject ProtectedLocalStorage ProtectedLocalStore
 @rendermode InteractiveServer
 @implements IDisposable
 
@@ -179,6 +178,16 @@
 
     protected override void OnInitialized()
     {
+        // Load adapter settings from user preferences
+        if (!string.IsNullOrEmpty(UserPrefs.Preferences.SelectedAdapter))
+            _selectedAdapterType = UserPrefs.Preferences.SelectedAdapter;
+
+        if (!string.IsNullOrEmpty(UserPrefs.Preferences.SelectedPort))
+            _selectedPort = UserPrefs.Preferences.SelectedPort;
+
+        if (!string.IsNullOrEmpty(UserPrefs.Preferences.SelectedBitrate))
+            _selectedBitrate = UserPrefs.Preferences.SelectedBitrate;
+
         LoadData();
 
         // Refresh status every second
@@ -190,29 +199,6 @@
                 StateHasChanged();
             });
         }, null, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(1));
-    }
-
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (firstRender)
-        {
-            try
-            {
-                var result = await ProtectedLocalStore.GetAsync<string>("selectedAdapter");
-                if (result is { Success: true, Value: not null }) _selectedAdapterType = result.Value;
-
-                result = await ProtectedLocalStore.GetAsync<string>("selectedPort");
-                if (result is { Success: true, Value: not null }) _selectedPort = result.Value;
-
-                result = await ProtectedLocalStore.GetAsync<string>("selectedBitrate");
-                if (result is { Success: true, Value: not null }) _selectedBitrate = result.Value;
-            }
-            catch (System.Security.Cryptography.CryptographicException)
-            {
-                // Data protection keys changed (app restart) - ignore old encrypted data
-                // The adapter settings will use default values
-            }
-        }
     }
     
     private void TogglePopover()
@@ -297,11 +283,13 @@
             {
                 Notification.NewSuccess($"Connected to {_selectedAdapterType}");
                 LoadData();
-                
-                await ProtectedLocalStore.SetAsync("selectedAdapter", _selectedAdapterType);
-                await ProtectedLocalStore.SetAsync("selectedPort", _selectedPort);
-                await ProtectedLocalStore.SetAsync("selectedBitrate", _selectedBitrate);
-                
+
+                // Save adapter settings to user preferences
+                UserPrefs.Preferences.SelectedAdapter = _selectedAdapterType;
+                UserPrefs.Preferences.SelectedPort = _selectedPort;
+                UserPrefs.Preferences.SelectedBitrate = _selectedBitrate;
+                UserPrefs.Save();
+
                 _isOpen = false; // Close popover on success
             }
             else

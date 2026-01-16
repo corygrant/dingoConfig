@@ -21,17 +21,6 @@ if (OperatingSystem.IsWindows())
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Configure data protection keys to persist across app restarts
-var keysDirectory = Path.Combine(
-    Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-    "Documents",
-    "dingoConfig",
-    ".keys"
-);
-Directory.CreateDirectory(keysDirectory);
-builder.Services.AddDataProtection()
-    .PersistKeysToFileSystem(new DirectoryInfo(keysDirectory));
-
 // Configure host shutdown timeout
 builder.Host.ConfigureHostOptions(opts =>
 {
@@ -78,6 +67,7 @@ builder.Services.AddSingleton<SystemLogger>();
 builder.Services.AddSingleton<SimPlayback>();
 builder.Services.AddSingleton<DevicePlotService>();
 builder.Services.AddSingleton<DeviceSignalService>();
+builder.Services.AddSingleton<UserPreferencesManager>();
 
 // Add background services
 builder.Services.AddHostedService<CommsDataPipeline>();
@@ -89,6 +79,10 @@ builder.Logging.Services.AddSingleton<ILoggerProvider>(sp =>
 var app = builder.Build();
 
 _ = app.Services.GetRequiredService<DevicePlotService>();
+
+// Initialize user preferences
+var userPrefsManager = app.Services.GetRequiredService<UserPreferencesManager>();
+userPrefsManager.Initialize();
 
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
