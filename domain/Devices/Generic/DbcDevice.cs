@@ -39,7 +39,6 @@ public class DbcDevice : IDevice
     [JsonPropertyName("minId")] private int MinId { get; set; }
     [JsonPropertyName("maxId")] private int MaxId { get; set; }
     [JsonPropertyName("dbcSignal")] public List<DbcSignal> DbcSignals { get; init; } = [];
-    [JsonIgnore] public bool Configurable => false;
 
     [JsonConstructor]
     public DbcDevice(string name, int baseId)
@@ -152,96 +151,4 @@ public class DbcDevice : IDevice
             yield return (signal.Id, signal);
         }
     }
-
-    #region Unused IDevice methods
-
-    public List<DeviceCanFrame> GetReadMsgs()
-    {
-        //No read configuration messages on Status Devices
-        return [];
-    }
-
-    public List<DeviceCanFrame> GetWriteMsgs()
-    {
-        //No write configuration message on Status Devices
-        return [];
-    }
-
-    public List<DeviceCanFrame> GetModifyMsgs(int newId)
-    {
-        //No modify configuration message on Status Devices
-        return [];
-    }
-
-    public DeviceCanFrame GetBurnMsg()
-    {
-        //No burn configuration message on Status Devices
-        return new DeviceCanFrame
-        {
-            Frame = new CanFrame
-            (
-                0,
-                0,
-                new byte[8]
-            )
-        };
-    }
-
-    public DeviceCanFrame GetSleepMsg()
-    {
-        //No sleep message on Status Devices
-        return new DeviceCanFrame
-        {
-            Frame = new CanFrame
-            (
-                0,
-                0,
-                new byte[8]
-            )
-        };
-    }
-
-    public DeviceCanFrame GetVersionMsg()
-    {
-        //No version message on Status Devices
-        return new DeviceCanFrame
-        {
-            Frame = new CanFrame
-            (
-                0,
-                0,
-                new byte[8]
-            )
-        };
-    }
-
-    public DeviceCanFrame GetWakeupMsg()
-    {
-        //No wakeup message on Status Devices
-        return new DeviceCanFrame
-        {
-            Frame = new CanFrame
-            (
-                0,
-                0,
-                new byte[8]
-            )
-        };
-    }
-
-    public DeviceCanFrame GetBootloaderMsg()
-    {
-        //No bootloader message on Status Devices
-        return new DeviceCanFrame
-        {
-            Frame = new CanFrame
-            (
-                0,
-                0,
-                new byte[8]
-            )
-        };
-    }
-    
-    #endregion
 }

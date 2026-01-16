@@ -7,6 +7,7 @@
 @using domain.Devices.dingoPdm
 @using domain.Devices.dingoPdmMax
 @using domain.Devices.Generic
+@using domain.Interfaces
 @inject DeviceManager DeviceManager
 @inject NotificationService Notification
 @typeparam TDevice where TDevice : domain.Interfaces.IDevice
@@ -114,6 +115,14 @@
         CanboardDevice => "CANBoard",
         _ => Device.GetType().Name
     };
+
+    private bool Configurable
+    {
+        get
+        {
+            return Device is Type(IDeviceConfigurable);
+        }
+    }
 
     // Device operation methods - Direct service calls (no HTTP)
     private void OnReadDeviceAsync()

@@ -14,7 +14,7 @@ using static domain.Common.DbcSignalCodec;
 
 namespace domain.Devices.dingoPdm;
 
-public class PdmDevice : IDevice
+public class PdmDevice : IDeviceConfigurable
 {
     [JsonIgnore] protected ILogger<PdmDevice> Logger = null!;
 
@@ -62,8 +62,6 @@ public class PdmDevice : IDevice
     [JsonIgnore] private DateTime LastRxTime { get; set; }
 
     [JsonIgnore] private Dictionary<int, List<(DbcSignal Signal, Action<double> SetValue)>> StatusMessageSignals { get; set; } = null!;
-
-    [JsonIgnore] public bool Configurable => true;
 
     [JsonIgnore]
     public bool Connected
