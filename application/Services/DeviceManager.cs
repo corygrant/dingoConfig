@@ -34,7 +34,7 @@ public class DeviceManager(ILogger<DeviceManager> logger, ILoggerFactory loggerF
     }
 
     /// <summary>
-    /// Get UI state for a device (creates device UI state if doesn't exist)
+    /// Get UI state for a device (creates device UI state if it doesn't exist)
     /// </summary>
     public DeviceUiState GetDeviceUiState(Guid deviceId)
     {
@@ -66,7 +66,7 @@ public class DeviceManager(ILogger<DeviceManager> logger, ILoggerFactory loggerF
         logger.LogInformation("Device added: {DeviceType} '{Name}' (ID: {BaseId}, Guid: {Guid})",
             deviceType, name, baseId, device.Guid);
 
-        OnDeviceAdded(this, new DeviceEventArgs(device));
+        OnDeviceAdded(new DeviceEventArgs(device));
     }
 
     /// <summary>
@@ -88,7 +88,7 @@ public class DeviceManager(ILogger<DeviceManager> logger, ILoggerFactory loggerF
     }
 
     /// <summary>
-    /// Get a device by BaseId (for routing CAN messages)
+    /// Get a device by BaseId (for routing CAN message)
     /// </summary>
     private IDevice? GetDeviceByBaseId(int baseId)
     {
@@ -129,7 +129,7 @@ public class DeviceManager(ILogger<DeviceManager> logger, ILoggerFactory loggerF
         {
             logger.LogInformation("Device removed: {Name} (Guid: {Guid})", device.Name, deviceId);
             
-            OnDeviceRemoved(this, new DeviceEventArgs(device));
+            OnDeviceRemoved(new DeviceEventArgs(device));
         }
     }
 
@@ -145,7 +145,7 @@ public class DeviceManager(ILogger<DeviceManager> logger, ILoggerFactory loggerF
 
             _devices[device.Guid] = device;
             GetDeviceUiState(device.Guid).NeedsRead = true;
-            OnDeviceAdded(this, new DeviceEventArgs(device));
+            OnDeviceAdded(new DeviceEventArgs(device));
         }
         logger.LogInformation("Added {Count} devices", devices.Count);
     }
@@ -294,12 +294,12 @@ public class DeviceManager(ILogger<DeviceManager> logger, ILoggerFactory loggerF
     public void ReadDeviceConfig(Guid deviceId)
     {
         var device = GetDevice(deviceId);
-        if (device == null)
+        if (device is not IDeviceConfigurable configurable)
             return;
 
         GetDeviceUiState(deviceId).NeedsRead = false;
 
-        var readMsgs = device.GetReadMsgs();
+        var readMsgs = configurable.GetReadMsgs();
         foreach (var msg in readMsgs)
         {
             QueueMessage(msg);
@@ -318,10 +318,10 @@ public class DeviceManager(ILogger<DeviceManager> logger, ILoggerFactory loggerF
     public bool WriteDeviceConfig(Guid deviceId)
     {
         var device = GetDevice(deviceId);
-        if (device == null)
+        if (device is not IDeviceConfigurable configurable)
             return false;
 
-        var downloadMsgs = device.GetWriteMsgs();
+        var downloadMsgs = configurable.GetWriteMsgs();
         foreach (var msg in downloadMsgs)
         {
             QueueMessage(msg);
@@ -342,10 +342,10 @@ public class DeviceManager(ILogger<DeviceManager> logger, ILoggerFactory loggerF
     public bool ModifyDeviceConfig(Guid deviceId, string newName, int newId)
     {
         var device = GetDevice(deviceId);
-        if (device == null)
+        if (device is not IDeviceConfigurable configurable)
             return false;
-        
-        var modifyMsgs = device.GetModifyMsgs(newId);
+
+        var modifyMsgs = configurable.GetModifyMsgs(newId);
         foreach (var msg in modifyMsgs)
         {
             QueueMessage(msg, true);
@@ -353,13 +353,13 @@ public class DeviceManager(ILogger<DeviceManager> logger, ILoggerFactory loggerF
         }
 
         logger.LogInformation("Modify started for {DeviceName} (Guid: {Guid})", device.Name, deviceId);
-        
+
         //Wait for modify messages to be sent, then update the base ID
         Thread.Sleep(300);
-        
+
         device.Name = newName;
         device.BaseId = newId;
-        
+
         return true;
     }
 
@@ -372,10 +372,10 @@ public class DeviceManager(ILogger<DeviceManager> logger, ILoggerFactory loggerF
     public bool BurnSettings(Guid deviceId)
     {
         var device = GetDevice(deviceId);
-        if (device == null)
+        if (device is not IDeviceConfigurable configurable)
             return false;
 
-        var burnMsg = device.GetBurnMsg();
+        var burnMsg = configurable.GetBurnMsg();
         QueueMessage(burnMsg);
 
         logger.LogInformation("Burn initiated for {DeviceName} (Guid: {Guid})", device.Name, deviceId);
@@ -391,10 +391,10 @@ public class DeviceManager(ILogger<DeviceManager> logger, ILoggerFactory loggerF
     public bool RequestSleep(Guid deviceId)
     {
         var device = GetDevice(deviceId);
-        if (device == null)
+        if (device is not IDeviceConfigurable configurable)
             return false;
 
-        var sleepMsg = device.GetSleepMsg();
+        var sleepMsg = configurable.GetSleepMsg();
         QueueMessage(sleepMsg);
 
         logger.LogInformation("Sleep requested for {DeviceName} (Guid: {Guid})", device.Name, deviceId);
@@ -410,10 +410,10 @@ public class DeviceManager(ILogger<DeviceManager> logger, ILoggerFactory loggerF
     public bool RequestVersion(Guid deviceId)
     {
         var device = GetDevice(deviceId);
-        if (device == null)
+        if (device is not IDeviceConfigurable configurable)
             return false;
 
-        var versionMsg = device.GetVersionMsg();
+        var versionMsg = configurable.GetVersionMsg();
         QueueMessage(versionMsg);
 
         logger.LogInformation("Version requested for {DeviceName} (Guid: {Guid})", device.Name, deviceId);
@@ -429,12 +429,12 @@ public class DeviceManager(ILogger<DeviceManager> logger, ILoggerFactory loggerF
     public bool RequestWakeup(Guid deviceId)
     {
         var device = GetDevice(deviceId);
-        if (device == null)
+        if (device is not IDeviceConfigurable configurable)
             return false;
-        
-        var wakeupMsg = device.GetWakeupMsg();
+
+        var wakeupMsg = configurable.GetWakeupMsg();
         QueueMessage(wakeupMsg, true);
-        
+
         logger.LogInformation("Wake up for {DeviceName} (Guid: {Guid})", device.Name, deviceId);
         return true;
     }
@@ -448,22 +448,22 @@ public class DeviceManager(ILogger<DeviceManager> logger, ILoggerFactory loggerF
     public bool RequestBootloader(Guid deviceId)
     {
         var device = GetDevice(deviceId);
-        if (device == null)
+        if (device is not IDeviceConfigurable configurable)
             return false;
-        
-        var bootloaderMsg = device.GetBootloaderMsg();
+
+        var bootloaderMsg = configurable.GetBootloaderMsg();
         QueueMessage(bootloaderMsg, true);
-        
+
         logger.LogInformation("Enter bootloader on {DeviceName} (Guid: {Guid})", device.Name, deviceId);
         return true;
     }
     
-    private void OnDeviceAdded(object sender, DeviceEventArgs e)
+    private void OnDeviceAdded(DeviceEventArgs e)
     {
         DeviceAdded?.Invoke(this, e);
     }
     
-    private void OnDeviceRemoved(object sender, DeviceEventArgs e)
+    private void OnDeviceRemoved(DeviceEventArgs e)
     {
         DeviceRemoved?.Invoke(this, e);
     }

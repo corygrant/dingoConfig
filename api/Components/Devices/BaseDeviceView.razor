@@ -21,16 +21,16 @@
                        Color="@(DeviceManager.GetDeviceUiState(Device.Guid).NeedsRead && Device.Connected ? Color.Warning : Color.Default)"
                        Size="Size.Small"
                        StartIcon="@Icons.Material.Filled.Download"
-                       Disabled="@(!Device.Connected || !AdapterConnected || !Device.Configurable)"
+                       Disabled="@(!Device.Connected || !AdapterConnected || !Configurable)"
                        OnClick="@OnReadDeviceAsync"
-                       Class="@(DeviceManager.GetDeviceUiState(Device.Guid).NeedsRead && Device.Connected && Device.Configurable ? "flash-button" : "")">
+                       Class="@(DeviceManager.GetDeviceUiState(Device.Guid).NeedsRead && Device.Connected && Configurable ? "flash-button" : "")">
                 Read
             </MudButton>
             <MudButton Variant="Variant.Outlined"
                        Color="Color.Default"
                        Size="Size.Small"
                        StartIcon="@Icons.Material.Filled.Upload"
-                       Disabled="@(!Device.Connected || !AdapterConnected || !Device.Configurable)"
+                       Disabled="@(!Device.Connected || !AdapterConnected || !Configurable)"
                        OnClick="@OnWriteDeviceAsync">
                 Write
             </MudButton>
@@ -38,7 +38,7 @@
                        Color="Color.Default"
                        Size="Size.Small"
                        StartIcon="@Icons.Material.Filled.Save"
-                       Disabled="@(!Device.Connected || !AdapterConnected || !Device.Configurable)"
+                       Disabled="@(!Device.Connected || !AdapterConnected || !Configurable)"
                        OnClick="@OnBurnSettingsAsync">
                 Burn
             </MudButton>
@@ -46,7 +46,7 @@
                        Color="Color.Default"
                        Size="Size.Small"
                        StartIcon="@Icons.Material.Filled.Bedtime"
-                       Disabled="@(!Device.Connected || !AdapterConnected || !Device.Configurable)"
+                       Disabled="@(!Device.Connected || !AdapterConnected || !Configurable)"
                        OnClick="@OnSleepAsync">
                 Sleep
             </MudButton>
@@ -54,7 +54,7 @@
                        Color="Color.Default"
                        Size="Size.Small"
                        StartIcon="@Icons.Material.Filled.WbSunny"
-                       Disabled="@(Device.Connected || !AdapterConnected || !Device.Configurable)"
+                       Disabled="@(Device.Connected || !AdapterConnected || !Configurable)"
                        OnClick="@OnWakeupAsync">
                 Wakeup
             </MudButton>
@@ -62,7 +62,7 @@
                        Color="Color.Default"
                        Size="Size.Small"
                        StartIcon="@Icons.Material.Filled.DeveloperMode"
-                       Disabled="@(!Device.Connected || !AdapterConnected || !Device.Configurable)"
+                       Disabled="@(!Device.Connected || !AdapterConnected || !Configurable)"
                        OnClick="@OnEnterBootloaderAsync">
                 Bootloader
             </MudButton>
@@ -116,13 +116,7 @@
         _ => Device.GetType().Name
     };
 
-    private bool Configurable
-    {
-        get
-        {
-            return Device is Type(IDeviceConfigurable);
-        }
-    }
+    private bool Configurable => Device is IDeviceConfigurable;
 
     // Device operation methods - Direct service calls (no HTTP)
     private void OnReadDeviceAsync()
