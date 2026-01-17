@@ -49,17 +49,27 @@ fi
 # Publish for Linux (x64)
 echo ""
 echo "Building for Linux (x64)..."
-dotnet publish "$PROJECT" -c "$CONFIG" -r linux-x64 $PUBLISH_ARGS -o "$OUTPUT_DIR/linux-x64"
+dotnet publish "$PROJECT" -c "$CONFIG" -r linux-x64 -p:DefineConstants=LINUX $PUBLISH_ARGS -o "$OUTPUT_DIR/linux-x64"
 if [ $? -eq 0 ]; then
     echo "[OK] Linux (x64) build complete"
 else
     echo "[FAILED] Linux (x64) build failed"
 fi
 
+# Publish for Linux (arm32)
+echo ""
+echo "Building for Linux (arm32)..."
+dotnet publish "$PROJECT" -c "$CONFIG" -r linux-arm -p:DefineConstants=LINUX $PUBLISH_ARGS -o "$OUTPUT_DIR/linux-arm32"
+if [ $? -eq 0 ]; then
+    echo "[OK] Linux (arm32) build complete"
+else
+    echo "[FAILED] Linux (arm32) build failed"
+fi
+
 # Publish for Linux (arm64)
 echo ""
 echo "Building for Linux (arm64)..."
-dotnet publish "$PROJECT" -c "$CONFIG" -r linux-arm64 $PUBLISH_ARGS -o "$OUTPUT_DIR/linux-arm64"
+dotnet publish "$PROJECT" -c "$CONFIG" -r linux-arm64 -p:DefineConstants=LINUX $PUBLISH_ARGS -o "$OUTPUT_DIR/linux-arm64"
 if [ $? -eq 0 ]; then
     echo "[OK] Linux (arm64) build complete"
 else
@@ -106,6 +116,10 @@ echo "Zipping Linux (x64)..."
 zip -r "dingoConfig-$VERSION-linux-x64.zip" linux-x64/ > /dev/null
 echo "[OK] dingoConfig-$VERSION-linux-x64.zip created"
 
+echo "Zipping Linux (arm32)..."
+zip -r "dingoConfig-$VERSION-linux-arm32.zip" linux-arm32/ > /dev/null
+echo "[OK] dingoConfig-$VERSION-linux-arm32.zip created"
+
 echo "Zipping Linux (arm64)..."
 zip -r "dingoConfig-$VERSION-linux-arm64.zip" linux-arm64/ > /dev/null
 echo "[OK] dingoConfig-$VERSION-linux-arm64.zip created"
@@ -128,6 +142,7 @@ echo ""
 echo "Zip files:"
 echo "  Windows (x64):         $OUTPUT_DIR/dingoConfig-$VERSION-win-x64.zip"
 echo "  Windows (arm64):       $OUTPUT_DIR/dingoConfig-$VERSION-win-arm64.zip"
+echo "  Linux (x32):           $OUTPUT_DIR/dingoConfig-$VERSION-linux-x32.zip"
 echo "  Linux (x64):           $OUTPUT_DIR/dingoConfig-$VERSION-linux-x64.zip"
 echo "  Linux (arm64):         $OUTPUT_DIR/dingoConfig-$VERSION-linux-arm64.zip"
 echo "  macOS (Intel):         $OUTPUT_DIR/dingoConfig-$VERSION-osx-x64.zip"

@@ -49,6 +49,16 @@ if ($LASTEXITCODE -eq 0) {
     Write-Host "[FAILED] Linux (x64) build failed" -ForegroundColor Red
 }
 
+# Publish for Linux (arm32)
+Write-Host ""
+Write-Host "Building for Linux (arm32)..." -ForegroundColor Yellow
+dotnet publish $project -c $config -r linux-arm @publishArgs -o "$outputDir/linux-arm32"
+if ($LASTEXITCODE -eq 0) {
+    Write-Host "[OK] Linux (arm32) build complete" -ForegroundColor Green
+} else {
+    Write-Host "[FAILED] Linux (arm32) build failed" -ForegroundColor Red
+}
+
 # Publish for Linux (arm64)
 Write-Host ""
 Write-Host "Building for Linux (arm64)..." -ForegroundColor Yellow
@@ -97,6 +107,10 @@ Write-Host "Zipping Linux (x64)..."
 Compress-Archive -Path "$outputDir/linux-x64/*" -DestinationPath "$outputDir/dingoConfig-$version-linux-x64.zip" -Force
 Write-Host "[OK] dingoConfig-$version-linux-x64.zip created" -ForegroundColor Green
 
+Write-Host "Zipping Linux (arm32)..."
+Compress-Archive -Path "$outputDir/linux-arm32/*" -DestinationPath "$outputDir/dingoConfig-$version-linux-arm32.zip" -Force
+Write-Host "[OK] dingoConfig-$version-linux-arm32.zip created" -ForegroundColor Green
+
 Write-Host "Zipping Linux (arm64)..."
 Compress-Archive -Path "$outputDir/linux-arm64/*" -DestinationPath "$outputDir/dingoConfig-$version-linux-arm64.zip" -Force
 Write-Host "[OK] dingoConfig-$version-linux-arm64.zip created" -ForegroundColor Green
@@ -117,6 +131,7 @@ Write-Host ""
 Write-Host "Zip files:" -ForegroundColor Cyan
 Write-Host "  Windows (x64):         $outputDir/dingoConfig-$version-win-x64.zip"
 Write-Host "  Windows (arm64):       $outputDir/dingoConfig-$version-win-arm64.zip"
+Write-Host "  Linux (x32):           $outputDir/dingoConfig-$version-linux-x32.zip"
 Write-Host "  Linux (x64):           $outputDir/dingoConfig-$version-linux-x64.zip"
 Write-Host "  Linux (arm64):         $outputDir/dingoConfig-$version-linux-arm64.zip"
 Write-Host "  macOS (Intel):         $outputDir/dingoConfig-$version-osx-x64.zip"

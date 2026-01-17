@@ -91,14 +91,25 @@ jobs:
           dotnet publish api/api.csproj \
             -c Release \
             -r linux-x64 \
+            -p:DefineConstants=LINUX \
             --self-contained true \
             -o publish/dingoConfig-${{ needs.check-version.outputs.version }}/linux-x64
+
+      - name: Build Linux ARM32
+        run: |
+          dotnet publish api/api.csproj \
+            -c Release \
+            -r linux-arm \
+            -p:DefineConstants=LINUX \
+            --self-contained true \
+            -o publish/dingoConfig-${{ needs.check-version.outputs.version }}/linux-arm32
 
       - name: Build Linux ARM64
         run: |
           dotnet publish api/api.csproj \
             -c Release \
             -r linux-arm64 \
+            -p:DefineConstants=LINUX \
             --self-contained true \
             -o publish/dingoConfig-${{ needs.check-version.outputs.version }}/linux-arm64
 
@@ -125,6 +136,7 @@ jobs:
           zip -r dingoConfig-${{ needs.check-version.outputs.version }}-win-x64.zip win-x64/
           zip -r dingoConfig-${{ needs.check-version.outputs.version }}-win-arm64.zip win-arm64/
           zip -r dingoConfig-${{ needs.check-version.outputs.version }}-linux-x64.zip linux-x64/
+          zip -r dingoConfig-${{ needs.check-version.outputs.version }}-linux-arm32.zip linux-arm32/
           zip -r dingoConfig-${{ needs.check-version.outputs.version }}-linux-arm64.zip linux-arm64/
           zip -r dingoConfig-${{ needs.check-version.outputs.version }}-osx-x64.zip osx-x64/
           zip -r dingoConfig-${{ needs.check-version.outputs.version }}-osx-arm64.zip osx-arm64/
@@ -140,6 +152,7 @@ jobs:
             publish/dingoConfig-${{ needs.check-version.outputs.version }}/dingoConfig-${{ needs.check-version.outputs.version }}-win-x64.zip
             publish/dingoConfig-${{ needs.check-version.outputs.version }}/dingoConfig-${{ needs.check-version.outputs.version }}-win-arm64.zip
             publish/dingoConfig-${{ needs.check-version.outputs.version }}/dingoConfig-${{ needs.check-version.outputs.version }}-linux-x64.zip
+            publish/dingoConfig-${{ needs.check-version.outputs.version }}/dingoConfig-${{ needs.check-version.outputs.version }}-linux-arm32.zip
             publish/dingoConfig-${{ needs.check-version.outputs.version }}/dingoConfig-${{ needs.check-version.outputs.version }}-linux-arm64.zip
             publish/dingoConfig-${{ needs.check-version.outputs.version }}/dingoConfig-${{ needs.check-version.outputs.version }}-osx-x64.zip
             publish/dingoConfig-${{ needs.check-version.outputs.version }}/dingoConfig-${{ needs.check-version.outputs.version }}-osx-arm64.zip

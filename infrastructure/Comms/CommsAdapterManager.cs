@@ -25,11 +25,35 @@ public class CommsAdapterManager(IServiceProvider serviceProvider, ILogger<Comms
 
     public (string[] adapters, string[] ports) GetAvailable()
     {
+        var serialPorts = SerialPort.GetPortNames();
+
+        // Discover CAN interfaces (Linux only)
+        string[] canIfaces = [];
+        try
+        {
+            canIfaces = Directory.GetDirectories("/sys/class/net")
+                .Select(Path.GetFileName)
+                .Where(n => n.StartsWith("can") || n.StartsWith("vcan"))
+                .ToArray();
+        }
+        catch
+        {
+            // Windows: ignore
+        }
+
+        // Adapter list with platform guard
+        var adapters = new List<string> { "USB", "SLCAN", "PCAN", "Sim" };
+
+        #if LINUX
+        #warning Building with LINUX define enabled
+        adapters.Add("SocketCAN");
+        #endif
+
         return (
-            adapters: ["USB", "SLCAN", "PCAN", "Sim"],
-            ports: SerialPort.GetPortNames()
+            adapters: adapters.ToArray(),
+            ports: serialPorts.Concat(canIfaces).ToArray()
         );
-    }
+    }        
 
     public (bool isConnected, string? activeAdapter, string? activePort) GetStatus()
     {
@@ -46,6 +70,10 @@ public class CommsAdapterManager(IServiceProvider serviceProvider, ILogger<Comms
         {
             "USB" => serviceProvider.GetRequiredService<UsbAdapter>(),
             "SLCAN" => serviceProvider.GetRequiredService<SlcanAdapter>(),
+            #if LINUX
+            #warning Building with LINUX define enabled
+            "SocketCAN" => serviceProvider.GetRequiredService<SocketCanAdapter>(),
+            #endif
             "PCAN" => serviceProvider.GetRequiredService<PcanAdapter>(),
             "Sim" => serviceProvider.GetRequiredService<SimAdapter>(),
             _ => throw new ArgumentException($"Unknown adapter type: {adapterName}")
@@ -54,7 +82,7 @@ public class CommsAdapterManager(IServiceProvider serviceProvider, ILogger<Comms
     
     public async Task<bool> ConnectAsync(ICommsAdapter commsAdapter, string port, CanBitRate bitRate, CancellationToken ct = default)
     {
-        if (_activeAdapter != null)
+        if (_activeAdapter is { IsConnected: true })
         {
             await DisconnectAsync();
         }
@@ -89,7 +117,7 @@ public class CommsAdapterManager(IServiceProvider serviceProvider, ILogger<Comms
             return await Task.FromResult(false);
         }
 
-        logger.LogInformation($"Adapter connected: {nameof(_activeAdapter)}");
+        logger.LogInformation($"Adapter connected: {_activeAdapter.Name}");
         return await Task.FromResult(true);
     }
 
@@ -103,10 +131,8 @@ public class CommsAdapterManager(IServiceProvider serviceProvider, ILogger<Comms
             _activeAdapter.Disconnected -= OnDisconnected;
             await _activeAdapter.StopAsync();
 
-            logger.LogInformation("Adapter disconnected: {AdapterName}", nameof(_activeAdapter));
+            logger.LogInformation("Adapter disconnected: {AdapterName}", _activeAdapter.Name);
         }
-
-        _activeAdapter = null;
 
         return await Task.FromResult(true);
     }
@@ -123,6 +149,7 @@ public class CommsAdapterManager(IServiceProvider serviceProvider, ILogger<Comms
 
     private void OnDisconnected(object? sender, EventArgs e)
     {
+        _ = DisconnectAsync();
         logger.LogWarning("Adapter disconnected: {AdapterName}", _activeAdapter?.Name ?? "Unknown");
         Disconnected?.Invoke(this, EventArgs.Empty);
     }

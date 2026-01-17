@@ -27,7 +27,7 @@
                 </MudChip>
             </CellTemplate>
         </PropertyColumn>
-        <PropertyColumn Property="x => x.Input" Title="Variable" CellStyle="max-width: 150px">
+        <PropertyColumn Property="x => x.Input" Title="Variable" CellStyle="max-width: 200px">
             <EditTemplate>
                 <MudSelect T="VarMap" @bind-Value="context.Item.Input" Variant="Variant.Outlined" Dense="true">
                     @foreach (VarMap varMap in Enum.GetValues(typeof(VarMap)))
