@@ -68,11 +68,12 @@
                     <strong>Not Connected</strong>
                 </MudAlert>
 
-                <MudSelect @bind-Value="_selectedAdapterType"
+                <MudSelect Value="_selectedAdapterType"
                            Label="Adapter Type"
                            Variant="Variant.Outlined"
                            Dense="true"
                            Class="mb-2"
+                           ValueChanged="OnAdapterTypeChanged"
                            T="string">
                     @foreach (var adapter in _available.Adapters)
                     {
@@ -189,6 +190,7 @@
             _selectedBitrate = UserPrefs.Preferences.SelectedBitrate;
 
         LoadData();
+        Refresh();
 
         // Refresh status every second
         _refreshTimer = new Timer(_ =>
@@ -212,16 +214,11 @@
         try
         {
             _status = CommsAdapterManager.GetStatus();
-            _available = CommsAdapterManager.GetAvailable();
 
             if (_status.IsConnected) return;
             if (string.IsNullOrEmpty(_selectedAdapterType) && _available.Adapters.Length > 0)
             {
                 _selectedAdapterType = _available.Adapters[0];
-            }
-            if (string.IsNullOrEmpty(_selectedPort) && _available.Ports.Length > 0)
-            {
-                _selectedPort = _available.Ports[0];
             }
         }
         catch
@@ -238,13 +235,39 @@
     {
         try
         {
-            _available = CommsAdapterManager.GetAvailable();
+            Refresh();
+            
             Notification.NewInfo("Adapter list refreshed");
         }
         catch (Exception ex)
         {
             Notification.NewError("Error refreshing adapters", ex);
         }
+    }
+
+    private void Refresh()
+    {
+        _available = CommsAdapterManager.GetAvailable();
+        
+        //Filter the available ports
+        if (_selectedAdapterType == "SocketCAN")
+        {
+            _available.Ports = _available.Ports.Where(s => s.Contains("can")).ToArray();
+            if (!_selectedPort.Contains("can") && _available.Adapters.Length > 0)
+                _selectedPort = _available.Ports[0];
+        }
+        else
+        {
+            _available.Ports = _available.Ports.Where(s => !s.Contains("can")).ToArray();
+            if (_selectedPort.Contains("can") && _available.Adapters.Length > 0)
+                _selectedPort = _available.Ports[0];
+        }
+        
+        if (string.IsNullOrEmpty(_selectedPort) && _available.Ports.Length > 0)
+        {
+            _selectedPort = _available.Ports[0];
+        }
+        
     }
 
     private async Task ConnectAdapter()
@@ -401,4 +424,11 @@
     {
         _refreshTimer?.Dispose();
     }
+
+    private void OnAdapterTypeChanged(string obj)
+    {
+        _selectedAdapterType = obj;
+        Refresh();
+    }
+
 }

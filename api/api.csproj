@@ -41,7 +41,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <BlazorDisableThrowNavigationException>true</BlazorDisableThrowNavigationException>
     <OutputType>Exe</OutputType>
-    <Version>0.1.4.1</Version>
+    <Version>0.1.5</Version>
     <ApplicationIcon>icon.ico</ApplicationIcon>
     <PackageIcon>wwwroot\icon.png</PackageIcon>
     <!-- Console window is hidden programmatically in Program.cs for Windows -->
