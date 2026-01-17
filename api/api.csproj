@@ -41,10 +41,18 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <BlazorDisableThrowNavigationException>true</BlazorDisableThrowNavigationException>
     <OutputType>Exe</OutputType>
-    <Version>0.1.4</Version>
+    <Version>0.1.4.1</Version>
     <ApplicationIcon>icon.ico</ApplicationIcon>
     <PackageIcon>wwwroot\icon.png</PackageIcon>
     <!-- Console window is hidden programmatically in Program.cs for Windows -->
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <RuntimeIdentifier>$(RuntimeIdentifier)</RuntimeIdentifier>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(RuntimeIdentifier)' != '' AND $([System.String]::Copy('$(RuntimeIdentifier)').StartsWith('linux'))">
+    <DefineConstants>LINUX;$(DefineConstants)</DefineConstants>
   </PropertyGroup>
 
 </Project>
