@@ -54,7 +54,7 @@ public class CommsAdapterManager(IServiceProvider serviceProvider, ILogger<Comms
     
     public async Task<bool> ConnectAsync(ICommsAdapter commsAdapter, string port, CanBitRate bitRate, CancellationToken ct = default)
     {
-        if (_activeAdapter != null)
+        if (_activeAdapter is { IsConnected: true })
         {
             await DisconnectAsync();
         }
@@ -89,7 +89,7 @@ public class CommsAdapterManager(IServiceProvider serviceProvider, ILogger<Comms
             return await Task.FromResult(false);
         }
 
-        logger.LogInformation($"Adapter connected: {nameof(_activeAdapter)}");
+        logger.LogInformation($"Adapter connected: {_activeAdapter.Name}");
         return await Task.FromResult(true);
     }
 
@@ -103,10 +103,8 @@ public class CommsAdapterManager(IServiceProvider serviceProvider, ILogger<Comms
             _activeAdapter.Disconnected -= OnDisconnected;
             await _activeAdapter.StopAsync();
 
-            logger.LogInformation("Adapter disconnected: {AdapterName}", nameof(_activeAdapter));
+            logger.LogInformation("Adapter disconnected: {AdapterName}", _activeAdapter.Name);
         }
-
-        _activeAdapter = null;
 
         return await Task.FromResult(true);
     }
@@ -123,6 +121,7 @@ public class CommsAdapterManager(IServiceProvider serviceProvider, ILogger<Comms
 
     private void OnDisconnected(object? sender, EventArgs e)
     {
+        _ = DisconnectAsync();
         logger.LogWarning("Adapter disconnected: {AdapterName}", _activeAdapter?.Name ?? "Unknown");
         Disconnected?.Invoke(this, EventArgs.Empty);
     }

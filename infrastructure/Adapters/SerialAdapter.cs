@@ -69,6 +69,9 @@ public abstract class SerialAdapter : ICommsAdapter
 
         RxStopwatch?.Stop();
 
+        //Set time delta to a high value to set IsConnected to false
+        RxTimeDelta = new TimeSpan(1, 0, 0); 
+
         return Task.FromResult(true);
     }
 
@@ -244,31 +247,7 @@ public abstract class SerialAdapter : ICommsAdapter
 
     protected void HandleDisconnection()
     {
-        if (!IsConnected) return; // Already handled
-
-        // Stop monitoring
-        ConnectionMonitorTimer?.Dispose();
-        ConnectionMonitorTimer = null;
-
-        // Clean up serial port
-        if (Serial != null)
-        {
-            try
-            {
-                Serial.DataReceived -= _serial_DataReceived;
-                Serial.ErrorReceived -= _serial_ErrorReceived;
-
-                if (Serial.IsOpen)
-                {
-                    Serial.Close();
-                }
-            }
-            catch
-            {
-                // Ignore exceptions during cleanup - port may already be gone
-            }
-        }
-
+        //Note: Disconnecting is handled by the CommsAdapterManager
         Disconnected?.Invoke(this, EventArgs.Empty);
     }
 }
