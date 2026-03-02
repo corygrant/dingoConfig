@@ -32,13 +32,9 @@ public abstract class PdmFunctionComponentBase<TDevice> : ComponentBase
         var variable = Device.VarMap.Find(p => p.VariableIndex == index);
 
         if (variable == null) return "Not found";
+
+        var name = variable.GetName();
         
-        if(variable.FunctionName.Length == 0)
-            return "Select Variable";
-
-        if (variable.SingleVariable)
-            return $"{variable.FunctionName}.{variable.PropertyName}";
-
-        return $"{variable.FunctionName}{variable.FunctionIndex}.{variable.PropertyName}";
+        return name.Length == 0 ? "Select Variable" : $"{name} - {variable.PropertyName}";
     }
 }

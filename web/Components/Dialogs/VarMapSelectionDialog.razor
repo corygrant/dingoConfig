@@ -33,7 +33,7 @@
         else
         {
             <MudPaper Elevation="0" MaxHeight="500px" Style="overflow-y: auto;">
-                @foreach (var function in GetFilteredVariables())
+                @foreach (var group in GetGroupedVariables())
                 {
                     <MudList T="string" Dense="true">
                         @* Function Level *@
@@ -42,12 +42,11 @@
                                      IconColor="Color.Primary">
                             <ChildContent>
                                 <MudText Typo="Typo.body1">
-                                    <b>@GetFunctionName(function)</b>
+                                    <b>@group.Key</b>
                                 </MudText>
                             </ChildContent>
                             <NestedList>
-                                @foreach (var property in GetFilteredVariables().Where(n => n.FunctionName.Equals(function.FunctionName) &&
-                                                                                                        n.FunctionIndex == function.FunctionIndex))
+                                @foreach (var property in group)
                                 {
                                     <MudListItem T="string"
                                                  Icon="@Icons.Material.Filled.Message"
@@ -92,9 +91,14 @@
 
     private List<DeviceVariable> GetFilteredVariables()
     {
-        return Device.VarMap.Where(n => (n.FunctionName.ToLower().Contains(_searchText.ToLower()) ||
+        return Device.VarMap.Where(n => (n.GetName().ToLower().Contains(_searchText.ToLower()) ||
                                         n.PropertyName.ToLower().Contains(_searchText.ToLower())) &&
                                         Datatypes.Any(dt => string.Equals(n.DataType, dt))).ToList();
+    }
+
+    private IEnumerable<IGrouping<string, DeviceVariable>> GetGroupedVariables()
+    {
+        return GetFilteredVariables().GroupBy(v => v.GetName());
     }
 
     private bool IsSelected(DeviceVariable variable)
@@ -117,11 +121,4 @@
         MudDialog.Cancel();
     }
 
-    private string GetFunctionName(DeviceVariable variable)
-    {
-        if (variable.SingleVariable)
-            return $"{variable.FunctionName}";
-
-        return $"{variable.FunctionName}{variable.FunctionIndex}";
-    }
 }

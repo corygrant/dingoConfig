@@ -313,8 +313,7 @@ public class PdmDevice : IDeviceConfigurable
 
         VarMap.Add(new DeviceVariable
         {
-            FunctionName = "None",
-            FunctionIndex = 0,
+            GetName = () => "None",
             PropertyName = "Value",
             DataType = "bool",
             VariableIndex = index++,
@@ -323,8 +322,7 @@ public class PdmDevice : IDeviceConfigurable
         
         VarMap.Add(new DeviceVariable
         {
-            FunctionName = "AlwaysOn",
-            FunctionIndex = 0,
+            GetName = () => "Always On",
             PropertyName = "Value",
             DataType = "bool",
             VariableIndex = index++,
@@ -333,8 +331,7 @@ public class PdmDevice : IDeviceConfigurable
         
         VarMap.Add(new DeviceVariable
         {
-            FunctionName = "State",
-            FunctionIndex = 0,
+            GetName = () => "State",
             PropertyName = "Value",
             DataType = "int",
             VariableIndex = index++,
@@ -343,8 +340,7 @@ public class PdmDevice : IDeviceConfigurable
         
         VarMap.Add(new DeviceVariable
         {
-            FunctionName = "Temperature",
-            FunctionIndex = 0,
+            GetName = () => "Temperature",
             PropertyName = "Value",
             DataType = "float",
             VariableIndex = index++,
@@ -353,8 +349,7 @@ public class PdmDevice : IDeviceConfigurable
         
         VarMap.Add(new DeviceVariable
         {
-            FunctionName = "Battery Voltage",
-            FunctionIndex = 0,
+            GetName =  () => "Battery Voltage",
             PropertyName = "Value",
             DataType = "float",
             VariableIndex = index++,
@@ -365,10 +360,10 @@ public class PdmDevice : IDeviceConfigurable
         {
             for (var i = 0; i < NumDigitalInputs; i++)
             {
+                var num = i;
                 VarMap.Add(new DeviceVariable
                 {
-                    FunctionName = "Input",
-                    FunctionIndex = i + 1,
+                    GetName  = () => Inputs[num].Name,
                     PropertyName = "State",
                     DataType = "bool",
                     VariableIndex = index++,
@@ -381,10 +376,10 @@ public class PdmDevice : IDeviceConfigurable
         {
             for (var i = 0; i < NumCanInputs; i++)
             {
+                var num = i;
                 VarMap.Add(new DeviceVariable
                 {
-                    FunctionName = "CANInput",
-                    FunctionIndex = i + 1,
+                    GetName = () => CanInputs[num].Name,
                     PropertyName = "State",
                     DataType = "bool",
                     VariableIndex = index++,
@@ -392,8 +387,7 @@ public class PdmDevice : IDeviceConfigurable
                 });
                 VarMap.Add(new DeviceVariable
                 {
-                    FunctionName = "CANInput",
-                    FunctionIndex = i + 1,
+                    GetName = () => CanInputs[num].Name,
                     PropertyName = "Value",
                     DataType = "float",
                     VariableIndex = index++,
@@ -406,10 +400,10 @@ public class PdmDevice : IDeviceConfigurable
         {
             for(var i=0; i< NumVirtualInputs; i++)
             {
+                var num = i;
                 VarMap.Add(new DeviceVariable
                 {
-                    FunctionName = "VirtualInput",
-                    FunctionIndex = i + 1,
+                    GetName = () => VirtualInputs[num].Name,
                     PropertyName = "State",
                     DataType = "bool",
                     VariableIndex = index++,
@@ -422,10 +416,10 @@ public class PdmDevice : IDeviceConfigurable
         {
             for (var i = 0; i < NumOutputs; i++)
             {
+                var num = i;
                 VarMap.Add(new DeviceVariable
                 {
-                    FunctionName = "Output",
-                    FunctionIndex = i + 1,
+                    GetName = () => Outputs[num].Name,
                     PropertyName = "On",
                     DataType = "bool",
                     VariableIndex = index++,
@@ -433,8 +427,7 @@ public class PdmDevice : IDeviceConfigurable
                 });
                 VarMap.Add(new DeviceVariable
                 {
-                    FunctionName = "Output",
-                    FunctionIndex = i + 1,
+                    GetName = () => Outputs[num].Name,
                     PropertyName = "Current",
                     DataType = "float",
                     VariableIndex = index++,
@@ -442,8 +435,7 @@ public class PdmDevice : IDeviceConfigurable
                 });
                 VarMap.Add(new DeviceVariable
                 {
-                    FunctionName = "Output",
-                    FunctionIndex = i + 1,
+                    GetName = () => Outputs[num].Name,
                     PropertyName = "Overcurrent",
                     DataType = "bool",
                     VariableIndex = index++,
@@ -451,8 +443,7 @@ public class PdmDevice : IDeviceConfigurable
                 });
                 VarMap.Add(new DeviceVariable
                 {
-                    FunctionName = "Output",
-                    FunctionIndex = i + 1,
+                    GetName = () => Outputs[num].Name,
                     PropertyName = "Fault",
                     DataType = "bool",
                     VariableIndex = index++,
@@ -465,10 +456,10 @@ public class PdmDevice : IDeviceConfigurable
         {
             for (var i = 0; i < NumFlashers; i++)
             {
+                var num = i;
                 VarMap.Add(new DeviceVariable
                 {
-                    FunctionName = "Flasher",
-                    FunctionIndex = i + 1,
+                    GetName = () => Flashers[num].Name,
                     PropertyName = "State",
                     DataType = "bool",
                     VariableIndex = index++,
@@ -481,10 +472,10 @@ public class PdmDevice : IDeviceConfigurable
         {
             for (var i = 0; i < NumConditions; i++)
             {
+                var num = i;
                 VarMap.Add(new DeviceVariable
                 {
-                    FunctionName = "Condition",
-                    FunctionIndex = i + 1,
+                    GetName = () => Conditions[num].Name,
                     PropertyName = "Value",
                     DataType = "bool",
                     VariableIndex = index++,
@@ -497,10 +488,10 @@ public class PdmDevice : IDeviceConfigurable
         {
             for (var i = 0; i < NumCounters; i++)
             {
+                var num = i;
                 VarMap.Add(new DeviceVariable
                 {
-                    FunctionName = "Counter",
-                    FunctionIndex = i + 1,
+                    GetName = () => Counters[num].Name,
                     PropertyName = "Value",
                     DataType = "int",
                     VariableIndex = index++,
@@ -511,9 +502,8 @@ public class PdmDevice : IDeviceConfigurable
         
         VarMap.Add(new DeviceVariable
         {
-            FunctionName = "Wiper.Slow",
-            FunctionIndex = 0,
-            PropertyName = "Output",
+            GetName = () => Wipers.Name,
+            PropertyName = "Slow Output",
             DataType = "bool",
             VariableIndex = index++,
             SingleVariable = true
@@ -521,9 +511,8 @@ public class PdmDevice : IDeviceConfigurable
         
         VarMap.Add(new DeviceVariable
         {
-            FunctionName = "Wiper.Fast",
-            FunctionIndex = 0,
-            PropertyName = "Output",
+            GetName = () => Wipers.Name,
+            PropertyName = "Fast Output",
             DataType = "bool",
             VariableIndex = index++,
             SingleVariable = true
@@ -531,9 +520,8 @@ public class PdmDevice : IDeviceConfigurable
         
         VarMap.Add(new DeviceVariable
         {
-            FunctionName = "Wiper.Park",
-            FunctionIndex = 0,
-            PropertyName = "Output",
+            GetName = () => Wipers.Name,
+            PropertyName = "Park Output",
             DataType = "bool",
             VariableIndex = index++,
             SingleVariable = true
@@ -541,9 +529,8 @@ public class PdmDevice : IDeviceConfigurable
         
         VarMap.Add(new DeviceVariable
         {
-            FunctionName = "Wiper.Inter",
-            FunctionIndex = 0,
-            PropertyName = "Output",
+            GetName = () => Wipers.Name,
+            PropertyName = "Inter Output",
             DataType = "bool",
             VariableIndex = index++,
             SingleVariable = true
@@ -551,9 +538,8 @@ public class PdmDevice : IDeviceConfigurable
         
         VarMap.Add(new DeviceVariable
         {
-            FunctionName = "Wiper.Wash",
-            FunctionIndex = 0,
-            PropertyName = "Output",
+            GetName = () => Wipers.Name,
+            PropertyName = "Wash Output",
             DataType = "bool",
             VariableIndex = index++,
             SingleVariable = true
@@ -561,9 +547,8 @@ public class PdmDevice : IDeviceConfigurable
         
         VarMap.Add(new DeviceVariable
         {
-            FunctionName = "Wiper.Swipe",
-            FunctionIndex = 0,
-            PropertyName = "Output",
+            GetName = () => Wipers.Name,
+            PropertyName = "Swipe Output",
             DataType = "bool",
             VariableIndex = index++,
             SingleVariable = true
@@ -573,12 +558,13 @@ public class PdmDevice : IDeviceConfigurable
         {
             for (var i = 0; i < NumKeypads; i++)
             {
+                var kp = i;
                 for (var j = 0; j < KeypadMaster.MaxButtons; j++)
                 {
+                    var num = j;
                     VarMap.Add(new DeviceVariable
                     {
-                        FunctionName = $"Keypad{i + 1}.Button",
-                        FunctionIndex = j + 1,
+                        GetName = () => $"{Keypads[kp].Name} - {Keypads[kp].Buttons[num].Name}",
                         PropertyName = "State",
                         DataType = "bool",
                         VariableIndex = index++,
@@ -588,10 +574,10 @@ public class PdmDevice : IDeviceConfigurable
                 
                 for (var j = 0; j < KeypadMaster.MaxDials; j++)
                 {
+                    var num = j;
                     VarMap.Add(new DeviceVariable
                     {
-                        FunctionName = $"Keypad{i + 1}.Dial",
-                        FunctionIndex = j + 1,
+                        GetName = () => $"{Keypads[kp].Name} - {Keypads[kp].Dials[num].Name}",
                         PropertyName = "Position",
                         DataType = "int",
                         VariableIndex = index++,
@@ -601,10 +587,10 @@ public class PdmDevice : IDeviceConfigurable
                 
                 for (var j = 0; j < KeypadMaster.MaxAnalogInputs; j++)
                 {
+                    var num = j;
                     VarMap.Add(new DeviceVariable
                     {
-                        FunctionName = $"Keypad{i + 1}.AnalogInput",
-                        FunctionIndex = j + 1,
+                        GetName = () => $"{Keypads[kp].Name} - analogIn{num}",
                         PropertyName = "Value",
                         DataType = "float",
                         VariableIndex = index++,
