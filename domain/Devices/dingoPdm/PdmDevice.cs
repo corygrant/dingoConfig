@@ -167,7 +167,7 @@ public class PdmDevice : IDeviceConfigurable
                 val => DeviceState = (DeviceState)val),
             (new DbcSignal { Name = "PdmType", StartBit = 12, Length = 4 },
                 val => PdmTypeOk = PdmType == (int)val),
-            (new DbcSignal { Name = "TotalCurrent", StartBit = 16, Length = 16, Factor = 0.1, Unit = "A" },
+            (new DbcSignal { Name = "TotalCurrent", StartBit = 16, Length = 16, Factor = 1.0, Unit = "A" },
                 val => TotalCurrent = val),
             (new DbcSignal { Name = "BatteryVoltage", StartBit = 32, Length = 16, Factor = 0.1, Unit = "V" },
                 val => BatteryVoltage = val),
@@ -181,7 +181,7 @@ public class PdmDevice : IDeviceConfigurable
         {
             var outputIndex = i;
             StatusSigs[1].Add((
-                new DbcSignal { Name = $"Output{outputIndex + 1}.Current", StartBit = i * 16, Length = 16, Factor = 0.1, Unit = "A" },
+                new DbcSignal { Name = $"Output{outputIndex + 1}.Current", StartBit = i * 16, Length = 16, Factor = 1.0, Unit = "A" },
                 val => Outputs[outputIndex].Current = val
             ));
         }
@@ -192,7 +192,7 @@ public class PdmDevice : IDeviceConfigurable
         {
             var outputIndex = i;
             StatusSigs[2].Add((
-                new DbcSignal { Name = $"Output{outputIndex + 1}.Current", StartBit = (i - 4) * 16, Length = 16, Factor = 0.1, Unit = "A" },
+                new DbcSignal { Name = $"Output{outputIndex + 1}.Current", StartBit = (i - 4) * 16, Length = 16, Factor = 1.0, Unit = "A" },
                 val => Outputs[outputIndex].Current = val
             ));
         }
@@ -276,29 +276,29 @@ public class PdmDevice : IDeviceConfigurable
             ));
         }
 
-        // Messages 7-14: CAN input values (4 per message)
-        for (var msg = 7; msg <= 14; msg++)
+        // Messages 7-22: CAN input values (2 per message)
+        for (var msg = 7; msg <= 22; msg++)
         {
             StatusSigs[msg] = [];
-            for (var i = 0; i < 4; i++)
+            for (var i = 0; i < 2; i++)
             {
-                var canInputIndex = (msg - 7) * 4 + i;
+                var canInputIndex = (msg - 7) * 2 + i;
                 if (canInputIndex < NumCanInputs)
                 {
                     StatusSigs[msg].Add((
-                        new DbcSignal { Name = $"CanInput{canInputIndex + 1}.Value", StartBit = i * 16, Length = 16 },
-                        val => CanInputs[canInputIndex].Value = (ushort)val
+                        new DbcSignal { Name = $"CanInput{canInputIndex + 1}.Value", StartBit = i * 32, Length = 32 },
+                        val => CanInputs[canInputIndex].Value = (int)val
                     ));
                 }
             }
         }
 
-        // Message 15: Output duty cycles
-        StatusSigs[15] = [];
+        // Message 23: Output duty cycles
+        StatusSigs[23] = [];
         for (var i = 0; i < NumOutputs; i++)
         {
             var outputIndex = i;
-            StatusSigs[15].Add((
+            StatusSigs[23].Add((
                 new DbcSignal { Name = $"Output{outputIndex + 1}.DutyCycle", StartBit = i * 8, Length = 8, Unit = "%" },
                 val => Outputs[outputIndex].CurrentDutyCycle = val
             ));

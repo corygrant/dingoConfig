@@ -1,5 +1,6 @@
 @using domain.Devices.dingoPdm.Enums
 @using domain.Devices.dingoPdm
+@using domain.Devices.dingoPdm.Functions
 @typeparam TDevice where TDevice : PdmDevice
 
 <div style="overflow-y: auto; height: calc(100vh - 250px); padding: 24px; scrollbar-width: auto; scrollbar-color: #888 transparent;">
@@ -99,12 +100,19 @@
                                      Size="Size.Small" Style="min-width: 100px;">
                                 @GetOutputStateText(output.State)
                             </MudChip>
-                            <MudText Typo="Typo.body2">@output.Current.ToString("F1") A</MudText>
-                            <MudText Typo="Typo.body2">Reset Count: @output.ResetCount.ToString("D")</MudText>
-                            @if (output.PwmEnabled)
+                            @if (output.PrimaryOutput < 0)
                             {
-                                <MudText Typo="Typo.body2">@output.CurrentDutyCycle.ToString("F1") %</MudText>
-                                <MudText Typo="Typo.body2">@output.CalculatedCurrent.ToString("F1") A (Calculated)</MudText>
+                                <MudText Typo="Typo.body2">@output.Current.ToString("F1") A</MudText>
+                                <MudText Typo="Typo.body2">Reset Count: @output.ResetCount.ToString("D")</MudText>
+                                @if (output.PwmEnabled)
+                                {
+                                    <MudText Typo="Typo.body2">@output.CurrentDutyCycle.ToString("F1") %</MudText>
+                                    <MudText Typo="Typo.body2">@output.CalculatedCurrent.ToString("F1") A (Calculated)</MudText>
+                                }
+                            }
+                            else
+                            {
+                                <MudText Typo="Typo.body2">Following Output: @(output.PrimaryOutput + 1)</MudText>
                             }
                         </MudStack>
                     </MudCardContent>
@@ -326,7 +334,7 @@
     {
         OutState.On => "ON",
         OutState.Overcurrent => "OVERCURRENT",
-        OutState.Fault => "RESETTING",
+        OutState.Fault => "FAULT",
         _ => "OFF"
     };
 
