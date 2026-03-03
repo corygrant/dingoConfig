@@ -654,7 +654,10 @@ public class PdmDevice : IDeviceConfigurable
         foreach (var flasher in Flashers) allParams.AddRange(flasher.Params);
         allParams.AddRange(StarterDisable.Params);
         allParams.AddRange(Wipers.Params);
-        foreach (var keypad in Keypads) allParams.AddRange(keypad.Params);
+        // Firmware groups all keypad base params first, then all buttons, then all dials
+        foreach (var keypad in Keypads) allParams.AddRange(keypad.BaseParams);
+        foreach (var keypad in Keypads) allParams.AddRange(keypad.ButtonParams);
+        foreach (var keypad in Keypads) allParams.AddRange(keypad.DialParams);
         Params = allParams;
 
         _paramProtocol = new ParamProtocol(Params);

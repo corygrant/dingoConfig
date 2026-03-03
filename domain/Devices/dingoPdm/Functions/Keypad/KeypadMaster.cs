@@ -38,8 +38,11 @@ public class KeypadMaster : IDeviceFunction
     [JsonIgnore] public int NumButtons { get; set; }
     [JsonIgnore] public int NumDials { get; set; }
     
-    [JsonIgnore]public List<DeviceParameter> Params { get; set; } = null!;
-    
+    [JsonIgnore] public List<DeviceParameter> BaseParams { get; private set; } = null!;
+    [JsonIgnore] public List<DeviceParameter> ButtonParams { get; private set; } = null!;
+    [JsonIgnore] public List<DeviceParameter> DialParams { get; private set; } = null!;
+    [JsonIgnore] public List<DeviceParameter> Params { get; set; } = null!;
+
     [JsonConstructor]
     public KeypadMaster(int number, string name)
     {
@@ -54,16 +57,15 @@ public class KeypadMaster : IDeviceFunction
     {
         for (var i = 0; i < MaxButtons; i++)
             Buttons.Add(new Button(Number, i + 1, "button" + (i + 1)));
-        
+
         for (var i = 0; i < MaxDials; i++)
             Dials.Add(new Dial(Number, i + 1, "dial" + (i + 1)));
     }
 
     private void InitParams()
     {
-        var allParams = new List<DeviceParameter>();
         var subIndex = 0;
-        allParams.AddRange(
+        BaseParams =
         [
             new DeviceParameter
             {
@@ -145,11 +147,11 @@ public class KeypadMaster : IDeviceFunction
                 ValueType = DimButtonBrightness.GetType(),
                 DefaultValue = 32
             },
-        ]);
+        ];
 
-        foreach (var button in Buttons) allParams.AddRange(button.Params);
-        foreach (var dial in Dials) allParams.AddRange(dial.Params);
-        Params = allParams;
+        ButtonParams = Buttons.SelectMany(b => b.Params).ToList();
+        DialParams = Dials.SelectMany(d => d.Params).ToList();
+        Params = [..BaseParams, ..ButtonParams, ..DialParams];
     }
 
     public bool IsBlinkMarine()
