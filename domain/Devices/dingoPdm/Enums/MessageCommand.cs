@@ -22,5 +22,7 @@ public enum MessageCommand
     BurnParams = 30,
     Version = 31,
     Sleep = 32,
-    Bootloader = 33
+    Bootloader = 33,
+    CheckCrc = 34,
+    CheckCrcRsp = 35,
 }

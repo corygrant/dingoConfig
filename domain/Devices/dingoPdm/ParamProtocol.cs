@@ -211,6 +211,23 @@ internal class ParamProtocol(List<DeviceParameter> @params)
                 }
 
                 break;
+                
+            case MessageCommand.CheckCrcRsp:
+                if (data.Length != 8) return;
+                
+                uint checkCrc = (uint)(data[7] << 24 | data[6] << 16 | data[5] << 8 | data[4]);
+                
+                var thisCheck = CalcCrc();
+                
+                if (checkCrc == thisCheck)
+                    _logger.LogInformation("{Name} ID: {BaseId}, Config Matches {pdmCrc}", name, baseId, checkCrc);
+                else
+                {
+                    _logger.LogInformation("{Name} ID: {BaseId}, Config Does Not Match {pdmCrc} != {thisCrc}", 
+                        name, baseId, checkCrc, thisCheck);
+                }
+
+                break;
 
             case MessageCommand.WriteAll:
                 if (data.Length != 8) return;
@@ -355,5 +372,18 @@ internal class ParamProtocol(List<DeviceParameter> @params)
         });
 
         return msgs;
+    }
+
+    private uint CalcCrc()
+    {
+        CumulativeCrc32 checkCrc32 =  new();
+        
+        foreach (var parameter in @params)
+        {
+            var data = ParamCodec.ToFrame(MessageCommand.Null, parameter, 0);
+            checkCrc32.Update(data.Payload.Skip(4).Take(4).ToArray());
+        }
+        
+        return checkCrc32.Final;
     }
 }
