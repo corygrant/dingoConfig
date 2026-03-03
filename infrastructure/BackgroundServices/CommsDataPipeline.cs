@@ -126,24 +126,16 @@ public class CommsDataPipeline(
         try
         {
             if (adapterManager.ActiveAdapter == null)
-            {
-                logger.LogDebug(
-                    "TX frame dropped: No active adapter. CanId={Id:X}",
-                    frame.Id);
                 return;
-            }
 
-            await adapterManager.ActiveAdapter.WriteAsync(frame, ct);
+            var success = await adapterManager.ActiveAdapter.WriteAsync(frame, ct);
+            if (!success) 
+                return;
 
             msgLogger.Log(DataDirection.Tx, frame);
 
             // Start timeout timer now that frame has been physically transmitted
             deviceManager.OnFrameTransmitted(deviceFrame);
-
-            logger.LogDebug(
-                "TX frame sent: CanId={Id:X}, Length={Len}",
-                frame.Id,
-                frame.Len);
         }
         catch (Exception ex)
         {

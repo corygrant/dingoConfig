@@ -7,23 +7,17 @@ using Microsoft.Extensions.Logging.Abstractions;
 
 namespace domain.Devices.dingoPdm;
 
-internal class ParamProtocol
+internal class ParamProtocol(List<DeviceParameter> @params)
 {
-    private readonly List<DeviceParameter> _params;
     private ILogger _logger = NullLogger.Instance;
 
     private readonly Dictionary<(int Index, int SubIndex), object> _tempParamValues = new();
     private int _readAllCount;
-    private int _readAllAttempts;
     private int _writeAllCount;
-    private int _writeAllAttempts;
-
     public Action<string>? NotifySuccess;
-
-    public ParamProtocol(List<DeviceParameter> @params)
-    {
-        _params = @params;
-    }
+    
+    private readonly CumulativeCrc32 _writeCrc32 =  new();
+    private readonly CumulativeCrc32 _readCrc32 =  new();
 
     public void SetLogger(ILogger logger) => _logger = logger;
 
@@ -53,7 +47,7 @@ internal class ParamProtocol
                 index = data[2] << 8 | data[1];
                 subIndex = data[3];
 
-                matchingParam = _params.FirstOrDefault(p => p.Index == index && p.SubIndex == subIndex);
+                matchingParam = @params.FirstOrDefault(p => p.Index == index && p.SubIndex == subIndex);
 
                 var paramName = "";
                 if (matchingParam != null)
@@ -89,7 +83,7 @@ internal class ParamProtocol
                 index = data[2] << 8 | data[1];
                 subIndex = data[3];
 
-                matchingParam = _params.FirstOrDefault(p => p.Index == index && p.SubIndex == subIndex);
+                matchingParam = @params.FirstOrDefault(p => p.Index == index && p.SubIndex == subIndex);
                 if (matchingParam is null) break;
 
                 if (matchingParam.ValueType == typeof(double))
@@ -127,13 +121,14 @@ internal class ParamProtocol
 
                 index = data[2] << 8 | data[1];
                 subIndex = data[3];
-
+                
+                _readCrc32.Reset();
+                
                 _tempParamValues.Clear();
-                foreach (var param in _params)
+                foreach (var param in @params)
                     _tempParamValues[(param.Index, param.SubIndex)] = param.DefaultValue;
 
                 _readAllCount = 0;
-                _readAllAttempts = 0;
 
                 key = (baseId, index, subIndex);
                 if (queue.TryGetValue(key, out canFrame!))
@@ -152,7 +147,7 @@ internal class ParamProtocol
                 index = data[2] << 8 | data[1];
                 subIndex = data[3];
 
-                matchingParam = _params.FirstOrDefault(p => p.Index == index && p.SubIndex == subIndex);
+                matchingParam = @params.FirstOrDefault(p => p.Index == index && p.SubIndex == subIndex);
                 if (matchingParam is null)
                 {
                     _logger.LogWarning("{Name} ID: {BaseId}, Cannot find param {index}:{subIndex}", name, baseId, index, subIndex);
@@ -179,6 +174,8 @@ internal class ParamProtocol
 
                 _tempParamValues[(index, subIndex)] = convertedValue;
 
+                _readCrc32.Update(data.Skip(4).Take(4).ToArray());
+                
                 _readAllCount++;
 
                 break;
@@ -187,11 +184,12 @@ internal class ParamProtocol
                 if (data.Length != 8) return;
 
                 var readAllCount = data[2] << 8 | data[1];
+                uint readAllCrc = (uint)(data[7] << 24 | data[6] << 16 | data[5] << 8 | data[4]);
 
-                if (readAllCount == _readAllCount)
+                if (readAllCrc == _readCrc32.Final)
                 {
                     // End of params, apply all temporary values to actual properties
-                    foreach (var param in _params)
+                    foreach (var param in @params)
                     {
                         var paramKey = (param.Index, param.SubIndex);
                         if (_tempParamValues.TryGetValue(paramKey, out var value))
@@ -201,20 +199,23 @@ internal class ParamProtocol
                     }
 
                     _tempParamValues.Clear();
-                    _logger.LogInformation("{Name} ID: {BaseId}, Read All Complete {fromPdm}", name, baseId, readAllCount);
+                    _logger.LogInformation("{Name} ID: {BaseId}, Read All Complete {pdmCrc} = {thisCrc}, {fromPdm}", 
+                        name, baseId, readAllCrc, _readCrc32.Final, readAllCount);
                     NotifySuccess?.Invoke($"{name}: Read Successful");
                 }
                 else
                 {
                     _tempParamValues.Clear();
-                    _logger.LogError("{Name} ID: {BaseId}, Read All Incomplete {fromPdm} vs {received}",
-                                        name, baseId, readAllCount, _readAllCount);
+                    _logger.LogError("{Name} ID: {BaseId}, Read All Incomplete {pdmCrc} != {thisCrc}, {fromPdm} vs {received}",
+                                        name, baseId, readAllCrc, _readCrc32.Final, readAllCount, _readAllCount);
                 }
 
                 break;
 
             case MessageCommand.WriteAll:
                 if (data.Length != 8) return;
+                
+                _writeCrc32.Reset();
 
                 index = data[2] << 8 | data[1];
                 subIndex = data[3];
@@ -236,6 +237,8 @@ internal class ParamProtocol
             case MessageCommand.WriteAllModified:
                 if (data.Length != 8) return;
 
+                _writeCrc32.Reset();
+                
                 index = data[2] << 8 | data[1];
                 subIndex = data[3];
 
@@ -255,18 +258,20 @@ internal class ParamProtocol
 
             case MessageCommand.WriteAllComplete:
                 if (data.Length != 8) return;
-
+                
                 var writeAllCount = data[2] << 8 | data[1];
+                uint writeAllCrc = (uint)(data[7] << 24 | data[6] << 16 | data[5] << 8 | data[4]);
 
-                if (writeAllCount == _writeAllCount)
+                if (writeAllCrc == _writeCrc32.Final)
                 {
-                    _logger.LogInformation("{Name} ID: {BaseId}, Write All Completed {fromPdm}", name, baseId, writeAllCount);
+                    _logger.LogInformation("{Name} ID: {BaseId}, Write All Completed {pdmCrc} = {thisCrc}, {fromPdm}", 
+                        name, baseId, writeAllCrc, _writeCrc32.Final, writeAllCount);
                     NotifySuccess?.Invoke($"{name}: Write Successful");
                 }
                 else
                 {
-                    _logger.LogError("{Name} ID: {BaseId}, Write All Failed {fromPdm} vs {received}",
-                        name, baseId, writeAllCount, _writeAllCount);
+                    _logger.LogError("{Name} ID: {BaseId}, Write All Failed {pdmCrc} != {thisCrc}, {fromPdm} vs {received}",
+                        name, baseId, writeAllCrc, _writeCrc32.Final, writeAllCount, _writeAllCount);
                 }
                 break;
 
@@ -316,7 +321,7 @@ internal class ParamProtocol
 
     private List<DeviceCanFrame> BuildWriteAllMsgs(int baseId, int txId, bool allParams)
     {
-        var writeParams = allParams ? _params : _params.Where(p => p.IsModified).ToList();
+        var writeParams = allParams ? @params : @params.Where(p => p.IsModified).ToList();
         
         List<DeviceCanFrame> msgs = [];
         _writeAllCount = writeParams.Count;
@@ -330,6 +335,8 @@ internal class ParamProtocol
                 Frame = ParamCodec.ToFrame(MessageCommand.WriteAllVal, parameter, txId),
                 Name = parameter.Name
             });
+            
+            _writeCrc32.Update(msgs.Last().Frame.Payload.Skip(4).Take(4).ToArray());
         }
 
         //Write all complete, with num params

@@ -644,16 +644,16 @@ public class PdmDevice : IDeviceConfigurable
             }
         ]);
         
-        foreach (var input in Inputs) allParams.AddRange(input.Params);
-        foreach (var output in Outputs) allParams.AddRange(output.Params);
-        foreach (var canInput in CanInputs) allParams.AddRange(canInput.Params);
         foreach (var canOutput in CanOutputs) allParams.AddRange(canOutput.Params);
+        foreach (var output in Outputs) allParams.AddRange(output.Params);
+        foreach (var input in Inputs) allParams.AddRange(input.Params);
+        foreach (var canInput in CanInputs) allParams.AddRange(canInput.Params);
         foreach (var virtualInput in VirtualInputs) allParams.AddRange(virtualInput.Params);
-        foreach (var flasher in Flashers) allParams.AddRange(flasher.Params);
-        foreach (var counter in Counters) allParams.AddRange(counter.Params);
         foreach (var condition in Conditions) allParams.AddRange(condition.Params);
-        allParams.AddRange(Wipers.Params);
+        foreach (var counter in Counters) allParams.AddRange(counter.Params);
+        foreach (var flasher in Flashers) allParams.AddRange(flasher.Params);
         allParams.AddRange(StarterDisable.Params);
+        allParams.AddRange(Wipers.Params);
         foreach (var keypad in Keypads) allParams.AddRange(keypad.Params);
         Params = allParams;
 
