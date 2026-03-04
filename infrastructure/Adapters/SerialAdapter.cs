@@ -87,13 +87,7 @@ public abstract class SerialAdapter : ICommsAdapter
 
         try
         {
-            var data = new byte[frame.Len];
-            for(var i = 0; i < data.Length; i++)
-            {
-                data[i] = frame.Payload[i];
-            }
-
-            Serial?.Write(data, 0, data.Length);
+            Serial?.Write(frame.Payload, 0, frame.Len);
         }
         catch (InvalidOperationException)
         {
@@ -146,6 +140,7 @@ public abstract class SerialAdapter : ICommsAdapter
             catch (TimeoutException) { continue; }
             catch (InvalidOperationException) { HandleDisconnection(); return; }
             catch (IOException) { HandleDisconnection(); return; }
+            catch (ArgumentOutOfRangeException) { HandleDisconnection(); return; }
         }
     }
 
