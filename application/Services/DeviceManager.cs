@@ -16,7 +16,9 @@ public class DeviceManager(ILogger<DeviceManager> logger, ILoggerFactory loggerF
 {
     private readonly Dictionary<Guid, IDevice> _devices = new();
     private ConcurrentDictionary<(int BaseId, int Index, int SubIndex), DeviceCanFrame> _requestQueue = new();
-    private Action<DeviceCanFrame>? _transmitCallback;
+
+    private Action<List<DeviceCanFrame>>? _batchTransmitCallback;
+    
     private readonly Dictionary<Guid, DeviceUiState> _deviceUiState = new();
 
     private readonly Dictionary<Guid, System.Timers.Timer> _cyclicTimers = new();
@@ -29,12 +31,9 @@ public class DeviceManager(ILogger<DeviceManager> logger, ILoggerFactory loggerF
     public event EventHandler<DeviceEventArgs>? DeviceAdded;
     public event EventHandler<DeviceEventArgs>? DeviceRemoved;
 
-    /// <summary>
-    /// Set the callback for transmitting frames (called by CommsDataPipeline during setup)
-    /// </summary>
-    public void SetTransmitCallback(Action<DeviceCanFrame> callback)
+    public void SetBatchTransmitCallback(Action<List<DeviceCanFrame>> callback)
     {
-        _transmitCallback = callback;
+        _batchTransmitCallback = callback;
     }
 
     /// <summary>
@@ -207,10 +206,8 @@ public class DeviceManager(ILogger<DeviceManager> logger, ILoggerFactory loggerF
             {
                 var outgoing = new List<DeviceCanFrame>();
                 device.Read(frame.Id, frame.Payload, ref _requestQueue, outgoing);
-                foreach (var msg in outgoing)
-                {
-                    QueueMessage(msg);
-                }
+                if (outgoing.Count > 0)
+                    _batchTransmitCallback?.Invoke(outgoing);
             }
         }
     }
@@ -299,9 +296,9 @@ public class DeviceManager(ILogger<DeviceManager> logger, ILoggerFactory loggerF
     private void QueueMessage(DeviceCanFrame frame)
     {
         // Queue for transmission
-        if (_transmitCallback != null)
+        if (_batchTransmitCallback != null)
         {
-            _transmitCallback(frame);
+            _batchTransmitCallback([frame]);
         }
         else
         {
@@ -356,10 +353,7 @@ public class DeviceManager(ILogger<DeviceManager> logger, ILoggerFactory loggerF
         else
         {
             // Retry - queue again
-            if (_transmitCallback != null)
-            {
-                _transmitCallback(frame);
-            }
+            _batchTransmitCallback?.Invoke([frame]);
 
             // NOTE: Timer restarts after transmission in OnFrameTransmitted
 

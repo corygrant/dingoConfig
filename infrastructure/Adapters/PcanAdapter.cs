@@ -72,6 +72,13 @@ public class PcanAdapter  : ICommsAdapter
         return Task.FromResult(true);
     }
 
+    public Task<bool> WriteBatchAsync(IReadOnlyList<CanFrame> frames, CancellationToken ct)
+    {
+        foreach (var frame in frames)
+            WriteAsync(frame, ct);
+        return Task.FromResult(true);
+    }
+
     public Task<bool> WriteAsync(CanFrame frame, CancellationToken ct)
     {
         if (_worker == null || frame.Payload.Length != 8 || !(_worker.Active)) return Task.FromResult(false);
@@ -79,20 +86,36 @@ public class PcanAdapter  : ICommsAdapter
         try
         {
             var msg = new PcanMessage((uint)frame.Id, MessageType.Standard, (byte)frame.Len, frame.Payload);
-            var result = _worker.Transmit(msg, out _);
-            
-            if (!result)
+
+            for (var i = 0; i < 3; i++)
             {
-                // Transmit failed - might indicate disconnection
-                // Check if worker is still active
-                if (!_worker.Active)
+                var result = _worker.Transmit(msg, out var error);
+                Thread.Sleep(1);
+                if (!result)
                 {
-                    HandleDisconnection();
+                    // Transmit failed - might indicate disconnection
+                    // Check if worker is still active
+                    if (!_worker.Active)
+                    {
+                        HandleDisconnection();
+                        return Task.FromResult(false);
+                    }
+
+                    if (!(error is PcanStatus.TransmitBufferFull or PcanStatus.TransmitQueueFull))
+                    {
+                        HandleDisconnection();
+                        return Task.FromResult(false);
+                    }
+                    
+                    Thread.Sleep(1);
                 }
-                return Task.FromResult(false);
+                else
+                {
+                    return Task.FromResult(true);
+                }
             }
 
-            return Task.FromResult(result);
+            return Task.FromResult(false);
         }
         catch (PcanBasicException)
         {

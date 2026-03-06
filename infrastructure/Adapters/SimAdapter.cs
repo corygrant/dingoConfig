@@ -31,10 +31,9 @@ public class SimAdapter(SimPlayback playback) : ICommsAdapter
         return Task.FromResult(true);
     }
 
-    public Task<bool> WriteAsync(CanFrame frame, CancellationToken ct)
-    {
-        return Task.FromResult(true);
-    }
+    public Task<bool> WriteAsync(CanFrame frame, CancellationToken ct) => Task.FromResult(true);
+
+    public Task<bool> WriteBatchAsync(IReadOnlyList<CanFrame> frames, CancellationToken ct) => Task.FromResult(true);
 
     private void OnMessageReady(CanFrame frame, DataDirection direction)
     {

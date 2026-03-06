@@ -10,7 +10,8 @@ public interface ICommsAdapter
     Task<bool>  InitAsync(string port, CanBitRate bitRate, CancellationToken ct);
     Task<bool>  StartAsync(CancellationToken ct);
     Task<bool>  StopAsync();
-    Task<bool>  WriteAsync(CanFrame frame, CancellationToken ct);
+    Task<bool> WriteAsync(CanFrame frame, CancellationToken ct);
+    Task<bool> WriteBatchAsync(IReadOnlyList<CanFrame> frames, CancellationToken ct);
 
     event DataReceivedHandler? DataReceived;
     event EventHandler? Disconnected;

@@ -86,6 +86,13 @@ public unsafe class SocketCanAdapter : ICommsAdapter
         return Task.FromResult(true);
     }
 
+    public Task<bool> WriteBatchAsync(IReadOnlyList<CanFrame> frames, CancellationToken ct)
+    {
+        foreach (var frame in frames)
+            WriteAsync(frame, ct);
+        return Task.FromResult(true);
+    }
+
     public Task<bool> WriteAsync(CanFrame frame, CancellationToken ct)
     {
         if (_fd < 0)

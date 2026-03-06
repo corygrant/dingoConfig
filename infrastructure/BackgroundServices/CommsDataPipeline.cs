@@ -26,8 +26,8 @@ public class CommsDataPipeline(
             SingleWriter = false // Multiple adapters could write
         });
     
-    // TX Channel - Outgoing CAN frames to adapter
-    private readonly Channel<DeviceCanFrame> _txChannel = Channel.CreateBounded<DeviceCanFrame>(
+    // TX Channel - Outgoing CAN frame batches to adapter
+    private readonly Channel<List<DeviceCanFrame>> _txChannel = Channel.CreateBounded<List<DeviceCanFrame>>(
         new BoundedChannelOptions(10000)
         {
             FullMode = BoundedChannelFullMode.DropOldest,
@@ -44,8 +44,8 @@ public class CommsDataPipeline(
     {
         adapterManager.Connected += OnConnect;
         
-        // Set up the transmit callback for DeviceManager
-        deviceManager.SetTransmitCallback(QueueTransmit);
+        // Set up transmit callbacks for DeviceManager
+        deviceManager.SetBatchTransmitCallback(batch => _txChannel.Writer.TryWrite(batch));
 
         // Start both pipelines
         var rxTask = ProcessRxPipelineAsync(stoppingToken);
@@ -106,10 +106,8 @@ public class CommsDataPipeline(
         {
             while (await _txChannel.Reader.WaitToReadAsync(ct))
             {
-                while (_txChannel.Reader.TryRead(out var deviceFrame))
-                {
-                    await TransmitFrameAsync(deviceFrame, ct);
-                }
+                while (_txChannel.Reader.TryRead(out var batch))
+                    await TransmitBatchAsync(batch, ct);
             }
         }
         catch (OperationCanceledException)
@@ -120,43 +118,32 @@ public class CommsDataPipeline(
         logger.LogInformation("TX Pipeline stopped");
     }
     
-    private async Task TransmitFrameAsync(DeviceCanFrame deviceFrame, CancellationToken ct)
+    private async Task TransmitBatchAsync(List<DeviceCanFrame> batch, CancellationToken ct)
     {
-        var frame = deviceFrame.Frame;
+        if (adapterManager.ActiveAdapter == null) return;
+
         try
         {
-            if (adapterManager.ActiveAdapter == null)
-                return;
+            //Chunk writes to allow other devices to transmit
+            foreach (var chunk in batch.Chunk(50))
+            {
+                var success = await adapterManager.ActiveAdapter.WriteBatchAsync(
+                    chunk.Select(df => df.Frame).ToList(), ct);
+                if (!success) return;
 
-            var success = await adapterManager.ActiveAdapter.WriteAsync(frame, ct);
-            if (!success) 
-                return;
-
-            msgLogger.Log(DataDirection.Tx, frame);
-
-            // Start timeout timer now that frame has been physically transmitted
-            deviceManager.OnFrameTransmitted(deviceFrame);
+                foreach (var deviceFrame in chunk)
+                {
+                    msgLogger.Log(DataDirection.Tx, deviceFrame.Frame);
+                    deviceManager.OnFrameTransmitted(deviceFrame);
+                }
+            }
         }
         catch (Exception ex)
         {
-            logger.LogError(
-                ex,
-                "Error transmitting frame: {CanId:X}",
-                frame.Id);
+            logger.LogError(ex, "Error transmitting batch of {Count} frames", batch.Count);
         }
     }
     
-    // ============================================
-    // Public API for Transmitting
-    // ============================================
-    
-    /// <summary>
-    /// Queue a frame for transmission (normal priority)
-    /// </summary>
-    private void QueueTransmit(DeviceCanFrame frame)
-    {
-        _txChannel.Writer.TryWrite(frame);
-    }
     
     public override void Dispose()
     {
