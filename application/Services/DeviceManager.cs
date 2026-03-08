@@ -194,6 +194,19 @@ public class DeviceManager(ILogger<DeviceManager> logger, ILoggerFactory loggerF
         return devices;
     }
 
+    public void CheckConfig()
+    {
+        foreach (var device in _devices)
+        {
+            if (device.Value is IDeviceConfigurable)
+            {
+                var deviceConfigurable = (IDeviceConfigurable)device.Value;
+                var msg = deviceConfigurable.GetCheckMsg();
+                QueueMessage(msg);
+            }
+        }
+    }
+
     /// <summary>
     /// Called by CommsDataPipeline when CAN data is received
     /// Routes data to all devices so they can update their state/config

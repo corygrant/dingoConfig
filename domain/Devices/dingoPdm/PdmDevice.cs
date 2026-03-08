@@ -852,6 +852,22 @@ public class PdmDevice : IDeviceConfigurable
         return msgs;
     }
 
+    public DeviceCanFrame GetCheckMsg()
+    {
+        return new DeviceCanFrame
+        {
+            DeviceBaseId = BaseId,
+            SendOnly = true,
+            Frame = new CanFrame
+            (
+                Id: ParamTxId,
+                Len: 8,
+                Payload: [Convert.ToByte(MessageCommand.CheckCrc), 0, 0, 0, 0, 0, 0, 0]
+            ),
+            Name = "Check"
+        };
+    }
+
     public List<DeviceCanFrame> GetModifyMsgs(int newId)
     {
         
