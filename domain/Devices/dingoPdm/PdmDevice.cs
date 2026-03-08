@@ -43,6 +43,7 @@ public class PdmDevice : IDeviceConfigurable
     [JsonPropertyName("baseId")] public int BaseId { get; set; }
     [JsonPropertyName("paramTxId")] public int ParamTxId { get; set; } = 0x080;
     [JsonPropertyName("paramRxId")] public int ParamRxId { get; set; } = 0x081;
+    
     [JsonIgnore] public List<DeviceVariable> VarMap { get; set; } = null!;
     [JsonIgnore] public List<DeviceParameter> Params { get; set; } = null!;
 
@@ -56,6 +57,7 @@ public class PdmDevice : IDeviceConfigurable
     
     [JsonPropertyName("sleepEnabled")] public bool SleepEnabled { get; set; }
     [JsonPropertyName("filtersEnabled")] public bool CanFiltersEnabled { get; set; }
+    [JsonPropertyName("connectUsbToCan")] public bool ConnectUsbToCan { get; set; } = true;
     [JsonPropertyName("bitrate")] public CanBitRate BitRate { get; set; } = CanBitRate.BitRate500K;
     [JsonIgnore] public TimeSpan CyclicGap { get; } =  TimeSpan.FromSeconds(0);
     [JsonIgnore] public TimeSpan CyclicPause { get; } = TimeSpan.FromMilliseconds(0);
@@ -623,6 +625,20 @@ public class PdmDevice : IDeviceConfigurable
             },
             new DeviceParameter
             {
+                ParentName = Name, Name = "device.paramTxId", Index = BaseIndex, SubIndex = subIndex++,
+                GetValue = () => ParamTxId, SetValue = val => ParamTxId = (int)val,
+                ValueType = ParamTxId.GetType(),
+                DefaultValue = 0x080
+            },
+            new DeviceParameter
+            {
+                ParentName = Name, Name = "device.paramRxId", Index = BaseIndex, SubIndex = subIndex++,
+                GetValue = () => ParamRxId, SetValue = val => ParamRxId = (int)val,
+                ValueType = ParamRxId.GetType(),
+                DefaultValue = 0x081
+            },
+            new DeviceParameter
+            {
                 ParentName = Name, Name = "device.canSpeed", Index = BaseIndex, SubIndex = subIndex++,
                 GetValue = () => BitRate, SetValue = val => BitRate = (CanBitRate)val,
                 ValueType = BitRate.GetType(),
@@ -641,6 +657,13 @@ public class PdmDevice : IDeviceConfigurable
                 GetValue = () => CanFiltersEnabled, SetValue = val => CanFiltersEnabled = (bool)val,
                 ValueType = CanFiltersEnabled.GetType(),
                 DefaultValue = false
+            },
+            new DeviceParameter
+            {
+                ParentName = Name, Name = "device.connectUsbToCan", Index = BaseIndex, SubIndex = subIndex++,
+                GetValue = () => ConnectUsbToCan, SetValue = val => ConnectUsbToCan = (bool)val,
+                ValueType = ConnectUsbToCan.GetType(),
+                DefaultValue = true
             }
         ]);
         
@@ -660,8 +683,10 @@ public class PdmDevice : IDeviceConfigurable
         foreach (var keypad in Keypads) allParams.AddRange(keypad.DialParams);
         Params = allParams;
 
-        _paramProtocol = new ParamProtocol(Params);
-        _paramProtocol.NotifySuccess = msg => SuccessNotification?.Invoke(msg);
+        _paramProtocol = new ParamProtocol(Params)
+        {
+            NotifySuccess = msg => SuccessNotification?.Invoke(msg)
+        };
     }
 
     private void Clear()
@@ -710,19 +735,12 @@ public class PdmDevice : IDeviceConfigurable
                 setValue(value);
             }
         }
-        // Handle special messages
+        // Handle param, version and info/warn/error messages
         else
         {
-            switch (offset)
+            if (offset == 31)
             {
-                case 30:
-                {
-                    if (((MessageCommand)data[0]) == MessageCommand.Version)
-                        ReadVersion(BaseId, Name, data, queue);
-                    
-                    _paramProtocol.HandleMessage(BaseId, ParamTxId, Name, data, queue, outgoing); break;
-                }
-                case 31: ReadInfoWarnErrorMessage(data); break;
+                ReadInfoWarnErrorMessage(data);
             }
 
             if (id == ParamRxId)
@@ -836,7 +854,12 @@ public class PdmDevice : IDeviceConfigurable
 
     public List<DeviceCanFrame> GetModifyMsgs(int newId)
     {
-        var modifyParams = Params.Where(p => p is { Index: 0x0010, SubIndex: 1 }).ToList();
+        
+        //Copy params:
+        //ID: 0x0000, Subindex: 1, Base ID
+        //ID: 0x0000, Subindex: 2, ParamTxId
+        //ID: 0x0000, Subindex: 3, ParamRxId
+        var modifyParams = Params.Where(p => p is { Index: 0x0000, SubIndex: 1 or 2 or 3 }).ToList();
 
         List<DeviceCanFrame> msgs = [];
 

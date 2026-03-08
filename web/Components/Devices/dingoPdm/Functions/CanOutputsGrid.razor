@@ -1,8 +1,10 @@
 @using web.Services
 @using application.Models
+@using application.Services
 @using domain.Devices.dingoPdm.Functions
 @inject NotificationService Notification
 @inject IDialogService DialogService
+@inject UserPreferencesManager UserPrefs
 @inject application.Services.DeviceSignalService SignalService
 @typeparam TDevice where TDevice : domain.Interfaces.IDevice
 
@@ -34,13 +36,13 @@
                                    OnClick="@(() => OpenSignalSelectorAsync(context.Item))"/>
                 </EditTemplate>
             </TemplateColumn>
-            <TemplateColumn Title="CAN ID" Resizable="true" CellStyle="max-width: 100px">
+            <TemplateColumn Title="ID" Resizable="true" CellStyle="max-width: 100px">
                 <EditTemplate>
-                    <MudNumericField @key="@($"id-{context.Item.Number}-{_refreshCounter}")"
-                                     Value="@context.Item.Id"
-                                     Disabled="!context.Item.Enabled"
-                                     ValueChanged="@((int val) => OnIdChanged(context.Item, val))"
-                                     Step="1"/>
+                    <MudTextField @key="@($"id-{context.Item.Number}-{_refreshCounter}")"
+                                  Value="@_id[context.Item.Number-1]"
+                                  Disabled="!context.Item.Enabled"
+                                  ValueChanged="@((string val) => @context.Item.Id = Utils.ParseId(val, UserPrefs.Preferences.IdFormat, Notification))"
+                                  Step="1"/>
                 </EditTemplate>
             </TemplateColumn>
             <PropertyColumn Property="x => x.Ide" Title="Extended" CellStyle="max-width: 100px">
@@ -110,7 +112,28 @@
     [Parameter, EditorRequired] public List<CanOutput> CanOutputs { get; set; } = null!;
     [Parameter, EditorRequired] public TDevice Device { get; set; } = default!;
 
+    private string[] _id;
+    
     private int _refreshCounter;
+
+    protected override Task OnInitializedAsync()
+    {
+        _id = new string[CanOutputs.Count];
+        
+        return Task.CompletedTask;
+    }
+    
+    protected override void OnParametersSet()
+    {
+        foreach (var input in CanOutputs)
+        {
+            _id[input.Number - 1] = Utils.FormatId(input.Id, UserPrefs.Preferences.IdFormat);
+        }
+        
+        StateHasChanged();
+
+        base.OnParametersSet();
+    }
 
     private void OnIdChanged(CanOutput item, int value)
     {

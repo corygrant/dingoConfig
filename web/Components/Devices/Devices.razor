@@ -5,6 +5,7 @@
 @inject DeviceManager DeviceManager
 @inject NotificationService Notification
 @inject IDialogService DialogService
+@inject UserPreferencesManager UserPrefs
 @inject NavigationManager Navigation
 
 <PageTitle>Devices</PageTitle>
@@ -52,13 +53,12 @@
                         </MudSelect>
                     </MudItem>
                     <MudItem xs="12" sm="4">
-                        <MudNumericField @bind-Value="_newDeviceBaseId"
+                        <MudTextField    Value="@_newDeviceBaseIdString"
+                                         ValueChanged="OnIdChanged"
                                          Label="Base ID"
                                          Required="true"
                                          Variant="Variant.Outlined"
-                                         Min="0"
-                                         Max="2047"
-                                         T="int" />
+                                         T="string" />
                     </MudItem>
                     @if (_newDeviceType == "BlinkKeypad")
                     {
@@ -129,13 +129,12 @@
                                       Variant="Variant.Outlined" />
                     </MudItem>
                     <MudItem xs="12" sm="4">
-                        <MudNumericField @bind-Value="_newDeviceBaseId"
+                        <MudTextField    Value="@_newDeviceBaseIdString"
+                                         ValueChanged="OnIdChanged"
                                          Label="Base ID"
                                          Required="true"
                                          Variant="Variant.Outlined"
-                                         Min="0"
-                                         Max="2047"
-                                         T="int" />
+                                         T="string" />
                     </MudItem>
                 </MudGrid>
             </MudCardContent>
@@ -184,7 +183,7 @@
                                 @device.Type
                             </MudText>
                             <MudText Typo="Typo.body2">
-                                Base ID: @device.BaseId
+                                Base ID: @(Utils.FormatId(device.BaseId, UserPrefs.Preferences.IdFormat))
                             </MudText>
                         </MudCardContent>
                         <MudCardActions>
@@ -227,6 +226,7 @@
     // Form fields
     private string _newDeviceName = string.Empty;
     private string _newDeviceType = string.Empty;
+    private string _newDeviceBaseIdString = string.Empty;
     private int _newDeviceBaseId;
     private string _newDeviceModel = string.Empty;
 
@@ -245,6 +245,12 @@
                 StateHasChanged();
             });
         }, null, TimeSpan.FromMilliseconds(50), TimeSpan.FromMilliseconds(50));
+    }
+
+    protected override void OnAfterRender(bool firstRender)
+    {
+        _newDeviceBaseIdString = Utils.FormatId(_newDeviceBaseId, UserPrefs.Preferences.IdFormat);
+        base.OnAfterRender(firstRender);
     }
 
     private void LoadDevices()
@@ -391,6 +397,11 @@
     public void Dispose()
     {
         _refreshTimer?.Dispose();
+    }
+
+    private void OnIdChanged(string id)
+    {
+        _newDeviceBaseId = Utils.ParseId(id, UserPrefs.Preferences.IdFormat, Notification);
     }
 
 }

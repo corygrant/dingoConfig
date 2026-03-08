@@ -9,4 +9,5 @@ public class UserPreferences
     public string? SelectedAdapter { get; set; }
     public string? SelectedPort { get; set; }
     public string? SelectedBitrate { get; set; }
+    public NumberFormat IdFormat { get; set; }
 }

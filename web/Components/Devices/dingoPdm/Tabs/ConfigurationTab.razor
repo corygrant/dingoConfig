@@ -1,6 +1,11 @@
+@using application.Models
+@using application.Services
 @using domain.Devices.dingoPdm
 @using web.Components.Devices.dingoPdm.Functions
 @using domain.Enums
+@using web.Services
+@inject UserPreferencesManager UserPrefs
+@inject NotificationService Notification
 @typeparam TDevice where TDevice : PdmDevice
 
 <div
@@ -9,6 +14,24 @@
 
         <MudExpansionPanel Text="Device">
             <MudStack>
+                <MudTextField    Value="@_baseId"
+                                 ValueChanged="@((string val) => @Device.BaseId = Utils.ParseId(val, UserPrefs.Preferences.IdFormat, Notification))"
+                                 Label="Base ID"
+                                 Variant="Variant.Outlined"
+                                 Style="max-width: 20%"
+                                 T="string" />
+                <MudTextField    Value="@_paramTxId"
+                                 ValueChanged="@((string val) => @Device.ParamTxId = Utils.ParseId(val, UserPrefs.Preferences.IdFormat, Notification))"
+                                 Label="Parameter TX ID"
+                                 Variant="Variant.Outlined"
+                                 Style="max-width: 20%"
+                                 T="string" />
+                <MudTextField    Value="@_paramRxId"
+                                 ValueChanged="@((string val) => @Device.ParamRxId = Utils.ParseId(val, UserPrefs.Preferences.IdFormat, Notification))"
+                                 Label="Parameter RX ID"
+                                 Variant="Variant.Outlined"
+                                 Style="max-width: 20%"
+                                 T="string" />
                 <MudSelect @bind-Value="@Device.BitRate"
                            Label="Bitrate"
                            Variant="Variant.Outlined"
@@ -27,6 +50,9 @@
                 <MudSwitch @bind-Value="@Device.CanFiltersEnabled"
                            Color="Color.Success"
                            Label="CAN Filters Enabled"/>
+                <MudSwitch @bind-Value="@Device.ConnectUsbToCan"
+                           Color="Color.Success"
+                           Label="Connect USB to CAN"/>
             </MudStack>
         </MudExpansionPanel>
 
@@ -141,4 +167,18 @@
     private bool _flashersExpanded;
     private bool _wiperExpanded;
     private bool _starterDisableExpanded;
+
+    private string _baseId = string.Empty;
+    private string _paramTxId = string.Empty;                                                                                                                                     
+    private string _paramRxId = string.Empty;
+    
+    protected override void OnParametersSet()
+    {
+        _baseId = Utils.FormatId(Device.BaseId, UserPrefs.Preferences.IdFormat);
+        _paramTxId = Utils.FormatId(Device.ParamTxId, UserPrefs.Preferences.IdFormat);
+        _paramRxId = Utils.FormatId(Device.ParamRxId, UserPrefs.Preferences.IdFormat);
+
+        StateHasChanged();
+        base.OnParametersSet();
+    }
 }

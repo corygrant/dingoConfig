@@ -1,11 +1,11 @@
 @using web.Services
 @using application.Models
-@using domain.Devices.dingoPdm
+@using application.Services
 @using domain.Devices.dingoPdm.Functions
 @using domain.Devices.dingoPdm.Enums
 @inject NotificationService Notification
 @inject IDialogService DialogService
-@inject application.Services.DeviceSignalService SignalService
+@inject UserPreferencesManager UserPrefs
 @typeparam TDevice where TDevice : domain.Interfaces.IDevice
 
 <MudPaper MaxHeight="400">
@@ -46,13 +46,13 @@
                     </MudChip>
                 </CellTemplate>
             </PropertyColumn>
-            <TemplateColumn Title="CAN ID" Resizable="true" CellStyle="max-width: 100px">
+            <TemplateColumn Title="ID" Resizable="true" CellStyle="max-width: 100px">
                 <EditTemplate>
-                    <MudNumericField @key="@($"id-{context.Item.Number}-{_refreshCounter}")"
-                                     Value="@context.Item.Id"
-                                     Disabled="!context.Item.Enabled"
-                                     ValueChanged="@((int val) => OnIdChanged(context.Item, val))"
-                                     Step="1"/>
+                    <MudTextField @key="@($"id-{context.Item.Number}-{_refreshCounter}")"
+                                  Value="@_id[context.Item.Number-1]"
+                                  Disabled="!context.Item.Enabled"
+                                  ValueChanged="@((string val) => @context.Item.Id = Utils.ParseId(val, UserPrefs.Preferences.IdFormat, Notification))"
+                                  Step="1"/>
                 </EditTemplate>
             </TemplateColumn>
             <PropertyColumn Property="x => x.Ide" Title="Extended" CellStyle="max-width: 100px">
@@ -143,20 +143,28 @@
 @code {
     [Parameter, EditorRequired] public List<CanInput> CanInputs { get; set; } = null!;
     [Parameter, EditorRequired] public TDevice Device { get; set; } = default!;
-
+    
+    private string[] _id;
+    
     private int _refreshCounter;
 
-    private void OnIdChanged(CanInput item, int value)
+    protected override Task OnInitializedAsync()
     {
-        const int min = 0;
-        const int max = 536870912;
-        if (value < min || value > max)
+        _id = new string[CanInputs.Count];
+        
+        return Task.CompletedTask;
+    }
+    
+    protected override void OnParametersSet()
+    {
+        foreach (var input in CanInputs)
         {
-            Notification.NewWarning($"{item.Name}.Id must be {min} to {max}");
+            _id[input.Number - 1] = Utils.FormatId(input.Id, UserPrefs.Preferences.IdFormat);
         }
+        
+        StateHasChanged();
 
-        item.Id = Math.Clamp(value, min, max);
-        _refreshCounter++;
+        base.OnParametersSet();
     }
 
     private void OnBitLengthChanged(CanInput item, int value)
