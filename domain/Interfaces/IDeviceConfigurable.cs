@@ -6,8 +6,9 @@ public interface IDeviceConfigurable : IDevice
 {
     int ParamTxId {get; set; }
     int ParamRxId {get; set; }
-    List<DeviceVariable> VarMap { get; set; }
-    List<DeviceParameter> Params { get; set; }
+    List<DeviceVariable> VarMap { get; }
+    List<DeviceParameter> Params { get; }
+    bool ConfigMismatch { get; set; }
     List<DeviceCanFrame> GetReadMsgs(bool allParams);
     List<DeviceCanFrame> GetWriteMsgs(bool allParams);
     List<DeviceCanFrame> GetModifyMsgs(int newId);

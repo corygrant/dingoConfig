@@ -35,7 +35,8 @@ public class PdmDevice : IDeviceConfigurable
     [JsonIgnore] public const int BaseIndex = 0x0000;
     [JsonIgnore] protected virtual int PdmType => 0; //0=dingoPDM, 1=dingoPDM-Max
     [JsonIgnore] protected bool PdmTypeOk;
-    
+    [JsonIgnore] public bool ConfigMismatch { get; set; } = true;
+
     [JsonIgnore] public Guid Guid { get; }
     [JsonIgnore] public virtual string Type => "dingoPDM";
     [JsonIgnore] public int ConfigVersion { get; set; }
@@ -683,7 +684,7 @@ public class PdmDevice : IDeviceConfigurable
         foreach (var keypad in Keypads) allParams.AddRange(keypad.DialParams);
         Params = allParams;
 
-        _paramProtocol = new ParamProtocol(Params)
+        _paramProtocol = new ParamProtocol(this, Params)
         {
             NotifySuccess = msg => SuccessNotification?.Invoke(msg)
         };

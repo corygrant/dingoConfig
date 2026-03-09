@@ -1,13 +1,14 @@
 using System.Collections.Concurrent;
 using domain.Common;
 using domain.Devices.dingoPdm.Enums;
+using domain.Interfaces;
 using domain.Models;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace domain.Devices.dingoPdm;
 
-internal class ParamProtocol(List<DeviceParameter> @params)
+internal class ParamProtocol(IDeviceConfigurable device, List<DeviceParameter> @params)
 {
     private ILogger _logger = NullLogger.Instance;
 
@@ -219,11 +220,12 @@ internal class ParamProtocol(List<DeviceParameter> @params)
                 
                 var thisCheck = CalcCrc();
                 
-                if (checkCrc == thisCheck)
+                device.ConfigMismatch = checkCrc != thisCheck;
+                if (!device.ConfigMismatch)
                     _logger.LogInformation("{Name} ID: {BaseId}, Config Matches {pdmCrc}", name, baseId, checkCrc);
                 else
                 {
-                    _logger.LogInformation("{Name} ID: {BaseId}, Config Does Not Match {pdmCrc} != {thisCrc}", 
+                    _logger.LogWarning("{Name} ID: {BaseId}, Config Does Not Match {pdmCrc} != {thisCrc}", 
                         name, baseId, checkCrc, thisCheck);
                 }
 
