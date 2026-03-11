@@ -3,10 +3,9 @@
 @using application.Services
 @using domain.Devices.dingoPdm.Functions
 @inject NotificationService Notification
-@inject IDialogService DialogService
 @inject UserPreferencesManager UserPrefs
-@inject application.Services.DeviceSignalService SignalService
-@typeparam TDevice where TDevice : domain.Interfaces.IDevice
+@typeparam TDevice where TDevice : domain.Interfaces.IDeviceConfigurable
+@inherits PdmFunctionComponentBase<TDevice>
 
 <MudPaper MaxHeight="400">
     <MudDataGrid Items="@CanOutputs" Dense="true" Hover="true" Striped="false" EditMode="DataGridEditMode.Cell"
@@ -26,16 +25,20 @@
                     <MudTextField @bind-Value="context.Item.Name" Variant="Variant.Outlined" Margin="Margin.Dense"/>
                 </EditTemplate>
             </PropertyColumn>
-            <TemplateColumn Title="Signals" StickyLeft="false" Sortable="false" Filterable="false"
-                            CellStyle="max-width: 100px">
+            <PropertyColumn Property="x => x.Input" Title="Variable" CellStyle="max-width: 250px;">
                 <EditTemplate>
-                    <MudIconButton Icon="@Icons.Material.Filled.Add"
-                                   Color="Color.Primary"
-                                   Size="Size.Small"
-                                   Disabled="!context.Item.Enabled"
-                                   OnClick="@(() => OpenSignalSelectorAsync(context.Item))"/>
+                    <MudStack Row="true">
+                        <MudIconButton Icon="@Icons.Material.Filled.Search"
+                                       Color="Color.Primary"
+                                       Size="Size.Small"
+                                       Disabled="(!context.Item.Enabled)"
+                                       Style="max-width: 20px"
+                                       OnClick="@(() => OpenVariableSelectorAsync(["bool", "int", "float"], v => context.Item.Input = v))">
+                        </MudIconButton>
+                        <MudText>@GetSelectedVarText(context.Item.Input)</MudText>
+                    </MudStack>
                 </EditTemplate>
-            </TemplateColumn>
+            </PropertyColumn>
             <TemplateColumn Title="ID" Resizable="true" CellStyle="max-width: 100px">
                 <EditTemplate>
                     <MudTextField @key="@($"id-{context.Item.Number}-{_refreshCounter}")"
@@ -110,7 +113,6 @@
 
 @code {
     [Parameter, EditorRequired] public List<CanOutput> CanOutputs { get; set; } = null!;
-    [Parameter, EditorRequired] public TDevice Device { get; set; } = default!;
 
     private string[] _id;
     
@@ -133,19 +135,6 @@
         StateHasChanged();
 
         base.OnParametersSet();
-    }
-
-    private void OnIdChanged(CanOutput item, int value)
-    {
-        const int min = 0;
-        const int max = 536870912;
-        if (value < min || value > max)
-        {
-            Notification.NewWarning($"{item.Name}.Id must be {min} to {max}");
-        }
-
-        item.Id = Math.Clamp(value, min, max);
-        _refreshCounter++;
     }
 
     private void OnBitLengthChanged(CanOutput item, int value)
@@ -186,38 +175,4 @@
         item.Interval = Math.Clamp(value, min, max);
         _refreshCounter++;
     }
-
-    private async Task OpenSignalSelectorAsync(CanOutput canOutput)
-    {
-        var parameters = new DialogParameters<DbcSignalSelectionDialog>
-        {
-            { x => x.Device, Device}
-        };
-        
-        var dialog = await DialogService.ShowAsync<DbcSignalSelectionDialog>("Select Signal", parameters);
-        var result = await dialog.Result;
-
-        if (result is not null && !result.Canceled && result.Data is (DeviceSignalNode deviceNode, SignalNode signalNode))
-        {
-            MapSignalToCanOutput(canOutput, deviceNode, signalNode);
-        }
-    }
-
-    private void MapSignalToCanOutput(CanOutput canOutput, DeviceSignalNode deviceNode, SignalNode signalNode)
-    {
-        var signal = signalNode.Signal;
-
-        canOutput.Id = signal.Id;
-        canOutput.StartBit = signal.StartBit;
-        canOutput.BitLength = signal.Length;
-        canOutput.Factor = signal.Factor;
-        canOutput.Offset = signal.Offset;
-        canOutput.Signed = signal.IsSigned;
-        canOutput.Name = $"{deviceNode.DeviceName}.{signal.Name}";
-        
-        // Trigger UI refresh
-        _refreshCounter++;
-        StateHasChanged();
-    }
-
 }

@@ -37,4 +37,19 @@ public abstract class PdmFunctionComponentBase<TDevice> : ComponentBase
         
         return name.Length == 0 ? "Select Variable" : $"{name} - {variable.PropertyName}";
     }
+
+    protected int GetSelectedVarLen(int index)
+    {
+        var variable = Device.VarMap.Find(p => p.VariableIndex == index);
+
+        if (variable == null) return 0;
+
+        return variable.DataType switch
+        {
+            "bool" => 1,
+            "int" => 16,
+            "float" => 32,
+            _ => 0
+        };
+    }
 }

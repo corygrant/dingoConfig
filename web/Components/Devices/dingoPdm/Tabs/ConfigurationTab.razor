@@ -99,6 +99,15 @@
                 <CanInputsGrid CanInputs="Device.CanInputs" Device="Device"/>
             }
         </MudExpansionPanel>
+        
+        @* CAN Outputs *@
+        <MudExpansionPanel Text="@($"CAN Outputs ({Device.CanOutputs.Count})")"
+                           ExpandedChanged="@((bool expanded) => _canOutputsExpanded = expanded)">
+            @if (_canOutputsExpanded)
+            {
+                <CanOutputsGrid CanOutputs="Device.CanOutputs" Device="Device"/>
+            }
+        </MudExpansionPanel>
 
         @* Virtual Inputs *@
         <MudExpansionPanel Text="@($"Virtual Inputs ({Device.VirtualInputs.Count})")"
@@ -168,6 +177,7 @@
     private bool _outputsExpanded;
     private bool _outputsPwmExpanded;
     private bool _canInputsExpanded;
+    private bool _canOutputsExpanded;
     private bool _virtualInputsExpanded;
     private bool _conditionsExpanded;
     private bool _countersExpanded;
