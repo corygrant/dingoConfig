@@ -79,7 +79,6 @@
 
     private IDevice? _currentDevice;
     private Timer? _refreshTimer;
-    private Timer? _checkConfigTimer;
 
     protected override void OnInitialized()
     {
@@ -95,16 +94,6 @@
                 StateHasChanged();
             });
         }, null, TimeSpan.FromMilliseconds(50), TimeSpan.FromMilliseconds(50));
-        
-        // Check the device configuration
-        _checkConfigTimer = new Timer(_ =>
-        {
-            InvokeAsync(() =>
-            {
-                DeviceManager.CheckConfig();
-                StateHasChanged();
-            });
-        }, null, TimeSpan.Zero, TimeSpan.FromSeconds(5));
     }
 
     public void Dispose()

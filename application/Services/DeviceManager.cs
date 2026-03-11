@@ -88,7 +88,8 @@ public class DeviceManager(ILogger<DeviceManager> logger, ILoggerFactory loggerF
     public IDevice? GetDevice(Guid id)
     {
         _devices.TryGetValue(id, out var device);
-        device?.UpdateIsConnected();
+        if(device?.UpdateIsConnected() == true) 
+            CheckConfig(id);
         return device;
     }
 
@@ -115,7 +116,8 @@ public class DeviceManager(ILogger<DeviceManager> logger, ILoggerFactory loggerF
     {
         foreach (var device in _devices.Values)
         {
-            device.UpdateIsConnected();
+            if(device.UpdateIsConnected())
+                CheckConfig(device.Guid); 
         }
 
         return _devices.Values;
@@ -129,7 +131,8 @@ public class DeviceManager(ILogger<DeviceManager> logger, ILoggerFactory loggerF
         var devices = _devices.Values.OfType<T>().ToList();
         foreach (var device in devices)
         {
-            device.UpdateIsConnected();
+            if(device.UpdateIsConnected())
+                CheckConfig(device.Guid);
         }
 
         return devices;
@@ -188,23 +191,20 @@ public class DeviceManager(ILogger<DeviceManager> logger, ILoggerFactory loggerF
         var devices = _devices.Values.ToList();
         foreach (var device in devices)
         {
-            device.UpdateIsConnected();
+            if(device.UpdateIsConnected())
+                CheckConfig(device.Guid);
         }
 
         return devices;
     }
 
-    public void CheckConfig()
+    public void CheckConfig(Guid deviceId)
     {
-        foreach (var device in _devices)
-        {
-            if (device.Value is IDeviceConfigurable)
-            {
-                var deviceConfigurable = (IDeviceConfigurable)device.Value;
-                var msg = deviceConfigurable.GetCheckMsg();
-                QueueMessage(msg);
-            }
-        }
+        var device = GetDevice(deviceId);
+        if (device is not IDeviceConfigurable) return;
+        var deviceConfigurable = (IDeviceConfigurable)device;
+        var msg = deviceConfigurable.GetCheckMsg();
+        QueueMessage(msg);
     }
 
     /// <summary>
@@ -410,6 +410,9 @@ public class DeviceManager(ILogger<DeviceManager> logger, ILoggerFactory loggerF
             Thread.Sleep(1); //Slow down to give device time to respond
         }
 
+        //Get CRC from device
+        CheckConfig(deviceId);
+        
         logger.LogInformation("Read started for {DeviceName} (Guid: {Guid})", device.Name, deviceId);
     }
     
@@ -431,6 +434,9 @@ public class DeviceManager(ILogger<DeviceManager> logger, ILoggerFactory loggerF
             QueueMessage(msg);
             Thread.Sleep(1); //Slow down to give device time to respond
         }
+        
+        //Get CRC from device
+        CheckConfig(deviceId);
 
         logger.LogInformation("Read started for {DeviceName} (Guid: {Guid})", device.Name, deviceId);
     }
@@ -454,6 +460,9 @@ public class DeviceManager(ILogger<DeviceManager> logger, ILoggerFactory loggerF
             QueueMessage(msg);
             Thread.Sleep(1); //Slow down to give device time to respond
         }
+        
+        //Get CRC from device
+        CheckConfig(deviceId);
 
         logger.LogInformation("Write started for {DeviceName} (Guid: {Guid})", device.Name, deviceId);
         return true;
@@ -478,6 +487,9 @@ public class DeviceManager(ILogger<DeviceManager> logger, ILoggerFactory loggerF
             QueueMessage(msg);
             Thread.Sleep(1); //Slow down to give device time to respond
         }
+        
+        //Get CRC from device
+        CheckConfig(deviceId);
 
         logger.LogInformation("Write started for {DeviceName} (Guid: {Guid})", device.Name, deviceId);
         return true;
@@ -513,7 +525,9 @@ public class DeviceManager(ILogger<DeviceManager> logger, ILoggerFactory loggerF
 
         device.Name = newName;
         device.BaseId = newId;
-
+        
+        //Get CRC from device
+        CheckConfig(deviceId);
     }
 
     /// <summary>

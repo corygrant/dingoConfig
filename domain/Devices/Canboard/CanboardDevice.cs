@@ -153,10 +153,16 @@ public class CanboardDevice : IDevice
         ));
     }
 
-    public void UpdateIsConnected()
+    /// <remarks>
+    /// Returns true only on Connected false to true transition
+    /// </remarks>
+    public bool UpdateIsConnected()
     {
+        var lastConnected = Connected;
         var timeSpan = DateTime.Now - LastRxTime;
         Connected = timeSpan.TotalMilliseconds < 500;
+        
+        return Connected & !lastConnected;
     }
 
     private void Clear()

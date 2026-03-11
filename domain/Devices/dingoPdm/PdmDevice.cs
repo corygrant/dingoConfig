@@ -710,10 +710,16 @@ public class PdmDevice : IDeviceConfigurable
         Logger.LogDebug("PDM {Name} cleared", Name);
     }
 
-    public void UpdateIsConnected()
+    /// <remarks>
+    /// Returns true only on Connected false to true transition
+    /// </remarks>
+    public bool UpdateIsConnected()
     {
+        var lastConnected = Connected;
         var timeSpan = DateTime.Now - LastRxTime;
         Connected = timeSpan.TotalMilliseconds < 500;
+        
+        return Connected & !lastConnected;
     }
     
     public bool InIdRange(int id)

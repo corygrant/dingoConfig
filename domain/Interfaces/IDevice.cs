@@ -12,7 +12,7 @@ public interface IDevice
     bool Connected {get;}
     TimeSpan CyclicGap {get;}
     TimeSpan CyclicPause {get;}
-    public void UpdateIsConnected();
+    public bool UpdateIsConnected();
     void Read(int id, byte[] data, 
                 ref ConcurrentDictionary<(int BaseId, int Index, int SubIndex), DeviceCanFrame> queue, 
                 List<DeviceCanFrame> outgoing);
