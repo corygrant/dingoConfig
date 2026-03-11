@@ -53,6 +53,13 @@
                 <MudSwitch @bind-Value="@Device.ConnectUsbToCan"
                            Color="Color.Success"
                            Label="Connect USB to CAN"/>
+                @foreach (var kp in Device.Keypads)
+                {
+                    var label = $"Keypad {kp.Number} Enabled";
+                    <MudSwitch @bind-Value="kp.Enabled"
+                               Color="Color.Success"
+                               Label=@label/>
+                }
             </MudStack>
         </MudExpansionPanel>
 

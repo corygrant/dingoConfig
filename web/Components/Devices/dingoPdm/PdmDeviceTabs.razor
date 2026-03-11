@@ -15,11 +15,14 @@
     
     @for (var i= 0; i < Device.Keypads.Count; i++)
     {
+        if (!Device.Keypads[i].Enabled)
+            continue;
+
         var index = i;
         var name = $"Keypad {i + 1}";
         <MudTabPanel Text=@name Icon="@Icons.Material.Filled.WbTwilight">
-            <KeypadConfigTab TDevice="TDevice" Device="Device" Keypad="Device.Keypads[index]" />
-        </MudTabPanel>    
+            <KeypadConfigTab TDevice="TDevice" Device="Device" Keypad="Device.Keypads[index]"/>
+        </MudTabPanel>
     }
     
     @*
