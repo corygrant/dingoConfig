@@ -13,8 +13,6 @@ public class CanOutput : IDeviceFunction
     [JsonPropertyName("enabled")] public bool Enabled {get; set;}
     [JsonPropertyName("input")] public int Input {get; set;}
     [JsonPropertyName("ide")] public bool Ide {get; set;}
-    [JsonPropertyName("sid")] public int Sid {get; set;}
-    [JsonPropertyName("eid")] public int Eid {get; set;}
     [JsonPropertyName("startBit")] public int StartBit {get; set;}
     [JsonPropertyName("bitLength")] public int BitLength { get; set; } = 8;
     [JsonPropertyName("factor")] public double Factor { get; set; } = 1.0;
@@ -31,10 +29,6 @@ public class CanOutput : IDeviceFunction
         {
             field = value;
             Ide = (field > 2047);
-            if (field > 2047)
-                Eid = field;
-            else
-                Sid = field;
         }
     }
 
@@ -77,16 +71,9 @@ public class CanOutput : IDeviceFunction
             },
             new DeviceParameter
             {
-                ParentName = Name, Name = $"canOutput[{Number}].sid", Index = BaseIndex + (Number - 1), SubIndex = subIndex++,
-                GetValue = () => Sid, SetValue = val => Sid = (int)val,
-                ValueType = Sid.GetType(),
-                DefaultValue = 0
-            },
-            new DeviceParameter
-            {
-                ParentName = Name, Name = $"canOutput[{Number}].eid", Index = BaseIndex + (Number - 1), SubIndex = subIndex++,
-                GetValue = () => Eid, SetValue = val => Eid = (int)val,
-                ValueType = Eid.GetType(),
+                ParentName = Name, Name = $"canOutput[{Number}].id", Index = BaseIndex + (Number - 1), SubIndex = subIndex++,
+                GetValue = () => Id, SetValue = val => Id = (int)val,
+                ValueType = Id.GetType(),
                 DefaultValue = 0
             },
             new DeviceParameter
