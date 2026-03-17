@@ -22,11 +22,11 @@
         @for (var i = 0; i < 4; i++)
         {
             var index = i;
-            var title = $"Color {index}"; 
+            var title = $"Color {index}";
             <TemplateColumn Title=@title Resizable="true" CellStyle="max-width: 200px">
                 <EditTemplate>
-                    <MudSelect T="ButtonColor" Value="@_colors[index]" Variant="Variant.Outlined" Dense="true" Disabled="!context.Item.Enabled" 
-                               ValueChanged="@((ButtonColor val) => OnColorChanged(context.Item.Colors[index], val))">
+                    <MudSelect T="ButtonColor" Value="@((ButtonColor)context.Item.Colors[index])" Variant="Variant.Outlined" Dense="true" Disabled="!context.Item.Enabled"
+                               ValueChanged="@((ButtonColor val) => context.Item.Colors[index] = (int)val)">
                         @foreach (ButtonColor color in Enum.GetValues(typeof(ButtonColor)))
                         {
                             <MudSelectItem T="ButtonColor" Value="@color">@color</MudSelectItem>
@@ -38,8 +38,8 @@
             title = $"Blink Color {index}";
             <TemplateColumn Title=@title Resizable="true" CellStyle="max-width: 200px">
                 <EditTemplate>
-                    <MudSelect T="ButtonColor" Value="@_blinkColors[index]" Variant="Variant.Outlined" Dense="true" Disabled="!context.Item.Enabled" 
-                               ValueChanged="@((ButtonColor val) => OnColorChanged(context.Item.BlinkColors[index], val))">
+                    <MudSelect T="ButtonColor" Value="@((ButtonColor)context.Item.BlinkColors[index])" Variant="Variant.Outlined" Dense="true" Disabled="!context.Item.Enabled"
+                               ValueChanged="@((ButtonColor val) => context.Item.BlinkColors[index] = (int)val)">
                         @foreach (ButtonColor color in Enum.GetValues(typeof(ButtonColor)))
                         {
                             <MudSelectItem T="ButtonColor" Value="@color">@color</MudSelectItem>
@@ -50,8 +50,8 @@
         }
         <TemplateColumn Title="Fault Color" Resizable="true" CellStyle="max-width: 200px">
             <EditTemplate>
-                <MudSelect T="ButtonColor" Value="@_faultColor" Variant="Variant.Outlined" Dense="true" Disabled="!context.Item.Enabled" 
-                           ValueChanged="@((ButtonColor val) => OnColorChanged(context.Item.FaultColor, val))">
+                <MudSelect T="ButtonColor" Value="@((ButtonColor)context.Item.FaultColor)" Variant="Variant.Outlined" Dense="true" Disabled="!context.Item.Enabled"
+                           ValueChanged="@((ButtonColor val) => context.Item.FaultColor = (int)val)">
                     @foreach (ButtonColor color in Enum.GetValues(typeof(ButtonColor)))
                     {
                         <MudSelectItem T="ButtonColor" Value="@color">@color</MudSelectItem>
@@ -61,8 +61,8 @@
         </TemplateColumn>
         <TemplateColumn Title="Fault Blink" Resizable="true" CellStyle="max-width: 200px">
             <EditTemplate>
-                <MudSelect T="ButtonColor" Value="@_faultBlinkColor" Variant="Variant.Outlined" Dense="true" Disabled="!context.Item.Enabled" 
-                           ValueChanged="@((ButtonColor val) => OnColorChanged(context.Item.FaultBlinkColor, val))">
+                <MudSelect T="ButtonColor" Value="@((ButtonColor)context.Item.FaultBlinkColor)" Variant="Variant.Outlined" Dense="true" Disabled="!context.Item.Enabled"
+                           ValueChanged="@((ButtonColor val) => context.Item.FaultBlinkColor = (int)val)">
                     @foreach (ButtonColor color in Enum.GetValues(typeof(ButtonColor)))
                     {
                         <MudSelectItem T="ButtonColor" Value="@color">@color</MudSelectItem>
@@ -78,14 +78,5 @@
     public IEnumerable<Button> Buttons { get; set; } = null!;
     [Parameter, EditorRequired] public TDevice Device { get; set; } = default!;
     
-    ButtonColor[] _colors = new ButtonColor[4];
-    ButtonColor[] _blinkColors = new ButtonColor[4];
-    ButtonColor _faultColor;
-    ButtonColor _faultBlinkColor;
-
-    private void OnColorChanged(int item, ButtonColor val)
-    {
-        item = (int)val;
-    }
 
 }
