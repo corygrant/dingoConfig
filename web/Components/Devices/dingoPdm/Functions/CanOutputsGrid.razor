@@ -74,12 +74,14 @@
             <PropertyColumn Property="x => x.Factor" Title="Factor" Resizable="true" CellStyle="max-width: 100px">
                 <EditTemplate>
                     <MudNumericField @bind-Value="@context.Item.Factor"
+                                     Format="G6"
                                      Disabled="!context.Item.Enabled"/>
                 </EditTemplate>
             </PropertyColumn>
             <PropertyColumn Property="x => x.Offset" Title="Offset" Resizable="true" CellStyle="max-width: 100px">
                 <EditTemplate>
                     <MudNumericField @bind-Value="@context.Item.Offset"
+                                     Format="G6"
                                      Disabled="!context.Item.Enabled"/>
                 </EditTemplate>
             </PropertyColumn>
@@ -140,7 +142,7 @@
     private void OnBitLengthChanged(CanOutput item, int value)
     {
         const int min = 1;
-        const int max = 64;
+        const int max = 32;
         if (value < min || value > max)
         {
             Notification.NewWarning($"{item.Name}.BitLength must be {min} to {max}");
