@@ -4,7 +4,6 @@
 @using web.Components.Devices.Keypad
 @using domain.Devices.Canboard
 @using domain.Devices.dingoPdm
-@using domain.Devices.dingoPdmMax
 @using domain.Devices.Generic
 @using domain.Devices.Keypad.BlinkMarine
 @using domain.Devices.Keypad.Grayhill
@@ -34,11 +33,6 @@
 
     @switch (Device)
     {
-        case PdmMaxDevice pdmMaxDevice:
-            @*PdmMax uses same tabs as Pdm*@
-            <PdmDeviceTabs TDevice="PdmMaxDevice" Device="pdmMaxDevice"/>
-            break;
-
         case PdmDevice pdmDevice:
             <PdmDeviceTabs TDevice="PdmDevice" Device="pdmDevice" />
             break;

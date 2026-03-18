@@ -2,7 +2,6 @@ using System.Text.Json;
 using application.Models;
 using domain.Devices.Canboard;
 using domain.Devices.dingoPdm;
-using domain.Devices.dingoPdmMax;
 using domain.Devices.Generic;
 using domain.Devices.Keypad.BlinkMarine;
 using domain.Devices.Keypad.Grayhill;
@@ -11,7 +10,7 @@ using Microsoft.Extensions.Logging;
 
 namespace application.Services;
 
-public class ConfigFileManager(ILogger<ConfigFileManager> logger)
+public class ConfigFileManager(ILogger<ConfigFileManager> logger, DeviceDefinitionManager deviceDefinitionManager)
 {
     private readonly JsonSerializerOptions _options = new() { WriteIndented = true, PropertyNameCaseInsensitive = true};
 
@@ -94,8 +93,7 @@ public class ConfigFileManager(ILogger<ConfigFileManager> logger)
         {
             var config = new ConfigFile()
             {
-                PdmDevices = devices.Where(d => d.GetType() == typeof(PdmDevice)).Cast<PdmDevice>().ToList(),
-                PdmMaxDevices = devices.Where(d => d.GetType() == typeof(PdmMaxDevice)).Cast<PdmMaxDevice>().ToList(),
+                PdmDevices = devices.OfType<PdmDevice>().ToList(),
                 CanboardDevices = devices.Where(d => d.GetType() == typeof(CanboardDevice)).Cast<CanboardDevice>().ToList(),
                 DbcDevices = devices.Where(d => d.GetType() == typeof(DbcDevice)).Cast<DbcDevice>().ToList(),
                 BlinkMarineKeypads = devices.OfType<BlinkMarineKeypadDevice>().ToList(),
@@ -141,9 +139,15 @@ public class ConfigFileManager(ILogger<ConfigFileManager> logger)
 
             CurrentFileName = Path.GetFileName(fileName);
 
+            // Apply definitions to PDM devices (restores Type, PdmType, counts, rebuilds VarMap/Params)
+            foreach (var device in config.PdmDevices)
+            {
+                var def = deviceDefinitionManager.GetByPdmType(device.PdmType) ?? DeviceDefinitionManager.DefaultPdm;
+                device.ApplyDefinition(def);
+            }
+
             var allDevices = new List<IDevice>();
             allDevices.AddRange(config.PdmDevices);
-            allDevices.AddRange(config.PdmMaxDevices);
             allDevices.AddRange(config.CanboardDevices);
             allDevices.AddRange(config.DbcDevices);
             allDevices.AddRange(config.BlinkMarineKeypads);

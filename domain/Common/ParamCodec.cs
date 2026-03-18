@@ -1,4 +1,4 @@
-using domain.Devices.dingoPdm.Enums;
+using domain.Enums;
 using domain.Models;
 
 namespace domain.Common;

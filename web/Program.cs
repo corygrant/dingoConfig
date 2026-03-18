@@ -64,6 +64,7 @@ builder.Services.AddTransient<PcanAdapter>();
 builder.Services.AddTransient<SimAdapter>();
 
 builder.Services.AddSingleton<ICommsAdapterManager, CommsAdapterManager>();
+builder.Services.AddSingleton<DeviceDefinitionManager>();
 builder.Services.AddSingleton<ConfigFileManager>();
 builder.Services.AddSingleton<DeviceManager>();
 builder.Services.AddSingleton<CanMsgLogger>();

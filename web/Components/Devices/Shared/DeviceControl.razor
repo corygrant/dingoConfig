@@ -1,7 +1,6 @@
 @using application.Services
 @using domain.Devices.Canboard
 @using domain.Devices.dingoPdm
-@using domain.Devices.dingoPdmMax
 @using domain.Devices.Generic
 @using domain.Devices.Keypad.BlinkMarine
 @using domain.Devices.Keypad.Grayhill
@@ -92,8 +91,7 @@
     
     private string DeviceName => Device switch
     {
-        PdmMaxDevice => "dingoPDM-Max",
-        PdmDevice => "dingoPDM",
+        PdmDevice pdm => pdm.Type,
         CanboardDevice => "CANBoard",
         BlinkMarineKeypadDevice => "Blink Marine Keypad",
         GrayhillKeypadDevice => "Grayhill Keypad",

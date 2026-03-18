@@ -1,7 +1,9 @@
 using System.Collections.Concurrent;
 using System.Text.Json.Serialization;
 using domain.Common;
-using domain.Devices.Canboard.Functions;
+using domain.Enums;
+using domain.Devices.Functions;
+using domain.Devices.Functions.Canboard;
 using domain.Interfaces;
 using domain.Models;
 using Microsoft.Extensions.Logging;
@@ -12,15 +14,42 @@ public class CanboardDevice : IDevice
 {
     [JsonIgnore] protected ILogger<CanboardDevice> Logger = null!;
 
+    [JsonIgnore] protected int MinMajorVersion { get; private set; } = 0;
+    [JsonIgnore] protected int MinMinorVersion { get; private set; } = 3;
+    [JsonIgnore] protected int MinBuildVersion { get; private set; } = 0;
+
     [JsonIgnore] protected virtual int NumAnalogInputs { get; } = 5; //Also serve as rotary switches and analog/dig inputs
     [JsonIgnore] protected virtual int NumDigitalInputs { get; } = 8;
     [JsonIgnore] protected virtual int NumDigitalOutputs { get; } = 4;
+    [JsonIgnore] protected int NumCanInputs { get; private set; } = 32;
+    [JsonIgnore] protected int NumCanOutputs { get; private set; } = 32;
+    [JsonIgnore] protected int NumVirtualInputs { get; private set; } = 16;
+    [JsonIgnore] protected int NumFlashers { get; private set; } = 4;
+    [JsonIgnore] protected int NumCounters { get; private set; } = 4;
+    [JsonIgnore] protected int NumConditions { get; private set; } = 32;
 
+    [JsonIgnore] public const int BaseIndex = 0x0000;
+    [JsonPropertyName("canboardType")] public int CanboardType { get; set; }
+    [JsonIgnore] protected bool CanboardTypeOk;
+    [JsonIgnore] public bool ConfigMismatch { get; set; } = true;
+    
     [JsonIgnore] public Guid Guid { get; }
     [JsonIgnore] public string Type => "CANBoard";
+    [JsonIgnore] public string Icon { get; private set; } = string.Empty;
+    [JsonIgnore] public int ConfigVersion { get; set; }
     [JsonPropertyName("name")] public string Name { get; set; }
     [JsonPropertyName("baseId")] public int BaseId { get; set; }
+    [JsonPropertyName("paramTxId")] public int ParamTxId { get; set; } = 0x080;
+    [JsonPropertyName("paramRxId")] public int ParamRxId { get; set; } = 0x081;
+    
+    [JsonIgnore] public List<DeviceVariable> VarMap { get; set; } = null!;
+    [JsonIgnore] public List<DeviceParameter> Params { get; set; } = null!;
+    
+    [JsonIgnore] public string Version { get; private set; } = "v0.0.0";
+    public event Action<string>? SuccessNotification;
+    
     [JsonIgnore] private DateTime LastRxTime { get; set; }
+    [JsonPropertyName("bitrate")] public CanBitRate BitRate { get; set; } = CanBitRate.BitRate500K;
     [JsonIgnore] public TimeSpan CyclicGap { get; } =  TimeSpan.FromSeconds(0);
     [JsonIgnore] public TimeSpan CyclicPause { get; } = TimeSpan.FromMilliseconds(0);
 
@@ -42,12 +71,20 @@ public class CanboardDevice : IDevice
     [JsonPropertyName("analogIn")] public List<AnalogInput> AnalogInputs { get; init; } = [];
     [JsonPropertyName("digitalIn")] public List<DigitalInput> DigitalInputs { get; init; } = [];
     [JsonPropertyName("digitalOut")] public List<DigitalOutput> DigitalOutputs { get; init; } = [];
+    [JsonPropertyName("canInputs")] public List<CanInput> CanInputs { get; init; } = [];
+    [JsonPropertyName("canOutputs")] public List<CanOutput> CanOutputs { get; init; } = [];
+    [JsonPropertyName("virtualInputs")] public List<VirtualInput> VirtualInputs { get; init; } = [];
+    [JsonPropertyName("flashers")] public List<Flasher> Flashers { get; init; } = [];
+    [JsonPropertyName("counters")] public List<Counter> Counters { get; init; } = [];
+    [JsonPropertyName("conditions")] public List<Condition> Conditions { get; init; } = [];
 
     [JsonIgnore] public double BoardTempC { get; private set; }
     [JsonIgnore] public int Heartbeat { get; private set; }
 
     [JsonIgnore] private Dictionary<int, List<(DbcSignal Signal, Action<double> SetValue)>> StatusSigs { get; set; } = null!;
 
+    [JsonIgnore] private ParamProtocol _paramProtocol = null!;
+    
     [JsonConstructor]
     public CanboardDevice(string name, int baseId)
     {

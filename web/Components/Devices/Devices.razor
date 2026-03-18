@@ -1,12 +1,14 @@
 @page "/devices"
 @using web.Services
 @using domain.Interfaces
+@using domain.Devices.dingoPdm
 @using application.Services
 @inject DeviceManager DeviceManager
 @inject NotificationService Notification
 @inject IDialogService DialogService
 @inject UserPreferencesManager UserPrefs
 @inject NavigationManager Navigation
+@inject DeviceDefinitionManager DeviceDefinitionManager
 
 <PageTitle>Devices</PageTitle>
 
@@ -44,8 +46,10 @@
                                    Required="true"
                                    Variant="Variant.Outlined"
                                    T="string">
-                            <MudSelectItem T="string" Value="@("Pdm")">PDM</MudSelectItem>
-                            <MudSelectItem T="string" Value="@("PdmMax")">PDM-Max</MudSelectItem>
+                            @foreach (var def in DeviceDefinitionManager.GetAllPdms())
+                            {
+                                <MudSelectItem T="string" Value="@($"pdm:{def.PdmType}")">@def.TypeName</MudSelectItem>
+                            }
                             <MudSelectItem T="string" Value="@("Canboard")">CANBoard</MudSelectItem>
                             <MudSelectItem T="string" Value="@("DbcDevice")">DBC Device</MudSelectItem>
                             <MudSelectItem T="string" Value="@("BlinkKeypad")">Blink Marine Keypad</MudSelectItem>
@@ -170,7 +174,7 @@
                         <MudCardHeader>
                             <CardHeaderContent>
                                 <MudText Typo="Typo.h6">@device.Name</MudText>
-                                <MudIcon Icon="@GetDeviceIcon(device.GetType().Name)" Size="Size.Large"></MudIcon>
+                                <MudIcon Icon="@GetDeviceIcon(device)" Size="Size.Large"></MudIcon>
                             </CardHeaderContent>
                             <CardHeaderActions>
                                 <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="@(device.Connected ? Color.Success : Color.Error)">
@@ -366,10 +370,18 @@
     private void OnDeviceTypeChanged(string deviceType)
     {
         _newDeviceType = deviceType;
-        
+
         //If a name hasn't been set, populate a default name
         if (_newDeviceName.Length == 0)
-            _newDeviceName = _newDeviceType.Trim().Replace(" ", "");
+        {
+            if (deviceType.StartsWith("pdm:") && int.TryParse(deviceType[4..], out var tid))
+            {
+                var def = DeviceDefinitionManager.GetAllPdms().FirstOrDefault(d => d.PdmType == tid);
+                _newDeviceName = def?.TypeName ?? deviceType;
+            }
+            else
+                _newDeviceName = _newDeviceType.Trim().Replace(" ", "");
+        }
 
         //Default CANopen Node IDs
         if (_newDeviceType == "BlinkKeypad") _newDeviceBaseId = 0x15;
@@ -381,18 +393,24 @@
         Navigation.NavigateTo($"/device/{deviceId}");
     }
     
-    private string GetDeviceIcon(string deviceType)
+    private string GetDeviceIcon(IDevice device)
     {
-        return deviceType switch
+        return device switch
         {
-            "PdmDevice" => Icons.Material.Filled.Bolt,
-            "PdmMaxDevice" => Icons.Material.Filled.OfflineBolt,
-            "CanboardDevice" => Icons.Material.Filled.DeveloperBoard,
-            "DbcDevice" => Icons.Material.Filled.FactCheck,
-            "BlinkMarineKeypadDevice" or "GrayhillKeypadDevice" => Icons.Material.Filled.CalendarViewMonth,
-            _ => Icons.Material.Filled.DeviceUnknown
+            PdmDevice pdm => GetPdmIcon(pdm.Icon),
+            _ => device.GetType().Name switch
+            {
+                "CanboardDevice" => Icons.Material.Filled.DeveloperBoard,
+                "DbcDevice" => Icons.Material.Filled.FactCheck,
+                "BlinkMarineKeypadDevice" or "GrayhillKeypadDevice" => Icons.Material.Filled.CalendarViewMonth,
+                _ => Icons.Material.Filled.DeviceUnknown
+            }
         };
     }
+
+    private static string GetPdmIcon(string name) =>
+        typeof(Icons.Material.Filled).GetField(name)?.GetValue(null) as string
+        ?? Icons.Material.Filled.DeviceUnknown;
     
     public void Dispose()
     {

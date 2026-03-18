@@ -1,16 +1,15 @@
 using System.Collections.Concurrent;
 using System.Text.Json.Serialization;
 using domain.Common;
-using domain.Devices.dingoPdm.Enums;
-using domain.Devices.dingoPdm.Functions;
-using domain.Devices.dingoPdm.Functions.Keypad;
 using domain.Enums;
+using domain.Enums.dingoPdm;
+using domain.Devices.Functions;
+using domain.Devices.Functions.Keypad;
 using domain.Interfaces;
 using domain.Models;
 using Microsoft.Extensions.Logging;
 using static domain.Common.DbcSignalCodec;
 // ReSharper disable MemberCanBePrivate.Global
-// ReSharper disable VirtualMemberCallInConstructor
 
 namespace domain.Devices.dingoPdm;
 
@@ -18,27 +17,28 @@ public class PdmDevice : IDeviceConfigurable
 {
     [JsonIgnore] protected ILogger<PdmDevice> Logger = null!;
 
-    [JsonIgnore] protected virtual int MinMajorVersion => 0;
-    [JsonIgnore] protected virtual int MinMinorVersion => 4;
-    [JsonIgnore] protected virtual int MinBuildVersion => 27;
+    [JsonIgnore] protected int MinMajorVersion { get; private set; } = 0;
+    [JsonIgnore] protected int MinMinorVersion { get; private set; } = 5;
+    [JsonIgnore] protected int MinBuildVersion { get; private set; } = 0;
 
-    [JsonIgnore] protected virtual int NumDigitalInputs => 2;
-    [JsonIgnore] protected virtual int NumOutputs => 8;
-    [JsonIgnore] protected virtual int NumCanInputs => 32;
-    [JsonIgnore] protected virtual int NumCanOutputs => 32;
-    [JsonIgnore] protected virtual int NumVirtualInputs => 16;
-    [JsonIgnore] protected virtual int NumFlashers => 4;
-    [JsonIgnore] protected virtual int NumCounters => 4;
-    [JsonIgnore] protected virtual int NumConditions => 32;
-    [JsonIgnore] protected virtual int NumKeypads => 2;
+    [JsonIgnore] protected int NumDigitalInputs { get; private set; } = 2;
+    [JsonIgnore] protected int NumOutputs { get; private set; } = 8;
+    [JsonIgnore] protected int NumCanInputs { get; private set; } = 32;
+    [JsonIgnore] protected int NumCanOutputs { get; private set; } = 32;
+    [JsonIgnore] protected int NumVirtualInputs { get; private set; } = 16;
+    [JsonIgnore] protected int NumFlashers { get; private set; } = 4;
+    [JsonIgnore] protected int NumCounters { get; private set; } = 4;
+    [JsonIgnore] protected int NumConditions { get; private set; } = 32;
+    [JsonIgnore] protected int NumKeypads { get; private set; } = 2;
 
     [JsonIgnore] public const int BaseIndex = 0x0000;
-    [JsonIgnore] protected virtual int PdmType => 0; //0=dingoPDM, 1=dingoPDM-Max
+    [JsonPropertyName("pdmType")] public int PdmType { get; set; }
     [JsonIgnore] protected bool PdmTypeOk;
     [JsonIgnore] public bool ConfigMismatch { get; set; } = true;
 
     [JsonIgnore] public Guid Guid { get; }
-    [JsonIgnore] public virtual string Type => "dingoPDM";
+    [JsonIgnore] public string Type { get; private set; } = "dingoPDM";
+    [JsonIgnore] public string Icon { get; private set; } = string.Empty;
     [JsonIgnore] public int ConfigVersion { get; set; }
     [JsonPropertyName("name")] public string Name { get; set; }
     [JsonPropertyName("baseId")] public int BaseId { get; set; }
@@ -114,7 +114,47 @@ public class PdmDevice : IDeviceConfigurable
         _paramProtocol.SetLogger(logger);
     }
 
-    protected virtual void InitFunctions()
+    public PdmDevice(PdmDeviceDefinition definition, string name, int baseId)
+    {
+        Name = name;
+        BaseId = baseId;
+        Guid = Guid.NewGuid();
+        NumDigitalInputs = definition.NumDigitalInputs;
+        NumOutputs = definition.NumOutputs;
+        NumCanInputs = definition.NumCanInputs;
+        NumCanOutputs = definition.NumCanOutputs;
+        NumVirtualInputs = definition.NumVirtualInputs;
+        NumFlashers = definition.NumFlashers;
+        NumCounters = definition.NumCounters;
+        NumConditions = definition.NumConditions;
+        NumKeypads = definition.NumKeypads;
+        InitFunctions();
+        ApplyDefinition(definition);
+    }
+
+    public void ApplyDefinition(PdmDeviceDefinition definition)
+    {
+        PdmType = definition.PdmType;
+        Type = definition.TypeName;
+        Icon = definition.Icon;
+        MinMajorVersion = definition.MinMajorVersion;
+        MinMinorVersion = definition.MinMinorVersion;
+        MinBuildVersion = definition.MinBuildVersion;
+        NumDigitalInputs = Inputs.Count;
+        NumOutputs = Outputs.Count;
+        NumCanInputs = CanInputs.Count;
+        NumCanOutputs = CanOutputs.Count;
+        NumVirtualInputs = VirtualInputs.Count;
+        NumFlashers = Flashers.Count;
+        NumCounters = Counters.Count;
+        NumConditions = Conditions.Count;
+        NumKeypads = Keypads.Count;
+        InitStatusSigs();
+        InitVarMap();
+        InitParams();
+    }
+
+    private void InitFunctions()
     {
         for (var i = 0; i < NumDigitalInputs; i++)
             Inputs.Add(new Input(i + 1, "digitalInput" + (i + 1)));
@@ -150,7 +190,7 @@ public class PdmDevice : IDeviceConfigurable
         InitStatusSigs();
     }
 
-    protected virtual void InitStatusSigs()
+    private void InitStatusSigs()
     {
         StatusSigs = new Dictionary<int, List<(DbcSignal Signal, Action<double> SetValue)>>();
 

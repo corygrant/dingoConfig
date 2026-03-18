@@ -2,7 +2,6 @@ using System.Collections.Concurrent;
 using application.Models;
 using domain.Devices.Canboard;
 using domain.Devices.dingoPdm;
-using domain.Devices.dingoPdmMax;
 using domain.Devices.Generic;
 using domain.Devices.Keypad.BlinkMarine;
 using domain.Devices.Keypad.Grayhill;
@@ -12,7 +11,7 @@ using Microsoft.Extensions.Logging;
 
 namespace application.Services;
 
-public class DeviceManager(ILogger<DeviceManager> logger, ILoggerFactory loggerFactory, SystemLogger systemLogger)
+public class DeviceManager(ILogger<DeviceManager> logger, ILoggerFactory loggerFactory, SystemLogger systemLogger, DeviceDefinitionManager deviceDefinitionManager)
 {
     private readonly Dictionary<Guid, IDevice> _devices = new();
     private ConcurrentDictionary<(int BaseId, int Index, int SubIndex), DeviceCanFrame> _requestQueue = new();
@@ -57,10 +56,20 @@ public class DeviceManager(ILogger<DeviceManager> logger, ILoggerFactory loggerF
         var devType = parts[0];
         var model = parts.Length > 1 ? parts[1] : string.Empty;
 
+        // Handle pdm:{typeId} format
+        int pdmTypeId = 0;
+        if (devType.Contains(':'))
+        {
+            var pdmParts = devType.Split(':', 2);
+            devType = pdmParts[0];
+            int.TryParse(pdmParts[1], out pdmTypeId);
+        }
+
         IDevice device = devType switch
         {
-            "pdm" => new PdmDevice(name, baseId),
-            "pdmmax" => new PdmMaxDevice(name, baseId),
+            "pdm" => new PdmDevice(
+                deviceDefinitionManager.GetByPdmType(pdmTypeId) ?? DeviceDefinitionManager.DefaultPdm,
+                name, baseId),
             "canboard" => new CanboardDevice(name, baseId),
             "dbcdevice" => new DbcDevice(name, baseId),
             "blinkkeypad" => new BlinkMarineKeypadDevice(name, baseId, model),

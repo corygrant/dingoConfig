@@ -30,7 +30,7 @@
         @foreach (var device in _devices)
         {
             <MudNavLink Href="@($"device/{device.Guid}")"
-                        Icon="@GetDeviceIcon(device.GetType().Name)"
+                        Icon="@GetDeviceIcon(device)"
                         IconColor= "@(device.Connected ? Color.Success : Color.Default)"
                         Style="@($"padding-left: 32px; {(device.Connected ? "color: var(--mud-palette-success);" : "")}")">
                 @device.Name
@@ -92,25 +92,25 @@
         }
     }
 
-    private string GetDeviceIcon(string deviceType)
+    private string GetDeviceIcon(IDevice device)
     {
-        return deviceType switch
+        // https://mudblazor.com/features/icons#icons
+        return device switch
         {
-            "PdmDevice" => Icons.Material.Filled.Bolt,
-            "PdmMaxDevice" => Icons.Material.Filled.OfflineBolt,
-            "CanboardDevice" => Icons.Material.Filled.DeveloperBoard,
-            "DbcDevice" => Icons.Material.Filled.FactCheck,
-            "BlinkMarineKeypadDevice" or "GrayhillKeypadDevice" => Icons.Material.Filled.CalendarViewMonth,
-            _ => Icons.Material.Filled.DeviceUnknown
-                
-                // https://mudblazor.com/features/icons#icons
-                // Settings = Icons.Material.Filled.Tune
-                // Plots = Icons.Material.Filled.StackedLineChart
-                // CAN log = Icons.Material.Filled.Article or Computer or DataExploration or Dvr
-                // Keypad = @Icons.Material.Filled.GridOn or CalendarViewMonth or DragIndicator
-                // PDM Alt = @Icons.Material.Filled.ElectricBolt or ElectricalServices
+            domain.Devices.dingoPdm.PdmDevice pdm => GetPdmIcon(pdm.Icon),
+            _ => device.GetType().Name switch
+            {
+                "CanboardDevice" => Icons.Material.Filled.DeveloperBoard,
+                "DbcDevice" => Icons.Material.Filled.FactCheck,
+                "BlinkMarineKeypadDevice" or "GrayhillKeypadDevice" => Icons.Material.Filled.CalendarViewMonth,
+                _ => Icons.Material.Filled.DeviceUnknown
+            }
         };
     }
+
+    private static string GetPdmIcon(string name) =>
+        typeof(Icons.Material.Filled).GetField(name)?.GetValue(null) as string
+        ?? Icons.Material.Filled.DeviceUnknown;
     
     private static string GetVersion()
     {

@@ -1,7 +1,6 @@
 @page "/device/{DeviceId:guid}"
 @using domain.Interfaces
 @using domain.Devices.dingoPdm
-@using domain.Devices.dingoPdmMax
 @using domain.Devices.Canboard
 @using domain.Devices.Generic
 @using domain.Devices.Keypad.BlinkMarine
@@ -19,12 +18,6 @@
         @* Render BaseDeviceView with appropriate device type *@
         @switch (_currentDevice)
         {
-            case PdmMaxDevice pdmMaxDevice:
-                <BaseDeviceView TDevice="PdmMaxDevice"
-                               Device="pdmMaxDevice"
-                               AdapterConnected="@AdapterManager.IsConnected" />
-                break;
-
             case PdmDevice pdmDevice:
                 <BaseDeviceView TDevice="PdmDevice"
                                Device="pdmDevice"

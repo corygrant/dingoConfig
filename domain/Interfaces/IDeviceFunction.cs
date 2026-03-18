@@ -1,5 +1,3 @@
-using System.Text.Json.Serialization;
-using domain.Devices.dingoPdm.Enums;
 using domain.Models;
 
 namespace domain.Interfaces;
