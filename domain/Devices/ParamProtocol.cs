@@ -122,9 +122,9 @@ internal class ParamProtocol(IDeviceConfigurable device, List<DeviceParameter> @
 
                 index = data[2] << 8 | data[1];
                 subIndex = data[3];
-                
+
                 _readCrc32.Reset();
-                
+
                 _tempParamValues.Clear();
                 foreach (var param in @params)
                     _tempParamValues[(param.Index, param.SubIndex)] = param.DefaultValue;
@@ -211,6 +211,14 @@ internal class ParamProtocol(IDeviceConfigurable device, List<DeviceParameter> @
                                         name, baseId, readAllCrc, _readCrc32.Final, readAllCount, _readAllCount);
                 }
 
+                outgoing.Add(new DeviceCanFrame
+                {
+                    DeviceBaseId = baseId,
+                    SendOnly = true,
+                    Frame = new CanFrame(Id: txId, Len: 8, Payload: [Convert.ToByte(MessageCommand.CheckCrc), 0, 0, 0, 0, 0, 0, 0]),
+                    Name = "CheckCRC"
+                });
+                
                 break;
                 
             case MessageCommand.CheckCrcRsp:
@@ -292,6 +300,14 @@ internal class ParamProtocol(IDeviceConfigurable device, List<DeviceParameter> @
                     _logger.LogError("{Name} ID: {BaseId}, Write All Failed {pdmCrc} != {thisCrc}, {fromPdm} vs {received}",
                         name, baseId, writeAllCrc, _writeCrc32.Final, writeAllCount, _writeAllCount);
                 }
+                
+                outgoing.Add(new DeviceCanFrame
+                {
+                    DeviceBaseId = baseId,
+                    SendOnly = true,
+                    Frame = new CanFrame(Id: txId, Len: 8, Payload: [Convert.ToByte(MessageCommand.CheckCrc), 0, 0, 0, 0, 0, 0, 0]),
+                    Name = "CheckCRC"
+                });
                 break;
 
 		    case MessageCommand.BurnParams:
@@ -382,6 +398,7 @@ internal class ParamProtocol(IDeviceConfigurable device, List<DeviceParameter> @
         
         foreach (var parameter in @params)
         {
+            //Always use all parameters to check CRC
             var data = ParamCodec.ToFrame(MessageCommand.Null, parameter, 0);
             checkCrc32.Update(data.Payload.Skip(4).Take(4).ToArray());
         }

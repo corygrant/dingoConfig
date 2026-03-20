@@ -652,13 +652,6 @@ public class PdmDevice : IDeviceConfigurable
         [
             new DeviceParameter
             {
-                ParentName = Name, Name = "device.configVersion", Index = BaseIndex, SubIndex = subIndex++,
-                GetValue = () => ConfigVersion, SetValue = val => ConfigVersion = (int)val,
-                ValueType = ConfigVersion.GetType(),
-                DefaultValue = 0
-            },
-            new DeviceParameter
-            {
                 ParentName = Name, Name = "device.baseId", Index = BaseIndex, SubIndex = subIndex++,
                 GetValue = () => BaseId, SetValue = val => BaseId = (int)val,
                 ValueType = BaseId.GetType(),

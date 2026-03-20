@@ -418,9 +418,6 @@ public class DeviceManager(ILogger<DeviceManager> logger, ILoggerFactory loggerF
             QueueMessage(msg);
             Thread.Sleep(1); //Slow down to give device time to respond
         }
-
-        //Get CRC from device
-        CheckConfig(deviceId);
         
         logger.LogInformation("Read started for {DeviceName} (Guid: {Guid})", device.Name, deviceId);
     }
@@ -443,9 +440,6 @@ public class DeviceManager(ILogger<DeviceManager> logger, ILoggerFactory loggerF
             QueueMessage(msg);
             Thread.Sleep(1); //Slow down to give device time to respond
         }
-        
-        //Get CRC from device
-        CheckConfig(deviceId);
 
         logger.LogInformation("Read started for {DeviceName} (Guid: {Guid})", device.Name, deviceId);
     }
@@ -469,9 +463,6 @@ public class DeviceManager(ILogger<DeviceManager> logger, ILoggerFactory loggerF
             QueueMessage(msg);
             Thread.Sleep(1); //Slow down to give device time to respond
         }
-        
-        //Get CRC from device
-        CheckConfig(deviceId);
 
         logger.LogInformation("Write started for {DeviceName} (Guid: {Guid})", device.Name, deviceId);
         return true;
@@ -496,9 +487,6 @@ public class DeviceManager(ILogger<DeviceManager> logger, ILoggerFactory loggerF
             QueueMessage(msg);
             Thread.Sleep(1); //Slow down to give device time to respond
         }
-        
-        //Get CRC from device
-        CheckConfig(deviceId);
 
         logger.LogInformation("Write started for {DeviceName} (Guid: {Guid})", device.Name, deviceId);
         return true;
@@ -534,9 +522,6 @@ public class DeviceManager(ILogger<DeviceManager> logger, ILoggerFactory loggerF
 
         device.Name = newName;
         device.BaseId = newId;
-        
-        //Get CRC from device
-        CheckConfig(deviceId);
     }
 
     /// <summary>
