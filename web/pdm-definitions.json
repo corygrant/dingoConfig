@@ -32,5 +32,22 @@
     "minMajorVersion": 0,
     "minMinorVersion": 5,
     "minBuildVersion": 0
+  },
+  {
+    "pdmType": 2,
+    "typeName": "PT-DPDM",
+    "icon": "OfflineBolt",
+    "numDigitalInputs": 4,
+    "numOutputs": 4,
+    "numCanInputs": 32,
+    "numCanOutputs": 32,
+    "numVirtualInputs": 16,
+    "numFlashers": 4,
+    "numCounters": 4,
+    "numConditions": 32,
+    "numKeypads": 2,
+    "minMajorVersion": 0,
+    "minMinorVersion": 5,
+    "minBuildVersion": 0
   }
 ]

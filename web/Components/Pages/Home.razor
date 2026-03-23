@@ -1,4 +1,9 @@
 @page "/"
+@using application.Services
+@using domain.Devices.dingoPdm
+@using domain.Interfaces
+@inject DeviceManager DeviceManager
+@inject DeviceDefinitionManager DeviceDefinitionManager
 
 <PageTitle>Home</PageTitle>
 
@@ -11,31 +16,21 @@
             </MudText>
 
             <MudGrid Justify="Justify.Center">
-                <MudItem>
-                    <MudCard Elevation="4" Style="width: 175px; height: 100%;">
-                        <MudCardContent>
-                            <MudStack Justify="Justify.Center" AlignItems="AlignItems.Center">
-                                <MudIcon Size="Size.Large" Icon="@Icons.Material.Filled.Bolt"/>
-                                <MudText Typo="Typo.h6">
-                                    dingoPDM
-                                </MudText>
-                            </MudStack>
-                        </MudCardContent>
-                    </MudCard>
-                </MudItem>
-
-                <MudItem>
-                    <MudCard Elevation="4" Style="width: 175px; height: 100%;">
-                        <MudCardContent>
-                            <MudStack Justify="Justify.Center" AlignItems="AlignItems.Center">
-                                <MudIcon Size="Size.Large" Icon="@Icons.Material.Filled.OfflineBolt"/>
-                                <MudText Typo="Typo.h6">
-                                    dingoPDM-Max
-                                </MudText>
-                            </MudStack>
-                        </MudCardContent>
-                    </MudCard>
-                </MudItem>
+                @foreach (var pdm in _pdmDevices)
+                {
+                    <MudItem>
+                        <MudCard Elevation="4" Style="width: 175px; height: 100%;">
+                            <MudCardContent>
+                                <MudStack Justify="Justify.Center" AlignItems="AlignItems.Center">
+                                    <MudIcon Size="Size.Large" Icon=@GetPdmIcon(pdm.Icon)/>
+                                    <MudText Typo="Typo.h6">
+                                        @pdm.TypeName
+                                    </MudText>
+                                </MudStack>
+                            </MudCardContent>
+                        </MudCard>
+                    </MudItem>
+                }
 
                 <MudItem>
                     <MudCard Elevation="4" Style="width: 175px; height: 100%;">
@@ -44,6 +39,32 @@
                                 <MudIcon Size="Size.Large" Icon="@Icons.Material.Filled.DeveloperBoard"/>
                                 <MudText Typo="Typo.h6">
                                     CANBoard
+                                </MudText>
+                            </MudStack>
+                        </MudCardContent>
+                    </MudCard>
+                </MudItem>
+                
+                <MudItem>
+                    <MudCard Elevation="4" Style="width: 175px; height: 100%;">
+                        <MudCardContent>
+                            <MudStack Justify="Justify.Center" AlignItems="AlignItems.Center">
+                                <MudIcon Size="Size.Large" Icon="@Icons.Material.Filled.CalendarViewMonth"/>
+                                <MudText Typo="Typo.h6">
+                                    Blink Marine
+                                </MudText>
+                            </MudStack>
+                        </MudCardContent>
+                    </MudCard>
+                </MudItem>
+                
+                <MudItem>
+                    <MudCard Elevation="4" Style="width: 175px; height: 100%;">
+                        <MudCardContent>
+                            <MudStack Justify="Justify.Center" AlignItems="AlignItems.Center">
+                                <MudIcon Size="Size.Large" Icon="@Icons.Material.Filled.CalendarViewMonth"/>
+                                <MudText Typo="Typo.h6">
+                                    Grayhill
                                 </MudText>
                             </MudStack>
                         </MudCardContent>
@@ -95,3 +116,16 @@
         </MudList>
     </MudPaper>
 </MudContainer>
+
+@code {
+    private IReadOnlyList<PdmDeviceDefinition> _pdmDevices = [];
+
+    protected override void OnInitialized()
+    {
+        _pdmDevices = DeviceDefinitionManager.GetAllPdms();
+    }
+    
+    private static string GetPdmIcon(string name) =>
+        typeof(Icons.Material.Filled).GetField(name)?.GetValue(null) as string
+        ?? Icons.Material.Filled.DeviceUnknown;
+}
