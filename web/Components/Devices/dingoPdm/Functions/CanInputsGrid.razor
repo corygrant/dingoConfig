@@ -108,7 +108,7 @@
             </PropertyColumn>
             <PropertyColumn Property="x => x.Operand" Title="Operand" Resizable="true" CellStyle="max-width: 100px">
                 <EditTemplate>
-                    <MudNumericField Value="@context.Item.Operand"
+                    <MudNumericField @bind-Value="@context.Item.Operand"
                                      Disabled="!context.Item.Enabled"/>
                 </EditTemplate>
             </PropertyColumn>
