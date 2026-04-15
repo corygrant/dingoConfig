@@ -63,7 +63,7 @@ public class PdmDevice : IDeviceConfigurable
     [JsonIgnore] public TimeSpan CyclicGap { get; } =  TimeSpan.FromSeconds(0);
     [JsonIgnore] public TimeSpan CyclicPause { get; } = TimeSpan.FromMilliseconds(0);
     
-    [JsonPropertyName("inputs")] public List<Input> Inputs { get; init; } = [];
+    [JsonPropertyName("inputs")] public List<DigitalInput> Inputs { get; init; } = [];
     [JsonPropertyName("outputs")] public List<Output> Outputs { get; init; } = [];
     [JsonPropertyName("canInputs")] public List<CanInput> CanInputs { get; init; } = [];
     [JsonPropertyName("canOutputs")] public List<CanOutput> CanOutputs { get; init; } = [];
@@ -157,7 +157,7 @@ public class PdmDevice : IDeviceConfigurable
     private void InitFunctions()
     {
         for (var i = 0; i < NumDigitalInputs; i++)
-            Inputs.Add(new Input(i + 1, "digitalInput" + (i + 1)));
+            Inputs.Add(new DigitalInput(i + 1, "digitalInput" + (i + 1)));
 
         for (var i = 0; i < NumOutputs; i++)
             Outputs.Add(new Output(i + 1, "output" + (i + 1)));
@@ -1071,7 +1071,7 @@ public class PdmDevice : IDeviceConfigurable
     }
 
     // Collection accessors
-    public IReadOnlyList<Input> GetInputs() => Inputs.AsReadOnly();
+    public IReadOnlyList<DigitalInput> GetInputs() => Inputs.AsReadOnly();
     public IReadOnlyList<Output> GetOutputs() => Outputs.AsReadOnly();
     public IReadOnlyList<CanInput> GetCanInputs() => CanInputs.AsReadOnly();
     public IReadOnlyList<CanOutput> GetCanOutputs() => CanOutputs.AsReadOnly();

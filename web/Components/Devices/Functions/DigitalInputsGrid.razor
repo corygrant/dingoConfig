@@ -68,11 +68,11 @@
 
 @code {
     [Parameter, EditorRequired]
-    public List<Input> Inputs { get; set; } = null!;
+    public List<DigitalInput> Inputs { get; set; } = null!;
 
     private int _refreshCounter = 0;
 
-    private void OnDebounceChanged(Input item, int value)
+    private void OnDebounceChanged(DigitalInput item, int value)
     {
         const int min = 0;
         const int max = 1000;

@@ -1,10 +1,10 @@
 @using web.Services
-@using web.Components.Devices.dingoPdm
+@using web.Components.Devices.Functions
 @using domain.Devices.Functions
 @using domain.Enums.dingoPdm
 @inject NotificationService Notification
 @typeparam TDevice where TDevice : domain.Interfaces.IDeviceConfigurable
-@inherits PdmFunctionComponentBase<TDevice>
+@inherits FunctionComponentBase<TDevice>
 
 <MudDataGrid Items="@Outputs" Dense="true" Hover="true" Striped="false" EditMode="DataGridEditMode.Cell" ReadOnly="false" 
              SortMode="SortMode.None" ColumnResizeMode="ResizeMode.Container" Virtualize="true" 

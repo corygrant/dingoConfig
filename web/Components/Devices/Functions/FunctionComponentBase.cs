@@ -4,9 +4,9 @@ using Microsoft.AspNetCore.Components;
 using MudBlazor;
 using web.Components.Dialogs;
 
-namespace web.Components.Devices.dingoPdm;
+namespace web.Components.Devices.Functions;
 
-public abstract class PdmFunctionComponentBase<TDevice> : ComponentBase
+public abstract class FunctionComponentBase<TDevice> : ComponentBase
     where TDevice : IDeviceConfigurable
 {
     [Parameter, EditorRequired] public TDevice Device { get; set; } = default!;

@@ -1,8 +1,9 @@
 @using domain.Devices.Functions.Keypad
+@using web.Components.Devices.Functions
 @using web.Services
 @inject NotificationService Notification
 @typeparam TDevice where TDevice : domain.Devices.dingoPdm.PdmDevice
-@inherits PdmFunctionComponentBase<TDevice>
+@inherits FunctionComponentBase<TDevice>
 
 <MudGrid Spacing="2">
     <MudItem>

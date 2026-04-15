@@ -6,34 +6,62 @@ using domain.Models;
 
 namespace domain.Devices.Functions.Canboard;
 
-public class AnalogInput(int number, string name) : IDeviceFunction
+public class AnalogInput : IDeviceFunction
 {
-    [JsonPropertyName("number")] public int Number { get; set; } = number;
-    [JsonPropertyName("name")] public string Name { get; set; } = name;
+    [JsonIgnore] public const int BaseIndex = 0x2200;
+    [JsonPropertyName("number")] public int Number { get; set; }
+
+    [JsonPropertyName("name")]
+    public string Name
+    {
+        get;
+        set
+        {
+            Switch?.Name = value;
+            Rotary?.Name = value;
+            field = value;
+        }
+    }
+
+    [JsonPropertyName("enabled")] public bool Enabled { get; set; }
+    [JsonPropertyName("switch")] public AnalogSwitch Switch { get; set; }
+    [JsonPropertyName("rotary")] public RotarySwitch Rotary { get; set; }
     
     [JsonIgnore][Plotable(displayName:"Millivolts")] public double Millivolts { get; set; }
-    [JsonIgnore][Plotable(displayName:"RotarySwPos")] public int RotarySwitchPos { get; set; }
-    [JsonIgnore][Plotable(displayName:"DigIn")] public bool DigitalIn { get; set; }
     
-    [JsonIgnore] public List<DeviceParameter> Params { get; } = [];
+    [JsonIgnore] public List<DeviceParameter> Params { get; }
     
-    public static int ExtractIndex(byte data, MessageCommand command)
+    [JsonConstructor]
+    public AnalogInput(int number, string name)
     {
-        throw new NotImplementedException();
-    }
+        Number = number;
+        Name = name;
+        
+        Switch = new AnalogSwitch(number, name);
+        Rotary = new RotarySwitch(number, name);
 
-    public bool Receive(byte[] data, MessageCommand command)
-    {
-        throw new NotImplementedException();
+        Params = InitParams();
     }
-
-    public DeviceCanFrame? CreateUploadRequest(int baseId, MessageCommand command)
+    
+    private List<DeviceParameter> InitParams()
     {
-        throw new NotImplementedException();
-    }
+        var allParams = new List<DeviceParameter>();
+        var subIndex = 0;
+        allParams.AddRange(
 
-    public DeviceCanFrame? CreateDownloadRequest(int baseId, MessageCommand command)
-    {
-        throw new NotImplementedException();
+            new DeviceParameter
+            {
+                ParentName = Name, Name = $"analogInput[{Number}].enabled", Index = BaseIndex + (Number - 1),
+                SubIndex = subIndex++,
+                GetValue = () => Enabled, SetValue = val => Enabled = (bool)val,
+                ValueType = Enabled.GetType(),
+                DefaultValue = false
+            }
+        );
+
+        allParams.AddRange(Switch.InitParams(ref subIndex));
+        allParams.AddRange(Rotary.InitParams(ref subIndex));
+        
+        return allParams;
     }
 }

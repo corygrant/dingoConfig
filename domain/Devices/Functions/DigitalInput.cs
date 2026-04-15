@@ -6,7 +6,7 @@ using domain.Models;
 
 namespace domain.Devices.Functions;
 
-public class Input : IDeviceFunction
+public class DigitalInput : IDeviceFunction
 {
     [JsonIgnore] public const int BaseIndex = 0x1200;
     [JsonPropertyName("enabled")] public bool Enabled { get; set; }
@@ -22,7 +22,7 @@ public class Input : IDeviceFunction
     [JsonIgnore] public List<DeviceParameter> Params { get; }
 
     [JsonConstructor]
-    public Input(int number, string name)
+    public DigitalInput(int number, string name)
     {
         Number = number;
         Name = name;

@@ -3,7 +3,7 @@
 @using domain.Devices.Functions
 @inject NotificationService Notification
 @typeparam TDevice where TDevice : domain.Interfaces.IDeviceConfigurable
-@inherits PdmFunctionComponentBase<TDevice>
+@inherits FunctionComponentBase<TDevice>
 
 <MudDataGrid Items="@Flashers" Dense="true" Hover="true" Striped="false" EditMode="DataGridEditMode.Cell" ReadOnly="false"
              SortMode="SortMode.None" ColumnResizeMode="ResizeMode.Container" Virtualize="true" 

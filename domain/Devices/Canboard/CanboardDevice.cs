@@ -2,31 +2,34 @@ using System.Collections.Concurrent;
 using System.Text.Json.Serialization;
 using domain.Common;
 using domain.Enums;
+using domain.Enums.Canboard;
 using domain.Devices.Functions;
 using domain.Devices.Functions.Canboard;
 using domain.Interfaces;
 using domain.Models;
 using Microsoft.Extensions.Logging;
+using static domain.Common.DbcSignalCodec;
+// ReSharper disable MemberCanBePrivate.Global
 
 namespace domain.Devices.Canboard;
 
-public class CanboardDevice : IDevice
+public class CanboardDevice : IDeviceConfigurable
 {
     [JsonIgnore] protected ILogger<CanboardDevice> Logger = null!;
 
-    [JsonIgnore] protected int MinMajorVersion { get; private set; } = 0;
-    [JsonIgnore] protected int MinMinorVersion { get; private set; } = 3;
+    [JsonIgnore] protected int MinMajorVersion { get; private set; } = 3;
+    [JsonIgnore] protected int MinMinorVersion { get; private set; } = 0;
     [JsonIgnore] protected int MinBuildVersion { get; private set; } = 0;
 
-    [JsonIgnore] protected virtual int NumAnalogInputs { get; } = 5; //Also serve as rotary switches and analog/dig inputs
-    [JsonIgnore] protected virtual int NumDigitalInputs { get; } = 8;
-    [JsonIgnore] protected virtual int NumDigitalOutputs { get; } = 4;
-    [JsonIgnore] protected int NumCanInputs { get; private set; } = 32;
-    [JsonIgnore] protected int NumCanOutputs { get; private set; } = 32;
-    [JsonIgnore] protected int NumVirtualInputs { get; private set; } = 16;
+    [JsonIgnore] protected virtual int NumAnalogInputs { get; private set; } = 5; //Also serve as rotary switches and analog/dig inputs
+    [JsonIgnore] protected virtual int NumDigitalInputs { get; private set; } = 8;
+    [JsonIgnore] protected virtual int NumDigitalOutputs { get; private set; } = 4;
+    [JsonIgnore] protected int NumCanInputs { get; private set; } = 8;
+    [JsonIgnore] protected int NumCanOutputs { get; private set; } = 8;
+    [JsonIgnore] protected int NumVirtualInputs { get; private set; } = 8;
     [JsonIgnore] protected int NumFlashers { get; private set; } = 4;
     [JsonIgnore] protected int NumCounters { get; private set; } = 4;
-    [JsonIgnore] protected int NumConditions { get; private set; } = 32;
+    [JsonIgnore] protected int NumConditions { get; private set; } = 8;
 
     [JsonIgnore] public const int BaseIndex = 0x0000;
     [JsonPropertyName("canboardType")] public int CanboardType { get; set; }
@@ -34,7 +37,7 @@ public class CanboardDevice : IDevice
     [JsonIgnore] public bool ConfigMismatch { get; set; } = true;
     
     [JsonIgnore] public Guid Guid { get; }
-    [JsonIgnore] public string Type => "CANBoard";
+    [JsonIgnore] public string Type  { get; private set; } = "CANBoard";
     [JsonIgnore] public string Icon { get; private set; } = string.Empty;
     [JsonIgnore] public int ConfigVersion { get; set; }
     [JsonPropertyName("name")] public string Name { get; set; }
@@ -45,10 +48,14 @@ public class CanboardDevice : IDevice
     [JsonIgnore] public List<DeviceVariable> VarMap { get; set; } = null!;
     [JsonIgnore] public List<DeviceParameter> Params { get; set; } = null!;
     
+    [JsonIgnore][Plotable(displayName:"Temperature", unit:"degC")] public double BoardTempC { get; private set; }
+    [JsonIgnore][Plotable(displayName:"Heartbeat", unit:" ")] public int Heartbeat { get; private set; }
+    
     [JsonIgnore] public string Version { get; private set; } = "v0.0.0";
     public event Action<string>? SuccessNotification;
     
     [JsonIgnore] private DateTime LastRxTime { get; set; }
+    [JsonPropertyName("filtersEnabled")] public bool CanFiltersEnabled { get; set; }
     [JsonPropertyName("bitrate")] public CanBitRate BitRate { get; set; } = CanBitRate.BitRate500K;
     [JsonIgnore] public TimeSpan CyclicGap { get; } =  TimeSpan.FromSeconds(0);
     [JsonIgnore] public TimeSpan CyclicPause { get; } = TimeSpan.FromMilliseconds(0);
@@ -78,9 +85,6 @@ public class CanboardDevice : IDevice
     [JsonPropertyName("counters")] public List<Counter> Counters { get; init; } = [];
     [JsonPropertyName("conditions")] public List<Condition> Conditions { get; init; } = [];
 
-    [JsonIgnore] public double BoardTempC { get; private set; }
-    [JsonIgnore] public int Heartbeat { get; private set; }
-
     [JsonIgnore] private Dictionary<int, List<(DbcSignal Signal, Action<double> SetValue)>> StatusSigs { get; set; } = null!;
 
     [JsonIgnore] private ParamProtocol _paramProtocol = null!;
@@ -93,25 +97,90 @@ public class CanboardDevice : IDevice
         BaseId = baseId;
 
         // ReSharper disable VirtualMemberCallInConstructor
-        InitCollections();
-        InitStatusSigs();
+        InitFunctions();
+        InitVarMap();
+        InitParams();
+    }
+    
+    public CanboardDevice(CanboardDeviceDefinition definition, string name, int baseId)
+    {
+        Guid = Guid.NewGuid();
+        Name = name;
+        BaseId = baseId;
+
+        NumDigitalInputs = definition.NumDigitalInputs;
+        NumDigitalOutputs = definition.NumOutputs;
+        NumAnalogInputs = definition.NumAnalogInputs;
+        NumCanInputs = definition.NumCanInputs;
+        NumCanOutputs = definition.NumCanOutputs;
+        NumVirtualInputs = definition.NumVirtualInputs;
+        NumFlashers = definition.NumFlashers;
+        NumCounters = definition.NumCounters;
+        NumConditions = definition.NumConditions;
+
+        InitFunctions();
+        ApplyDefinition(definition);
     }
     
     public void SetLogger(ILogger<CanboardDevice> logger)
     {
         Logger = logger;
+        _paramProtocol.SetLogger(logger);
     }
 
-    protected virtual void InitCollections()
+    public void ApplyDefinition(CanboardDeviceDefinition definition)
     {
-        for (var i = 0; i < NumAnalogInputs; i++)
-            AnalogInputs.Add(new AnalogInput(i + 1, "analogInput" + (i + 1)));
+        CanboardType = definition.CanboardType;
+        Type = definition.TypeName;
+        Icon = definition.Icon;
+        MinMajorVersion = definition.MinMajorVersion;
+        MinMinorVersion = definition.MinMinorVersion;
+        MinBuildVersion = definition.MinBuildVersion;
+        NumDigitalInputs = definition.NumDigitalInputs;
+        NumDigitalOutputs = definition.NumOutputs;
+        NumAnalogInputs = definition.NumAnalogInputs;
+        NumCanInputs = definition.NumCanInputs;
+        NumCanOutputs = definition.NumCanOutputs;
+        NumVirtualInputs = definition.NumVirtualInputs;
+        NumFlashers = definition.NumFlashers;
+        NumCounters = definition.NumCounters;
+        NumConditions = definition.NumConditions;
+        
+        InitStatusSigs();
+        InitVarMap();
+        InitParams();
+    }
 
+    private void InitFunctions()
+    {
         for (var i = 0; i < NumDigitalInputs; i++)
             DigitalInputs.Add(new DigitalInput(i + 1, "digitalInput" + (i + 1)));
-
+        
         for (var i = 0; i < NumDigitalOutputs; i++)
             DigitalOutputs.Add(new DigitalOutput(i + 1, "digitalOutput" + (i + 1)));
+        
+        for (var i = 0; i < NumAnalogInputs; i++)
+            AnalogInputs.Add(new AnalogInput(i + 1, "analogInput" + (i + 1)));
+        
+        for (var i = 0; i < NumCanInputs; i++)
+            CanInputs.Add(new CanInput(i + 1, "canInput" + (i + 1)));
+        
+        for (var i = 0; i < NumCanOutputs; i++)
+            CanOutputs.Add(new CanOutput(i + 1, "canOutput" + (i + 1)));
+
+        for (var i = 0; i < NumVirtualInputs; i++)
+            VirtualInputs.Add(new VirtualInput(i + 1, "virtualInput" + (i + 1)));
+
+        for (var i = 0; i < NumFlashers; i++)
+            Flashers.Add(new Flasher(i + 1,  "flasher" + (i + 1)));
+
+        for (var i = 0; i < NumCounters; i++)
+            Counters.Add(new Counter(i  + 1, "counter" + (i + 1)));
+
+        for (var i = 0; i < NumConditions; i++)
+            Conditions.Add(new Condition(i + 1, "condition" + (i + 1)));
+        
+        InitStatusSigs();
     }
 
     protected virtual void InitStatusSigs()
@@ -140,7 +209,7 @@ public class CanboardDevice : IDevice
                 val => BoardTempC = val)
         ];
 
-        // Message 2 (BaseId + 2): Complex message with rotary switches, digital I/O, heartbeat
+        // Message 2 (BaseId + 2): Rotary switches, digital I/O, heartbeat
         StatusSigs[2] = [];
 
         // Rotary switch positions (4-bit each)
@@ -149,7 +218,7 @@ public class CanboardDevice : IDevice
             var index = i;
             StatusSigs[2].Add((
                 new DbcSignal { Name = $"RotarySwitch{index + 1}.Pos", StartBit = index * 4, Length = 4 },
-                val => AnalogInputs[index].RotarySwitchPos = (short)val
+                val => AnalogInputs[index].Rotary.Pos = (short)val
             ));
         }
 
@@ -169,7 +238,7 @@ public class CanboardDevice : IDevice
             var index = i;
             StatusSigs[2].Add((
                 new DbcSignal { Name = $"AnalogInput{index + 1}.DigitalMode", StartBit = 40 + index, Length = 1 },
-                val => AnalogInputs[index].DigitalIn = val != 0
+                val => AnalogInputs[index].Switch.State = val != 0
             ));
         }
 
@@ -189,7 +258,270 @@ public class CanboardDevice : IDevice
             val => Heartbeat = (int)val
         ));
     }
+    
+    private void InitVarMap()
+    {
+        VarMap = [];
+        
+        var index = 0;
 
+        VarMap.Add(new DeviceVariable
+        {
+            GetName = () => "None",
+            PropertyName = "Value",
+            DataType = "bool",
+            VariableIndex = index++,
+            SingleVariable = true
+        });
+        
+        VarMap.Add(new DeviceVariable
+        {
+            GetName = () => "Always On",
+            PropertyName = "Value",
+            DataType = "bool",
+            VariableIndex = index++,
+            SingleVariable = true
+        });
+        
+        if (NumDigitalInputs > 0)
+        {
+            for (var i = 0; i < NumDigitalInputs; i++)
+            {
+                var num = i;
+                VarMap.Add(new DeviceVariable
+                {
+                    GetName  = () => DigitalInputs[num].Name,
+                    PropertyName = "State",
+                    DataType = "bool",
+                    VariableIndex = index++,
+                    SingleVariable = false
+                });
+            }
+        }
+        
+        if (NumDigitalOutputs > 0)
+        {
+            for (var i = 0; i < NumDigitalOutputs; i++)
+            {
+                var num = i;
+                VarMap.Add(new DeviceVariable
+                {
+                    GetName  = () => DigitalOutputs[num].Name,
+                    PropertyName = "State",
+                    DataType = "bool",
+                    VariableIndex = index++,
+                    SingleVariable = false
+                });
+            }
+        }
+        
+        if (NumAnalogInputs > 0)
+        {
+            for (var i = 0; i < NumAnalogInputs; i++)
+            {
+                var num = i;
+                VarMap.Add(new DeviceVariable
+                {
+                    GetName  = () => AnalogInputs[num].Name,
+                    PropertyName = "Value",
+                    DataType = "float",
+                    VariableIndex = index++,
+                    SingleVariable = false
+                });
+                VarMap.Add(new DeviceVariable
+                {
+                    GetName  = () => AnalogInputs[num].Name,
+                    PropertyName = "Value Millivolts",
+                    DataType = "float",
+                    VariableIndex = index++,
+                    SingleVariable = false
+                });
+                VarMap.Add(new DeviceVariable
+                {
+                    GetName  = () => AnalogInputs[num].Name,
+                    PropertyName = "Rotary Position",
+                    DataType = "int",
+                    VariableIndex = index++,
+                    SingleVariable = false
+                });
+                VarMap.Add(new DeviceVariable
+                {
+                    GetName  = () => AnalogInputs[num].Name,
+                    PropertyName = "Switch Value",
+                    DataType = "bool",
+                    VariableIndex = index++,
+                    SingleVariable = false
+                });
+            }
+        }
+        
+        if (NumCanInputs > 0)
+        {
+            for (var i = 0; i < NumCanInputs; i++)
+            {
+                var num = i;
+                VarMap.Add(new DeviceVariable
+                {
+                    GetName = () => CanInputs[num].Name,
+                    PropertyName = "State",
+                    DataType = "bool",
+                    VariableIndex = index++,
+                    SingleVariable = false
+                });
+                VarMap.Add(new DeviceVariable
+                {
+                    GetName = () => CanInputs[num].Name,
+                    PropertyName = "Value",
+                    DataType = "float",
+                    VariableIndex = index++,
+                    SingleVariable = false
+                });
+            }
+        }
+        
+        if (NumVirtualInputs > 0)
+        {
+            for(var i=0; i< NumVirtualInputs; i++)
+            {
+                var num = i;
+                VarMap.Add(new DeviceVariable
+                {
+                    GetName = () => VirtualInputs[num].Name,
+                    PropertyName = "State",
+                    DataType = "bool",
+                    VariableIndex = index++,
+                    SingleVariable = false
+                });
+            }  
+        }
+        
+        if (NumFlashers > 0)
+        {
+            for (var i = 0; i < NumFlashers; i++)
+            {
+                var num = i;
+                VarMap.Add(new DeviceVariable
+                {
+                    GetName = () => Flashers[num].Name,
+                    PropertyName = "State",
+                    DataType = "bool",
+                    VariableIndex = index++,
+                    SingleVariable = false
+                });
+            }
+        }
+        
+        if (NumConditions > 0)
+        {
+            for (var i = 0; i < NumConditions; i++)
+            {
+                var num = i;
+                VarMap.Add(new DeviceVariable
+                {
+                    GetName = () => Conditions[num].Name,
+                    PropertyName = "Value",
+                    DataType = "bool",
+                    VariableIndex = index++,
+                    SingleVariable = false
+                });
+            }
+        }
+        
+        if (NumCounters > 0)
+        {
+            for (var i = 0; i < NumCounters; i++)
+            {
+                var num = i;
+                VarMap.Add(new DeviceVariable
+                {
+                    GetName = () => Counters[num].Name,
+                    PropertyName = "Value",
+                    DataType = "int",
+                    VariableIndex = index++,
+                    SingleVariable = false
+                });
+            }
+        }
+    }
+
+    private void InitParams()
+    {
+        var allParams = new List<DeviceParameter>();
+        var subIndex = 0;
+        allParams.AddRange(
+        [
+            new DeviceParameter
+            {
+                ParentName = Name, Name = "device.baseId", Index = BaseIndex, SubIndex = subIndex++,
+                GetValue = () => BaseId, SetValue = val => BaseId = (int)val,
+                ValueType = BaseId.GetType(),
+                DefaultValue = 0x7D0
+            },
+            new DeviceParameter
+            {
+                ParentName = Name, Name = "device.paramTxId", Index = BaseIndex, SubIndex = subIndex++,
+                GetValue = () => ParamTxId, SetValue = val => ParamTxId = (int)val,
+                ValueType = ParamTxId.GetType(),
+                DefaultValue = 0x080
+            },
+            new DeviceParameter
+            {
+                ParentName = Name, Name = "device.paramRxId", Index = BaseIndex, SubIndex = subIndex++,
+                GetValue = () => ParamRxId, SetValue = val => ParamRxId = (int)val,
+                ValueType = ParamRxId.GetType(),
+                DefaultValue = 0x081
+            },
+            new DeviceParameter
+            {
+                ParentName = Name, Name = "device.canSpeed", Index = BaseIndex, SubIndex = subIndex++,
+                GetValue = () => BitRate, SetValue = val => BitRate = (CanBitRate)val,
+                ValueType = BitRate.GetType(),
+                DefaultValue = CanBitRate.BitRate500K
+            },
+            new DeviceParameter
+            {
+                ParentName = Name, Name = "device.canFiltersEnabled", Index = BaseIndex, SubIndex = subIndex++,
+                GetValue = () => CanFiltersEnabled, SetValue = val => CanFiltersEnabled = (bool)val,
+                ValueType = CanFiltersEnabled.GetType(),
+                DefaultValue = false
+            }
+        ]);
+        
+        foreach (var input in DigitalInputs) allParams.AddRange(input.Params);
+        foreach (var canInput in CanInputs) allParams.AddRange(canInput.Params);
+        foreach (var virtualInput in VirtualInputs) allParams.AddRange(virtualInput.Params);
+        foreach (var condition in Conditions) allParams.AddRange(condition.Params);
+        foreach (var counter in Counters) allParams.AddRange(counter.Params);
+        foreach (var flasher in Flashers) allParams.AddRange(flasher.Params);
+        foreach (var canOutput in CanOutputs) allParams.AddRange(canOutput.Params);
+        foreach (var digitalOutput in DigitalOutputs) allParams.AddRange(digitalOutput.Params);
+        foreach (var analogInput in AnalogInputs) allParams.AddRange(analogInput.Params);
+        Params = allParams;
+
+        _paramProtocol = new ParamProtocol(this, Params)
+        {
+            NotifySuccess = msg => SuccessNotification?.Invoke(msg)
+        };
+    }
+
+    private void Clear()
+    {
+        foreach (var input in AnalogInputs)
+        {
+            input.Switch.State = false;
+            input.Millivolts = 0.0;
+            input.Rotary.Pos = 0;
+        }
+
+        foreach (var input in DigitalInputs)
+            input.State = false;
+
+        foreach (var output in DigitalOutputs)
+            output.State = false;
+
+        Logger.LogDebug("CANBoard {Name} cleared", Name);
+    }
+    
     /// <remarks>
     /// Returns true only on Connected false to true transition
     /// </remarks>
@@ -202,37 +534,40 @@ public class CanboardDevice : IDevice
         return Connected & !lastConnected;
     }
 
-    private void Clear()
-    {
-        foreach (var input in AnalogInputs)
-        {
-            input.DigitalIn = false;
-            input.Millivolts = 0.0;
-        }
-
-        foreach (var input in DigitalInputs)
-            input.State = false;
-
-        foreach (var output in DigitalOutputs)
-            output.State = false;
-
-        Logger.LogDebug("CANBoard {Name} cleared", Name);
-    }
-
     public bool InIdRange(int id)
     {
-        return (id >= BaseId) && (id <= BaseId + 2);
+        return (id >= BaseId) && (id <= BaseId + 2) || (id == ParamRxId);
     }
 
-    public void Read(int id, byte[] data, ref ConcurrentDictionary<(int BaseId, int Index, int SubIndex), DeviceCanFrame> queue, List<DeviceCanFrame> outgoing)
+    public void Read(int id, byte[] data, 
+                     ref ConcurrentDictionary<(int BaseId, int Index, int SubIndex), DeviceCanFrame> queue, 
+                     List<DeviceCanFrame> outgoing)
     {
         var offset = id - BaseId;
+
+        // Use dictionary lookup for status messages
         if (StatusSigs.TryGetValue(offset, out var signals))
         {
             foreach (var (signal, setValue) in signals)
             {
-                var value = DbcSignalCodec.ExtractSignal(data, signal);
+                var value = ExtractSignal(data, signal);
                 setValue(value);
+            }
+        }
+        // Handle param, version and info/warn/error messages
+        else
+        {
+            if (offset == 31)
+            {
+                ReadInfoWarnErrorMessage(data);
+            }
+
+            if (id == ParamRxId)
+            {
+                if (((MessageCommand)data[0]) == MessageCommand.Version)
+                    ReadVersion(BaseId, Name, data, queue);
+                    
+                _paramProtocol.HandleMessage(BaseId, ParamTxId, Name, data, queue, outgoing);
             }
         }
 
@@ -265,9 +600,223 @@ public class CanboardDevice : IDevice
             }
         }
     }
+    
+    protected void ReadInfoWarnErrorMessage(byte[] data)
+    {
+        //Response is lowercase version of set/get prefix
+        var type = (MessageType)char.ToUpper(Convert.ToChar(data[0]));
+        var src = (MessageSrc)data[1];
+
+        switch (type)
+        {
+            case MessageType.Info:
+                Logger.LogInformation("{Name} ID: {BaseId}, Src: {MessageSrc} {I} {I1} {I2}", 
+                    Name, BaseId, src, (data[3] << 8) + data[2], (data[5] << 8) + data[4], (data[7] << 8) + data[6]);
+                break;
+            case MessageType.Warning:
+                Logger.LogWarning("{Name} ID: {BaseId}, Src: {MessageSrc} {I} {I1} {I2}", 
+                    Name, BaseId, src, (data[3] << 8) + data[2], (data[5] << 8) + data[4], (data[7] << 8) + data[6]);
+                break;
+            case MessageType.Error:
+                Logger.LogError("{Name} ID: {BaseId}, Src: {MessageSrc} {I} {I1} {I2}", 
+                    Name, BaseId, src, (data[3] << 8) + data[2], (data[5] << 8) + data[4], (data[7] << 8) + data[6]);
+                break;
+        }
+    }
+
+    public List<DeviceCanFrame> GetReadMsgs(bool allParams)
+    {
+        var id = BaseId;
+
+        var cmd = allParams ? MessageCommand.ReadAll : MessageCommand.ReadAllModified;
+        var name = allParams ? "ReadAll" : "ReadAllModified";
+        
+        List<DeviceCanFrame>  msgs =
+        [
+            GetVersionMsg(),
+            new()
+            {
+                DeviceBaseId = BaseId,
+                SendOnly = true,
+                Frame = new CanFrame(
+                    Id: ParamTxId,
+                    Len: 8,
+                    Payload: [Convert.ToByte(cmd), 0, 0, 0, 0, 0, 0, 0]),
+                Name = name
+            }
+        ];
+
+		return msgs;
+    }
+
+    public List<DeviceCanFrame> GetWriteMsgs(bool allParams)
+    {
+        var cmd = allParams ? MessageCommand.WriteAll : MessageCommand.WriteAllModified;
+        var name = allParams ? "WriteAll" : "WriteAllModified";
+        
+        List<DeviceCanFrame> msgs =
+        [
+            new()
+            {
+                DeviceBaseId = BaseId,
+                Frame = new CanFrame
+                (
+                    Id: ParamTxId,
+                    Len: 8,
+                    Payload: [Convert.ToByte(cmd), 0, 0, 0, 0, 0, 0, 0]
+                ),
+                Name = name
+            }
+        ];
+
+        return msgs;
+    }
+    
+    public DeviceCanFrame GetCheckMsg()
+    {
+        return new DeviceCanFrame
+        {
+            DeviceBaseId = BaseId,
+            SendOnly = true,
+            Frame = new CanFrame
+            (
+                Id: ParamTxId,
+                Len: 8,
+                Payload: [Convert.ToByte(MessageCommand.CheckCrc), 0, 0, 0, 0, 0, 0, 0]
+            ),
+            Name = "Check"
+        };
+    }
+    
+    public List<DeviceCanFrame> GetModifyMsgs(int newId)
+    {
+        
+        //Copy params:
+        //ID: 0x0000, Subindex: 1, Base ID
+        //ID: 0x0000, Subindex: 2, ParamTxId
+        //ID: 0x0000, Subindex: 3, ParamRxId
+        var modifyParams = Params.Where(p => p is { Index: 0x0000, SubIndex: 1 or 2 or 3 }).ToList();
+
+        List<DeviceCanFrame> msgs = [];
+
+        foreach (var parameter in modifyParams)
+        {
+            msgs.Add(new DeviceCanFrame
+            {
+                SendOnly = true,
+                DeviceBaseId = newId,
+                Frame = ParamCodec.ToFrame(MessageCommand.Write, parameter, ParamTxId),
+                Name = $"Modify {parameter.Index}:{parameter.SubIndex}"
+            });
+        }
+        
+        return msgs;
+    }
+    
+    public DeviceCanFrame GetBurnMsg()
+    {
+        return new DeviceCanFrame
+        {
+            Frame = null
+        };
+    }
+
+    public DeviceCanFrame GetSleepMsg()
+    {
+        return new DeviceCanFrame
+        {
+            Frame = null
+        };
+    }
+    
+    public DeviceCanFrame GetVersionMsg()
+    {
+        return new DeviceCanFrame
+        {
+            Frame = null
+        };
+    }
+    
+    public DeviceCanFrame GetWakeupMsg()
+    {
+        return new DeviceCanFrame
+        {
+            Frame = null
+        };
+    }
+
+    public DeviceCanFrame GetBootloaderMsg()
+    {
+        return new DeviceCanFrame
+        {
+            SendOnly = true,
+            DeviceBaseId = BaseId,
+            Frame = new CanFrame
+            (
+                Id: ParamTxId,
+                Len: 8,
+                Payload: [
+                    Convert.ToByte(MessageCommand.Bootloader), (byte)'B', (byte)'O', (byte)'O', (byte)'T', (byte)'L', 0,
+                    0
+                ]
+            ),
+            Name = "Bootloader"
+        };
+    }
 
     public List<CanFrame> GetCyclicMsgs()
     {
         return [];
     }
+    
+    private void ReadVersion(int baseId, string name, byte[] data,
+        ConcurrentDictionary<(int BaseId, int Index, int SubIndex), DeviceCanFrame> queue)
+    {
+        if (data.Length != 8) return;
+
+        var version = $"v{data[4]}.{data[5]}.{(data[6] << 8) + (data[7])}";
+
+        if (!CheckVersion(data[4], data[5], (data[6] << 8) + (data[7])))
+        {
+            Logger.LogError("{Name} ID: {BaseId}, Firmware needs to be updated. V{MinMajorVersion}.{MinMinorVersion}.{MinBuildVersion} or greater",
+                name, baseId, MinMajorVersion, MinMinorVersion, MinBuildVersion);
+        }
+        
+        (int BaseId, int, int) key = (baseId, 0, 0); //Version request message index =0, subindex = 0
+        if (queue.TryGetValue(key, out var canFrame))
+        {
+            canFrame.TimeSentTimer?.Dispose();
+            queue.TryRemove(key, out _);
+        }
+
+        Logger.LogInformation("{Name} FW version received: {Version}", name, version);
+
+        Version = version;
+    }
+    
+    private bool CheckVersion(int major, int minor, int build)
+    {
+        if (major > MinMajorVersion)
+            return true;
+
+        if ((major == MinMajorVersion) && (minor > MinMinorVersion))
+            return true;
+
+        if ((major == MinMajorVersion) && (minor == MinMinorVersion) && (build >= MinBuildVersion))
+            return true;
+
+        return false;
+    }
+    
+    // Collection accessors
+    public IReadOnlyList<DigitalInput> GetDigitalInputs() => DigitalInputs.AsReadOnly();
+    public IReadOnlyList<DigitalOutput> GetDigitalOutputs() => DigitalOutputs.AsReadOnly();
+    public IReadOnlyCollection<AnalogInput> GetAnalogInputs() => AnalogInputs.AsReadOnly();
+    public IReadOnlyList<CanInput> GetCanInputs() => CanInputs.AsReadOnly();
+    public IReadOnlyList<CanOutput> GetCanOutputs() => CanOutputs.AsReadOnly();
+    public IReadOnlyList<VirtualInput> GetVirtualInputs() => VirtualInputs.AsReadOnly();
+    public IReadOnlyList<Flasher> GetFlashers() => Flashers.AsReadOnly();
+    public IReadOnlyList<Counter> GetCounters() => Counters.AsReadOnly();
+    public IReadOnlyList<Condition> GetConditions() => Conditions.AsReadOnly();
+
 }

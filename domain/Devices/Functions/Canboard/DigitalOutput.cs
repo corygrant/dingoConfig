@@ -1,38 +1,49 @@
 using System.Text.Json.Serialization;
 using domain.Common;
-using domain.Enums;
 using domain.Interfaces;
 using domain.Models;
 
 namespace domain.Devices.Functions.Canboard;
 
-public class DigitalOutput(int number, string name) : IDeviceFunction
+public class DigitalOutput : IDeviceFunction
 {
-    [JsonPropertyName("number")] public int Number { get; set; } = number;
-    [JsonPropertyName("name")] public string Name { get; set; } = name;
-    [JsonIgnore] public List<DeviceParameter> Parameters { get; } = [];
+    [JsonIgnore] public const int BaseIndex = 0x2100;
+    [JsonPropertyName("name")] public string Name {get; set; }
+    [JsonPropertyName("number")] public int Number {get;}
+    [JsonPropertyName("enabled")] public bool Enabled {get; set;}
+    [JsonPropertyName("input")] public int Input { get; set; }
 
     [JsonIgnore][Plotable(displayName:"State")] public bool State { get; set; }
     
-    [JsonIgnore] public List<DeviceParameter> Params { get; } = [];
-
-    public static int ExtractIndex(byte data, MessageCommand command)
+    [JsonIgnore] public List<DeviceParameter> Params { get; }
+    
+    [JsonConstructor]
+    public DigitalOutput(int number, string name)
     {
-        throw new NotImplementedException();
+        Number = number;
+        Name = name;
+        Params = InitParams();
     }
-
-    public bool Receive(byte[] data, MessageCommand command)
+    
+    private List<DeviceParameter> InitParams()
     {
-        throw new NotImplementedException();
-    }
-
-    public DeviceCanFrame? CreateUploadRequest(int baseId, MessageCommand command)
-    {
-        throw new NotImplementedException();
-    }
-
-    public DeviceCanFrame? CreateDownloadRequest(int baseId, MessageCommand command)
-    {
-        throw new NotImplementedException();
+        var subIndex = 0;
+        return
+        [
+            new DeviceParameter
+            {
+                ParentName = Name, Name = $"digitalOutput[{Number}].enabled", Index = BaseIndex + (Number - 1), SubIndex = subIndex++,
+                GetValue = () => Enabled, SetValue = val => Enabled = (bool)val,
+                ValueType = Enabled.GetType(),
+                DefaultValue = false
+            },
+            new DeviceParameter
+            {
+                ParentName = Name, Name = $"digitalOutput[{Number}].input", Index = BaseIndex + (Number - 1), SubIndex = subIndex++,
+                GetValue = () => Input, SetValue = val => Input = (int)val,
+                ValueType = Input.GetType(),
+                DefaultValue = 0
+            }
+        ];
     }
 }

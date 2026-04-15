@@ -1,5 +1,4 @@
 @using application.Services
-@using web.Components.Devices.dingoPdm
 @using domain.Devices.Functions.Keypad
 @using domain.Devices.dingoPdm
 @using domain.Enums
@@ -8,11 +7,12 @@
 @using domain.Devices.Keypad.Grayhill
 @using web.Components.Devices.dingoPdm.Functions.BlinkMarineKeypad
 @using web.Components.Devices.dingoPdm.Functions.GrayhillKeypad
+@using web.Components.Devices.Functions
 @using web.Services
 @inject UserPreferencesManager UserPrefs
 @inject DeviceManager DeviceManager
 @typeparam TDevice where TDevice : PdmDevice
-@inherits PdmFunctionComponentBase<TDevice>
+@inherits FunctionComponentBase<TDevice>
 @implements IDisposable
 
 <div style="overflow-y: auto; height: calc(100vh - 250px); padding: 24px; scrollbar-width: auto; scrollbar-color: #888 transparent;">

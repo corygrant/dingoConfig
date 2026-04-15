@@ -1,0 +1,96 @@
+@using web.Services
+@using domain.Devices.Functions
+@using domain.Devices.Functions.Canboard
+@using domain.Enums
+@inject NotificationService Notification
+
+<MudDataGrid Items="@Inputs" Dense="true" Hover="true" Striped="false" EditMode="DataGridEditMode.Cell" ReadOnly="false"
+             SortMode="SortMode.None" ColumnResizeMode="ResizeMode.Container" Virtualize="true" 
+             FixedHeader="true" HorizontalScrollbar="true" Style="max-height: 400px;">
+    <Columns>
+        <PropertyColumn Property="x => x.Number" Title="#" StickyLeft="true" Editable="false" CellStyle="max-width: 100px"/>
+        <PropertyColumn Property="x => x.Rotary.Enabled" CellStyle="max-width: 100px">
+            <EditTemplate>
+                <MudCheckBox @bind-Value="context.Item.Rotary.Enabled" Dense="true" />
+            </EditTemplate>
+        </PropertyColumn>
+        <PropertyColumn Property="x => x.Name" CellStyle="max-width: 200px">
+            <EditTemplate>
+                <MudTextField @bind-Value="context.Item.Name" Variant="Variant.Outlined" Margin="Margin.Dense" />
+            </EditTemplate>
+        </PropertyColumn>
+        <PropertyColumn Title="Position" Property="x => x.Rotary.Pos" Resizable="true" Editable="false" CellStyle="max-width: 100px"/>
+        <PropertyColumn Property="x => x.Switch.Invert" Title="Switch Invert" CellStyle="max-width: 100px">
+            <EditTemplate>
+                <MudCheckBox @bind-Value="context.Item.Switch.Invert" Dense="true" Disabled="!context.Item.Enabled"/>
+            </EditTemplate>
+        </PropertyColumn>
+        <TemplateColumn Title="Offset (mV)" Resizable="true" CellStyle="max-width: 100px">
+            <EditTemplate>
+                <MudNumericField @key="@($"offset-{context.Item.Number}-{_refreshCounter}")"
+                                 Value="@context.Item.Rotary.Offset"
+                                 Disabled="!context.Item.Enabled"
+                                 ValueChanged="@((double val) => OnOffsetChanged(context.Item, val))"/>
+            </EditTemplate>
+        </TemplateColumn>
+        <TemplateColumn Title="Step (mV)" Resizable="true" CellStyle="max-width: 100px">
+            <EditTemplate>
+                <MudNumericField @key="@($"step-{context.Item.Number}-{_refreshCounter}")"
+                                 Value="@context.Item.Rotary.Step"
+                                 Disabled="!context.Item.Enabled"
+                                 ValueChanged="@((double val) => OnStepChanged(context.Item, val))"/>
+            </EditTemplate>
+        </TemplateColumn>
+        <TemplateColumn Title="Max Pos" Resizable="true" CellStyle="max-width: 100px">
+            <EditTemplate>
+                <MudNumericField @key="@($"maxpos-{context.Item.Number}-{_refreshCounter}")"
+                                 Value="@context.Item.Rotary.MaxPos"
+                                 Disabled="!context.Item.Enabled"
+                                 ValueChanged="@((double val) => OnMaxPosChanged(context.Item, val))"/>
+            </EditTemplate>
+        </TemplateColumn>
+    </Columns>
+</MudDataGrid>
+
+@code {
+    [Parameter, EditorRequired]
+    public List<AnalogInput> Inputs { get; set; } = null!;
+
+    private int _refreshCounter = 0;
+
+    private void OnOffsetChanged(AnalogInput item, double value)
+    {
+        const double min = 0;
+        const double max = 5000;
+        if (value < min || value > max)
+        {
+            Notification.NewWarning($"{item.Name}.Offset must be {min} to {max}");
+        }
+        item.Rotary.Offset = Math.Clamp(value, min, max);
+        _refreshCounter++;
+    }
+
+    private void OnStepChanged(AnalogInput item, double value)
+    {
+        const double min = 0;
+        const double max = 5000;
+        if (value < min || value > max)
+        {
+            Notification.NewWarning($"{item.Name}.Step must be {min} to {max}");
+        }
+        item.Rotary.Step = Math.Clamp(value, min, max);
+        _refreshCounter++;
+    }
+
+    private void OnMaxPosChanged(AnalogInput item, double value)
+    {
+        const double min = 0;
+        const double max = 5000;
+        if (value < min || value > max)
+        {
+            Notification.NewWarning($"{item.Name}.MaxPos must be {min} to {max}");
+        }
+        item.Rotary.MaxPos = Math.Clamp(value, min, max);
+        _refreshCounter++;
+    }
+}
