@@ -21,15 +21,18 @@ public class CanboardDevice : IDeviceConfigurable
     [JsonIgnore] protected int MinMinorVersion { get; private set; } = 0;
     [JsonIgnore] protected int MinBuildVersion { get; private set; } = 0;
 
-    [JsonIgnore] protected virtual int NumAnalogInputs { get; private set; } = 5; //Also serve as rotary switches and analog/dig inputs
-    [JsonIgnore] protected virtual int NumDigitalInputs { get; private set; } = 8;
-    [JsonIgnore] protected virtual int NumDigitalOutputs { get; private set; } = 4;
+    [JsonIgnore] protected int NumAnalogInputs { get; private set; } = 5; //Also serve as rotary switches and analog/dig inputs
+    [JsonIgnore] protected int NumDigitalInputs { get; private set; } = 8;
+    [JsonIgnore] protected int NumDigitalOutputs { get; private set; } = 4;
     [JsonIgnore] protected int NumCanInputs { get; private set; } = 8;
     [JsonIgnore] protected int NumCanOutputs { get; private set; } = 8;
     [JsonIgnore] protected int NumVirtualInputs { get; private set; } = 8;
     [JsonIgnore] protected int NumFlashers { get; private set; } = 4;
     [JsonIgnore] protected int NumCounters { get; private set; } = 4;
     [JsonIgnore] protected int NumConditions { get; private set; } = 8;
+    
+    [JsonIgnore] public bool CanSleep { get; } = false;
+    [JsonIgnore] public bool CanBootloader { get; } = false;
 
     [JsonIgnore] public const int BaseIndex = 0x0000;
     [JsonPropertyName("canboardType")] public int CanboardType { get; set; }
@@ -626,8 +629,6 @@ public class CanboardDevice : IDeviceConfigurable
 
     public List<DeviceCanFrame> GetReadMsgs(bool allParams)
     {
-        var id = BaseId;
-
         var cmd = allParams ? MessageCommand.ReadAll : MessageCommand.ReadAllModified;
         var name = allParams ? "ReadAll" : "ReadAllModified";
         
@@ -717,51 +718,45 @@ public class CanboardDevice : IDeviceConfigurable
     {
         return new DeviceCanFrame
         {
-            Frame = null
+            DeviceBaseId = BaseId,
+            Frame = new CanFrame
+            (
+                Id: ParamTxId,
+                Len: 8,
+                Payload: [Convert.ToByte(MessageCommand.BurnParams), 1, 3, 8, 0, 0, 0, 0]
+            ),
+            Name = "Burn"
         };
     }
 
-    public DeviceCanFrame GetSleepMsg()
+    public DeviceCanFrame? GetSleepMsg()
     {
-        return new DeviceCanFrame
-        {
-            Frame = null
-        };
+        return null;
     }
     
     public DeviceCanFrame GetVersionMsg()
     {
         return new DeviceCanFrame
         {
-            Frame = null
-        };
-    }
-    
-    public DeviceCanFrame GetWakeupMsg()
-    {
-        return new DeviceCanFrame
-        {
-            Frame = null
-        };
-    }
-
-    public DeviceCanFrame GetBootloaderMsg()
-    {
-        return new DeviceCanFrame
-        {
-            SendOnly = true,
             DeviceBaseId = BaseId,
             Frame = new CanFrame
             (
                 Id: ParamTxId,
                 Len: 8,
-                Payload: [
-                    Convert.ToByte(MessageCommand.Bootloader), (byte)'B', (byte)'O', (byte)'O', (byte)'T', (byte)'L', 0,
-                    0
-                ]
+                Payload: [Convert.ToByte(MessageCommand.Version), 0, 0, 0, 0, 0, 0, 0]
             ),
-            Name = "Bootloader"
+            Name = "Version"
         };
+    }
+    
+    public DeviceCanFrame? GetWakeupMsg()
+    {
+        return null;
+    }
+
+    public DeviceCanFrame? GetBootloaderMsg()
+    {
+        return null;
     }
 
     public List<CanFrame> GetCyclicMsgs()

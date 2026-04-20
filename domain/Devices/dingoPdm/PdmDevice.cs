@@ -31,6 +31,9 @@ public class PdmDevice : IDeviceConfigurable
     [JsonIgnore] protected int NumConditions { get; private set; } = 32;
     [JsonIgnore] protected int NumKeypads { get; private set; } = 2;
 
+    [JsonIgnore] public bool CanSleep { get; } = true;
+    [JsonIgnore] public bool CanBootloader { get; } = true;
+
     [JsonIgnore] public const int BaseIndex = 0x0000;
     [JsonPropertyName("pdmType")] public int PdmType { get; set; }
     [JsonIgnore] protected bool PdmTypeOk;

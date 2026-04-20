@@ -9,13 +9,16 @@ public interface IDeviceConfigurable : IDevice
     List<DeviceVariable> VarMap { get; }
     List<DeviceParameter> Params { get; }
     bool ConfigMismatch { get; set; }
+    DeviceCanFrame GetCheckMsg();
     List<DeviceCanFrame> GetReadMsgs(bool allParams);
     List<DeviceCanFrame> GetWriteMsgs(bool allParams);
     List<DeviceCanFrame> GetModifyMsgs(int newId);
     DeviceCanFrame GetBurnMsg();
-    DeviceCanFrame GetSleepMsg();
     DeviceCanFrame GetVersionMsg();
-    DeviceCanFrame GetWakeupMsg();
-    DeviceCanFrame GetBootloaderMsg();
-    DeviceCanFrame GetCheckMsg();
+    bool CanSleep { get; }
+    DeviceCanFrame? GetSleepMsg();
+    DeviceCanFrame? GetWakeupMsg();
+    bool CanBootloader { get; }
+    DeviceCanFrame? GetBootloaderMsg();
+    
 }

@@ -556,6 +556,13 @@ public class DeviceManager(ILogger<DeviceManager> logger, ILoggerFactory loggerF
             return false;
 
         var sleepMsg = configurable.GetSleepMsg();
+
+        if (sleepMsg == null)
+        {
+            logger.LogInformation("No sleep msg for {DeviceName} (Guid: {Guid})", device.Name, deviceId);
+            return false;
+        }    
+            
         QueueMessage(sleepMsg);
 
         logger.LogInformation("Sleep requested for {DeviceName} (Guid: {Guid})", device.Name, deviceId);
@@ -594,6 +601,13 @@ public class DeviceManager(ILogger<DeviceManager> logger, ILoggerFactory loggerF
             return false;
 
         var wakeupMsg = configurable.GetWakeupMsg();
+
+        if (wakeupMsg == null)
+        {
+            logger.LogInformation("No wake up msg for {DeviceName} (Guid: {Guid})", device.Name, deviceId);
+            return false;
+        }    
+        
         QueueMessage(wakeupMsg);
 
         logger.LogInformation("Wake up for {DeviceName} (Guid: {Guid})", device.Name, deviceId);
@@ -613,6 +627,13 @@ public class DeviceManager(ILogger<DeviceManager> logger, ILoggerFactory loggerF
             return false;
 
         var bootloaderMsg = configurable.GetBootloaderMsg();
+
+        if (bootloaderMsg == null)
+        {
+            logger.LogInformation("No bootloader msg for {DeviceName} (Guid: {Guid})", device.Name, deviceId);
+            return false;    
+        }
+        
         QueueMessage(bootloaderMsg);
 
         logger.LogInformation("Enter bootloader on {DeviceName} (Guid: {Guid})", device.Name, deviceId);

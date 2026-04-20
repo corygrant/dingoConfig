@@ -39,7 +39,7 @@
                        Color="Color.Default"
                        Size="Size.Small"
                        StartIcon="@Icons.Material.Filled.Bedtime"
-                       Disabled="@(!Device.Connected || !AdapterConnected)"
+                       Disabled="@(!Device.Connected || !AdapterConnected || !Device.CanSleep)"
                        OnClick="@OnSleepAsync">
                 Sleep
             </MudButton>
@@ -47,7 +47,7 @@
                        Color="Color.Default"
                        Size="Size.Small"
                        StartIcon="@Icons.Material.Filled.WbSunny"
-                       Disabled="@(Device.Connected || !AdapterConnected)"
+                       Disabled="@(!Device.Connected || !AdapterConnected || !Device.CanSleep)"
                        OnClick="@OnWakeupAsync">
                 Wakeup
             </MudButton>
@@ -55,7 +55,7 @@
                        Color="Color.Default"
                        Size="Size.Small"
                        StartIcon="@Icons.Material.Filled.DeveloperMode"
-                       Disabled="@(!Device.Connected || !AdapterConnected)"
+                       Disabled="@(!Device.Connected || !AdapterConnected || !Device.CanBootloader)"
                        OnClick="@OnEnterBootloaderAsync">
                 Bootloader
             </MudButton>

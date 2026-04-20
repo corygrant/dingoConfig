@@ -21,9 +21,8 @@ public class AnalogSwitch(int number, string name) : IDeviceFunction
     
     [JsonIgnore] public List<DeviceParameter> Params { get; } = null!;
 
-    public List<DeviceParameter> InitParams(ref int subIndexStart)
+    public List<DeviceParameter> InitParams(ref int subIndex)
     {
-        var subIndex = subIndexStart;
         return
         [
             new DeviceParameter
