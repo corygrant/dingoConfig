@@ -36,7 +36,7 @@
   {
     "pdmType": 2,
     "typeName": "PT-DPDM",
-    "icon": "OfflineBolt",
+    "icon": "./Icons/PTDPDM.svg",
     "numDigitalInputs": 4,
     "numOutputs": 4,
     "numCanInputs": 32,

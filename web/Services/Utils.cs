@@ -1,4 +1,5 @@
 using application.Models;
+using MudBlazor;
 
 namespace web.Services;
 
@@ -30,5 +31,17 @@ public static class Utils
         catch (FormatException e) { notification.NewError("Invalid character", e); }
         catch (OverflowException e) { notification.NewError("Value overflow", e); }
         return 0;
+    }
+    
+    public static string GetIcon(string icon)
+    {
+        //If icon in catalog is svg, read svg contents
+        if (icon.EndsWith(".svg"))
+        {
+            return File.ReadAllText(icon);
+        }
+
+        return typeof(Icons.Material.Filled).GetField(icon)?.GetValue(null) as string
+               ?? Icons.Material.Filled.DeviceUnknown;
     }
 }

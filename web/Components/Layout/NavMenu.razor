@@ -97,7 +97,7 @@
         // https://mudblazor.com/features/icons#icons
         return device switch
         {
-            domain.Devices.dingoPdm.PdmDevice pdm => GetPdmIcon(pdm.Icon),
+            domain.Devices.dingoPdm.PdmDevice pdm => Utils.GetIcon(pdm.Icon),
             _ => device.GetType().Name switch
             {
                 "CanboardDevice" => Icons.Material.Filled.DeveloperBoard,
@@ -108,9 +108,6 @@
         };
     }
 
-    private static string GetPdmIcon(string name) =>
-        typeof(Icons.Material.Filled).GetField(name)?.GetValue(null) as string
-        ?? Icons.Material.Filled.DeviceUnknown;
     
     private static string GetVersion()
     {

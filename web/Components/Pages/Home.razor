@@ -2,6 +2,7 @@
 @using application.Services
 @using domain.Devices.dingoPdm
 @using domain.Interfaces
+@using web.Services
 @inject DeviceManager DeviceManager
 @inject DeviceDefinitionManager DeviceDefinitionManager
 
@@ -22,7 +23,7 @@
                         <MudCard Elevation="4" Style="width: 175px; height: 100%;">
                             <MudCardContent>
                                 <MudStack Justify="Justify.Center" AlignItems="AlignItems.Center">
-                                    <MudIcon Size="Size.Large" Icon=@GetPdmIcon(pdm.Icon)/>
+                                    <MudIcon Size="Size.Large" Icon="@Utils.GetIcon(pdm.Icon)"/>
                                     <MudText Typo="Typo.h6">
                                         @pdm.TypeName
                                     </MudText>
@@ -125,7 +126,4 @@
         _pdmDevices = DeviceDefinitionManager.GetAllPdms();
     }
     
-    private static string GetPdmIcon(string name) =>
-        typeof(Icons.Material.Filled).GetField(name)?.GetValue(null) as string
-        ?? Icons.Material.Filled.DeviceUnknown;
 }

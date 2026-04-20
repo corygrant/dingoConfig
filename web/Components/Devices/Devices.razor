@@ -393,24 +393,17 @@
         Navigation.NavigateTo($"/device/{deviceId}");
     }
     
-    private string GetDeviceIcon(IDevice device)
+    private static string GetDeviceIcon(IDevice device) => device switch
     {
-        return device switch
+        PdmDevice pdm => Utils.GetIcon(pdm.Icon),
+        _ => device.GetType().Name switch
         {
-            PdmDevice pdm => GetPdmIcon(pdm.Icon),
-            _ => device.GetType().Name switch
-            {
-                "CanboardDevice" => Icons.Material.Filled.DeveloperBoard,
-                "DbcDevice" => Icons.Material.Filled.FactCheck,
-                "BlinkMarineKeypadDevice" or "GrayhillKeypadDevice" => Icons.Material.Filled.CalendarViewMonth,
-                _ => Icons.Material.Filled.DeviceUnknown
-            }
-        };
-    }
-
-    private static string GetPdmIcon(string name) =>
-        typeof(Icons.Material.Filled).GetField(name)?.GetValue(null) as string
-        ?? Icons.Material.Filled.DeviceUnknown;
+            "CanboardDevice" => Icons.Material.Filled.DeveloperBoard,
+            "DbcDevice" => Icons.Material.Filled.FactCheck,
+            "BlinkMarineKeypadDevice" or "GrayhillKeypadDevice" => Icons.Material.Filled.CalendarViewMonth,
+            _ => Icons.Material.Filled.DeviceUnknown
+        }
+    };
     
     public void Dispose()
     {
