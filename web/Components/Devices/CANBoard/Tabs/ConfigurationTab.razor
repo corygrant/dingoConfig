@@ -60,6 +60,15 @@
             }
         </MudExpansionPanel>
         
+        @* Rotary Switch *@
+        <MudExpansionPanel Text="@($"Rotary Switch ({Device.AnalogInputs.Count})")"
+                           ExpandedChanged="@((bool expanded) => _rotarySwitchExpanded = expanded)">
+            @if (_rotarySwitchExpanded)
+            {
+                <RotarySwitchGrid Inputs="Device.AnalogInputs"/>
+            }
+        </MudExpansionPanel>
+        
         @* Digital Inputs *@
         <MudExpansionPanel Text="@($"Digital Inputs ({Device.DigitalInputs.Count})")"
                            ExpandedChanged="@((bool expanded) => _digitalInputsExpanded = expanded)">
@@ -141,6 +150,7 @@
     // Expansion panel state tracking for lazy loading
     private bool _digitalInputsExpanded;
     private bool _analogInputsExpanded;
+    private bool _rotarySwitchExpanded;
     private bool _digitalOutputsExpanded;
     private bool _canInputsExpanded;
     private bool _canOutputsExpanded;

@@ -7,6 +7,14 @@
         <MudItem>
             <MudCard Style="height: 100%">
                 <MudCardContent>
+                    <MudText Typo="Typo.h6">@Device.Version</MudText>
+                    <MudText Typo="Typo.body2">FW Version</MudText>
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+        <MudItem>
+            <MudCard Style="height: 100%">
+                <MudCardContent>
                     <MudText Typo="Typo.h6">@Device.BoardTempC.ToString("F1") °C</MudText>
                     <MudText Typo="Typo.body2">Board Temperature</MudText>
                 </MudCardContent>

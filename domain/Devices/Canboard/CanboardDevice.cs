@@ -45,8 +45,8 @@ public class CanboardDevice : IDeviceConfigurable
     [JsonIgnore] public int ConfigVersion { get; set; }
     [JsonPropertyName("name")] public string Name { get; set; }
     [JsonPropertyName("baseId")] public int BaseId { get; set; }
-    [JsonPropertyName("paramTxId")] public int ParamTxId { get; set; } = 0x080;
-    [JsonPropertyName("paramRxId")] public int ParamRxId { get; set; } = 0x081;
+    [JsonPropertyName("paramTxId")] public int ParamTxId { get; set; } = 0x100;
+    [JsonPropertyName("paramRxId")] public int ParamRxId { get; set; } = 0x101;
     
     [JsonIgnore] public List<DeviceVariable> VarMap { get; set; } = null!;
     [JsonIgnore] public List<DeviceParameter> Params { get; set; } = null!;
@@ -458,21 +458,21 @@ public class CanboardDevice : IDeviceConfigurable
                 ParentName = Name, Name = "device.baseId", Index = BaseIndex, SubIndex = subIndex++,
                 GetValue = () => BaseId, SetValue = val => BaseId = (int)val,
                 ValueType = BaseId.GetType(),
-                DefaultValue = 0x7D0
+                DefaultValue = 0x640
             },
             new DeviceParameter
             {
                 ParentName = Name, Name = "device.paramTxId", Index = BaseIndex, SubIndex = subIndex++,
                 GetValue = () => ParamTxId, SetValue = val => ParamTxId = (int)val,
                 ValueType = ParamTxId.GetType(),
-                DefaultValue = 0x080
+                DefaultValue = 0x100
             },
             new DeviceParameter
             {
                 ParentName = Name, Name = "device.paramRxId", Index = BaseIndex, SubIndex = subIndex++,
                 GetValue = () => ParamRxId, SetValue = val => ParamRxId = (int)val,
                 ValueType = ParamRxId.GetType(),
-                DefaultValue = 0x081
+                DefaultValue = 0x101
             },
             new DeviceParameter
             {

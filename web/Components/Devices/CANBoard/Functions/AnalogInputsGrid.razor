@@ -30,6 +30,11 @@
                 </MudChip>
             </CellTemplate>
         </PropertyColumn>
+        <PropertyColumn Property="x => x.Switch.Enabled" Title="Switch Enabled" CellStyle="max-width: 100px">
+            <EditTemplate>
+                <MudCheckBox @bind-Value="context.Item.Switch.Enabled" Dense="true" />
+            </EditTemplate>
+        </PropertyColumn>
         <PropertyColumn Property="x => x.Switch.Mode" Title="Switch Mode" CellStyle="max-width: 200px">
             <EditTemplate>
                 <MudSelect T="domain.Enums.InputMode" @bind-Value="context.Item.Switch.Mode" Variant="Variant.Outlined" Dense="true"
