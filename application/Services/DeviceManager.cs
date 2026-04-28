@@ -115,7 +115,7 @@ public class DeviceManager(ILogger<DeviceManager> logger, ILoggerFactory loggerF
     /// </summary>
     private IDevice? GetDeviceByBaseId(int baseId)
     {
-        return _devices.Values.FirstOrDefault(d => d.BaseId == baseId);
+        return _devices.Values.FirstOrDefault(d => d.Ids.Base == baseId);
     }
 
     /// <summary>
@@ -496,7 +496,7 @@ public class DeviceManager(ILogger<DeviceManager> logger, ILoggerFactory loggerF
     /// Modify device, name and base ID
     /// Sends modify message to device
     /// </summary>
-    public void ModifyDeviceConfig(Guid deviceId, string newName, int newId)
+    public void ModifyDeviceConfig(Guid deviceId, string newName, DeviceIds newIds)
     {
         var device = GetDevice(deviceId);
         if (device is not IDeviceConfigurable configurable)
@@ -504,11 +504,11 @@ public class DeviceManager(ILogger<DeviceManager> logger, ILoggerFactory loggerF
             if (device == null) return;
             
             device.Name = newName;
-            device.BaseId = newId;
+            device.Ids = newIds;
             return;
         }
 
-        var modifyMsgs = configurable.GetModifyMsgs(newId);
+        var modifyMsgs = configurable.GetModifyMsgs(newIds);
         foreach (var msg in modifyMsgs)
         {
             QueueMessage(msg);
@@ -520,8 +520,9 @@ public class DeviceManager(ILogger<DeviceManager> logger, ILoggerFactory loggerF
         //Wait for modify messages to be sent, then update the base ID
         Thread.Sleep(300);
 
-        device.Name = newName;
-        device.BaseId = newId;
+        var configurableDevice = (IDeviceConfigurable)device;
+        configurableDevice.Name = newName;
+        configurableDevice.Ids = newIds;
     }
 
     /// <summary>

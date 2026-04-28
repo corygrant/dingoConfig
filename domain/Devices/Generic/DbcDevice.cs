@@ -14,7 +14,7 @@ public class DbcDevice : IDevice
     [JsonIgnore] public Guid Guid { get; }
     [JsonIgnore] public string Type => "DbcDevice";
     [JsonPropertyName("name")] public string Name { get; set; }
-    [JsonPropertyName("baseId")] public int BaseId { get; set; }
+    [JsonPropertyName("ids")] public DeviceIds Ids { get; set; }
     [JsonIgnore] private DateTime LastRxTime { get; set; }
     [JsonIgnore] public TimeSpan CyclicGap { get; } =  TimeSpan.FromSeconds(0);
     [JsonIgnore] public TimeSpan CyclicPause { get; } = TimeSpan.FromMilliseconds(0);
@@ -46,7 +46,7 @@ public class DbcDevice : IDevice
     public DbcDevice(string name, int baseId)
     {
         Name = name;
-        BaseId = baseId;
+        Ids!.Base = baseId;
         Guid =  Guid.NewGuid();
     }
     

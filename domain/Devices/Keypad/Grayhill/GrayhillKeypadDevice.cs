@@ -16,7 +16,7 @@ public class GrayhillKeypadDevice : IKeypadDevice
     [JsonIgnore] public Guid Guid { get; }
     [JsonIgnore] public string Type => "GrayhillKeypad";
     [JsonPropertyName("name")] public string Name { get; set; }
-    [JsonPropertyName("baseId")] public int BaseId { get; set; }
+    [JsonPropertyName("ids")] public DeviceIds Ids { get; set; } = new DeviceIds();
     [JsonPropertyName("cyclicGap")] public TimeSpan CyclicGap { get; } = TimeSpan.FromSeconds(1);
     [JsonPropertyName("cyclicPause")] public TimeSpan CyclicPause { get; } = TimeSpan.FromMilliseconds(1);
     [JsonPropertyName("isSim")] public bool IsSim { get; set; }
@@ -47,7 +47,7 @@ public class GrayhillKeypadDevice : IKeypadDevice
     public GrayhillKeypadDevice(string name, int baseId, string model)
     {
         Name = name;
-        BaseId = baseId;
+        Ids.Base= baseId;
         Model = model;
         NumButtons = GrayhillModels.Lookup(model);
         Guid = Guid.NewGuid();
@@ -106,13 +106,13 @@ public class GrayhillKeypadDevice : IKeypadDevice
     {
         // CANopen uses BaseId as node ID (1-127)
         // Message IDs: 0x180 + nodeId, 0x200 + nodeId, etc.
-        return id == ((int)MessageId.ButtonState + BaseId) ||
-               id == ((int)MessageId.LedControl + BaseId);
+        return id == ((int)MessageId.ButtonState + Ids.Base) ||
+               id == ((int)MessageId.LedControl + Ids.Base);
     }
 
     public void Read(int id, byte[] data, ref ConcurrentDictionary<(int BaseId, int Index, int SubIndex), DeviceCanFrame> queue, List<DeviceCanFrame> outgoing)
     {
-        switch ((MessageId)id - BaseId)
+        switch ((MessageId)id - Ids.Base)
         {
             case MessageId.ButtonState:
                 //Only read button state when not sim
@@ -189,14 +189,14 @@ public class GrayhillKeypadDevice : IKeypadDevice
             DbcSignalCodec.InsertBool(data, button.State, i);
         }
     
-        return new CanFrame((int)MessageId.ButtonState + BaseId, 3, data);
+        return new CanFrame((int)MessageId.ButtonState + Ids.Base, 3, data);
     }
 
     public IEnumerable<(int MessageId, DbcSignal Signal)> GetStatusSigs()
     {
         foreach (var kvp in StatusSigs)
         {
-            var messageId = BaseId + kvp.Key;
+            var messageId = Ids.Base + kvp.Key;
             foreach (var (signal, _) in kvp.Value)
             {
                 // Create a copy with the ID populated

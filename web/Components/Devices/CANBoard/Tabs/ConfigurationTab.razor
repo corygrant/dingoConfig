@@ -15,19 +15,19 @@
         <MudExpansionPanel Text="Device">
             <MudStack>
                 <MudTextField    Value="@_baseId"
-                                 ValueChanged="@((string val) => @Device.BaseId = Utils.ParseId(val, UserPrefs.Preferences.IdFormat, Notification))"
+                                 ValueChanged="@((string val) => @Device.Ids.Base = Utils.ParseId(val, UserPrefs.Preferences.IdFormat, Notification))"
                                  Label="Base ID"
                                  Variant="Variant.Outlined"
                                  Style="max-width: 20%"
                                  T="string" />
                 <MudTextField    Value="@_paramTxId"
-                                 ValueChanged="@((string val) => @Device.ParamTxId = Utils.ParseId(val, UserPrefs.Preferences.IdFormat, Notification))"
+                                 ValueChanged="@((string val) => @Device.Ids.ParamTx = Utils.ParseId(val, UserPrefs.Preferences.IdFormat, Notification))"
                                  Label="Parameter TX ID"
                                  Variant="Variant.Outlined"
                                  Style="max-width: 20%"
                                  T="string" />
                 <MudTextField    Value="@_paramRxId"
-                                 ValueChanged="@((string val) => @Device.ParamRxId = Utils.ParseId(val, UserPrefs.Preferences.IdFormat, Notification))"
+                                 ValueChanged="@((string val) => @Device.Ids.ParamRx = Utils.ParseId(val, UserPrefs.Preferences.IdFormat, Notification))"
                                  Label="Parameter RX ID"
                                  Variant="Variant.Outlined"
                                  Style="max-width: 20%"
@@ -165,9 +165,9 @@
     
     protected override void OnParametersSet()
     {
-        _baseId = Utils.FormatId(Device.BaseId, UserPrefs.Preferences.IdFormat);
-        _paramTxId = Utils.FormatId(Device.ParamTxId, UserPrefs.Preferences.IdFormat);
-        _paramRxId = Utils.FormatId(Device.ParamRxId, UserPrefs.Preferences.IdFormat);
+        _baseId = Utils.FormatId(Device.Ids.Base, UserPrefs.Preferences.IdFormat);
+        _paramTxId = Utils.FormatId(Device.Ids.ParamTx, UserPrefs.Preferences.IdFormat);
+        _paramRxId = Utils.FormatId(Device.Ids.ParamRx, UserPrefs.Preferences.IdFormat);
 
         StateHasChanged();
         base.OnParametersSet();

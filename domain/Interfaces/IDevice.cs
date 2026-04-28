@@ -8,7 +8,7 @@ public interface IDevice
     Guid Guid { get; }
     string Type { get; }
     string Name { get; set; }
-    int BaseId {get; set; }
+    DeviceIds Ids {get; set; }
     bool Connected {get;}
     TimeSpan CyclicGap {get;}
     TimeSpan CyclicPause {get;}

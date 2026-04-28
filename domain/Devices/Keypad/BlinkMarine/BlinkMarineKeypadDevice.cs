@@ -15,7 +15,7 @@ public class BlinkMarineKeypadDevice : IKeypadDevice
     [JsonIgnore] public Guid Guid { get; }
     [JsonIgnore] public string Type => "BlinkMarineKeypad";
     [JsonPropertyName("name")] public string Name { get; set; }
-    [JsonPropertyName("baseId")] public int BaseId { get; set; }
+    [JsonPropertyName("ids")] public DeviceIds Ids { get; set; } = new DeviceIds();
     [JsonPropertyName("cyclicGap")] public TimeSpan CyclicGap { get; } = TimeSpan.FromSeconds(1);
     [JsonPropertyName("cyclicPause")] public TimeSpan CyclicPause { get; } = TimeSpan.FromMilliseconds(1);
     [JsonPropertyName("isSim")] public bool IsSim { get; set; }
@@ -54,8 +54,7 @@ public class BlinkMarineKeypadDevice : IKeypadDevice
     public BlinkMarineKeypadDevice(string name, int baseId, string model)
     {
         Name = name;
-        BaseId = baseId;
-
+        Ids.Base = baseId;
         Model = model;
         var config = BlinkMarineModels.Lookup(Model);
         NumButtons = config.numButtons;
@@ -191,20 +190,20 @@ public class BlinkMarineKeypadDevice : IKeypadDevice
     {
         // CANopen uses BaseId as node ID (1-127)
         // Message IDs: 0x180 + nodeId, 0x280 + nodeId, etc.
-        return id == ((int)MessageId.ButtonState + BaseId) ||
-               id == ((int)MessageId.SetLed + BaseId) ||
-               id == ((int)MessageId.DialState1 + BaseId) ||
-               id == ((int)MessageId.SetLedBlink + BaseId) ||
-               id == ((int)MessageId.DialState2 + BaseId) ||
-               id == ((int)MessageId.LedBrightness + BaseId) ||
-               id == ((int)MessageId.AnalogInput + BaseId) ||
-               id == ((int)MessageId.Backlight + BaseId) ||
-               id == ((int)MessageId.Heartbeat + BaseId);
+        return id == ((int)MessageId.ButtonState + Ids.Base) ||
+               id == ((int)MessageId.SetLed + Ids.Base) ||
+               id == ((int)MessageId.DialState1 + Ids.Base) ||
+               id == ((int)MessageId.SetLedBlink + Ids.Base) ||
+               id == ((int)MessageId.DialState2 + Ids.Base) ||
+               id == ((int)MessageId.LedBrightness + Ids.Base) ||
+               id == ((int)MessageId.AnalogInput + Ids.Base) ||
+               id == ((int)MessageId.Backlight + Ids.Base) ||
+               id == ((int)MessageId.Heartbeat + Ids.Base);
     }
 
     public void Read(int id, byte[] data, ref ConcurrentDictionary<(int BaseId, int Index, int SubIndex), DeviceCanFrame> queue, List<DeviceCanFrame> outgoing)
     {
-        switch ((MessageId)id - BaseId)
+        switch ((MessageId)id - Ids.Base)
         {
             case MessageId.ButtonState:
                 ParseButtonState(data);
@@ -416,7 +415,7 @@ public class BlinkMarineKeypadDevice : IKeypadDevice
         data[4] = TickTimer;
         TickTimer++;
 
-        return new CanFrame((int)MessageId.ButtonState + BaseId, 5, data);
+        return new CanFrame((int)MessageId.ButtonState + Ids.Base, 5, data);
     }
 
     private CanFrame BuildDialState(int index)
@@ -455,7 +454,7 @@ public class BlinkMarineKeypadDevice : IKeypadDevice
             DbcSignalCodec.InsertSignal(data, input.Voltage, i * 16, 16, factor: 0.01);
         }
 
-        return new CanFrame((int)MessageId.AnalogInput + BaseId, 8, data);
+        return new CanFrame((int)MessageId.AnalogInput + Ids.Base, 8, data);
     }
 
     public IEnumerable<(int MessageId, DbcSignal Signal)> GetStatusSigs()
@@ -463,7 +462,7 @@ public class BlinkMarineKeypadDevice : IKeypadDevice
         foreach (var kvp in StatusSigs)
         {
             // Create a copy with the ID populated
-            var messageId = BaseId + kvp.Key;
+            var messageId = Ids.Base + kvp.Key;
             foreach (var (signal, _) in kvp.Value)
             {
                 var signalCopy = new DbcSignal
