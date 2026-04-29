@@ -16,11 +16,13 @@ public class GrayhillKeypadDevice : IKeypadDevice
     [JsonIgnore] public Guid Guid { get; }
     [JsonIgnore] public string Type => "GrayhillKeypad";
     [JsonPropertyName("name")] public string Name { get; set; }
-    [JsonPropertyName("ids")] public DeviceIds Ids { get; set; } = new DeviceIds();
+    [JsonPropertyName("ids")] public DeviceIds Ids { get; set; }
     [JsonPropertyName("cyclicGap")] public TimeSpan CyclicGap { get; } = TimeSpan.FromSeconds(1);
     [JsonPropertyName("cyclicPause")] public TimeSpan CyclicPause { get; } = TimeSpan.FromMilliseconds(1);
     [JsonPropertyName("isSim")] public bool IsSim { get; set; }
     [JsonIgnore] private DateTime _lastRxTime = DateTime.Now;
+
+    [JsonIgnore] public static DeviceIds DefaultIds { get; } = new DeviceIds(0x0A, 0x0, 0x0);
 
     [JsonIgnore]
     public bool Connected
@@ -44,10 +46,10 @@ public class GrayhillKeypadDevice : IKeypadDevice
     [JsonIgnore] public Dictionary<int, List<(DbcSignal Signal, Action<double> SetValue)>> StatusSigs { get; set; } = null!;
 
     [JsonConstructor]
-    public GrayhillKeypadDevice(string name, int baseId, string model)
+    public GrayhillKeypadDevice(string name, DeviceIds ids, string model)
     {
         Name = name;
-        Ids.Base= baseId;
+        Ids = ids;
         Model = model;
         NumButtons = GrayhillModels.Lookup(model);
         Guid = Guid.NewGuid();

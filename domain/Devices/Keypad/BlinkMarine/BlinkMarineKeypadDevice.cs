@@ -15,11 +15,13 @@ public class BlinkMarineKeypadDevice : IKeypadDevice
     [JsonIgnore] public Guid Guid { get; }
     [JsonIgnore] public string Type => "BlinkMarineKeypad";
     [JsonPropertyName("name")] public string Name { get; set; }
-    [JsonPropertyName("ids")] public DeviceIds Ids { get; set; } = new DeviceIds();
+    [JsonPropertyName("ids")] public DeviceIds Ids { get; set; }
     [JsonPropertyName("cyclicGap")] public TimeSpan CyclicGap { get; } = TimeSpan.FromSeconds(1);
     [JsonPropertyName("cyclicPause")] public TimeSpan CyclicPause { get; } = TimeSpan.FromMilliseconds(1);
     [JsonPropertyName("isSim")] public bool IsSim { get; set; }
     [JsonIgnore] private DateTime _lastRxTime = DateTime.Now;
+    
+    [JsonIgnore] public static DeviceIds DefaultIds { get; } = new DeviceIds(0x15, 0x0, 0x0);
 
     [JsonIgnore]
     public bool Connected
@@ -51,10 +53,10 @@ public class BlinkMarineKeypadDevice : IKeypadDevice
         null!;
 
     [JsonConstructor]
-    public BlinkMarineKeypadDevice(string name, int baseId, string model)
+    public BlinkMarineKeypadDevice(string name, DeviceIds ids, string model)
     {
         Name = name;
-        Ids.Base = baseId;
+        Ids = ids;
         Model = model;
         var config = BlinkMarineModels.Lookup(Model);
         NumButtons = config.numButtons;

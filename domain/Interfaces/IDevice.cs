@@ -9,6 +9,7 @@ public interface IDevice
     string Type { get; }
     string Name { get; set; }
     DeviceIds Ids {get; set; }
+    static DeviceIds DefaultIds { get; } = null!;
     bool Connected {get;}
     TimeSpan CyclicGap {get;}
     TimeSpan CyclicPause {get;}

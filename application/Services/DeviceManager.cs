@@ -50,7 +50,7 @@ public class DeviceManager(ILogger<DeviceManager> logger, ILoggerFactory loggerF
     /// <summary>
     /// Create and add a device of the specified type
     /// </summary>
-    public void AddDevice(string deviceType, string name, int baseId)
+    public void AddDevice(string deviceType, string name, DeviceIds ids)
     {
         var parts = deviceType.ToLower().Split('-', 2); // Limit to 2 parts max
         var devType = parts[0];
@@ -69,11 +69,11 @@ public class DeviceManager(ILogger<DeviceManager> logger, ILoggerFactory loggerF
         {
             "pdm" => new PdmDevice(
                 deviceDefinitionManager.GetByPdmType(pdmTypeId) ?? DeviceDefinitionManager.DefaultPdm,
-                name, baseId),
-            "canboard" => new CanboardDevice(name, baseId),
-            "dbcdevice" => new DbcDevice(name, baseId),
-            "blinkkeypad" => new BlinkMarineKeypadDevice(name, baseId, model),
-            "grayhillkeypad" => new GrayhillKeypadDevice(name, baseId, model),
+                name, ids),
+            "canboard" => new CanboardDevice(name, ids),
+            "dbcdevice" => new DbcDevice(name, ids),
+            "blinkkeypad" => new BlinkMarineKeypadDevice(name, ids, model),
+            "grayhillkeypad" => new GrayhillKeypadDevice(name, ids, model),
             _ => throw new ArgumentException($"Unknown device type: '{deviceType}'")
         };
 
@@ -85,7 +85,7 @@ public class DeviceManager(ILogger<DeviceManager> logger, ILoggerFactory loggerF
         GetDeviceUiState(device.Guid).NeedsRead = needsRead;
 
         logger.LogInformation("Device added: {DeviceType} '{Name}' (ID: {BaseId}, Guid: {Guid})",
-            deviceType, name, baseId, device.Guid);
+            deviceType, name, ids.Base, device.Guid);
 
         SetCyclicTimer(device);
         OnDeviceAdded(new DeviceEventArgs(device));
@@ -520,9 +520,8 @@ public class DeviceManager(ILogger<DeviceManager> logger, ILoggerFactory loggerF
         //Wait for modify messages to be sent, then update the base ID
         Thread.Sleep(300);
 
-        var configurableDevice = (IDeviceConfigurable)device;
-        configurableDevice.Name = newName;
-        configurableDevice.Ids = newIds;
+        device.Name = newName;
+        device.Ids = newIds;
     }
 
     /// <summary>

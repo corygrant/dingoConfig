@@ -44,7 +44,9 @@ public class CanboardDevice : IDeviceConfigurable
     [JsonIgnore] public string Icon { get; private set; } = string.Empty;
     [JsonIgnore] public int ConfigVersion { get; set; }
     [JsonPropertyName("name")] public string Name { get; set; }
-    [JsonPropertyName("ids")] public DeviceIds Ids { get; set; } = new DeviceIds();
+    [JsonPropertyName("ids")] public DeviceIds Ids { get; set; }
+    
+    [JsonIgnore] public static DeviceIds DefaultIds { get; } = new DeviceIds(0x640, 0x100, 0x101);
     
     [JsonIgnore] public List<DeviceVariable> VarMap { get; set; } = null!;
     [JsonIgnore] public List<DeviceParameter> Params { get; set; } = null!;
@@ -91,11 +93,11 @@ public class CanboardDevice : IDeviceConfigurable
     [JsonIgnore] private ParamProtocol _paramProtocol = null!;
     
     [JsonConstructor]
-    public CanboardDevice(string name, int baseId)
+    public CanboardDevice(string name, DeviceIds ids)
     {
         Guid = Guid.NewGuid();
         Name = name;
-        Ids.Base = baseId;
+        Ids = ids;
 
         // ReSharper disable VirtualMemberCallInConstructor
         InitFunctions();
@@ -103,11 +105,11 @@ public class CanboardDevice : IDeviceConfigurable
         InitParams();
     }
     
-    public CanboardDevice(CanboardDeviceDefinition definition, string name, int baseId)
+    public CanboardDevice(CanboardDeviceDefinition definition, string name, DeviceIds ids)
     {
         Guid = Guid.NewGuid();
         Name = name;
-        Ids.Base = baseId;
+        Ids = ids;
 
         NumDigitalInputs = definition.NumDigitalInputs;
         NumDigitalOutputs = definition.NumOutputs;
@@ -456,21 +458,21 @@ public class CanboardDevice : IDeviceConfigurable
                 ParentName = Name, Name = "device.baseId", Index = BaseIndex, SubIndex = subIndex++,
                 GetValue = () => Ids.Base, SetValue = val => Ids.Base = (int)val,
                 ValueType = Ids.Base.GetType(),
-                DefaultValue = 0x640
+                DefaultValue = DefaultIds.Base
             },
             new DeviceParameter
             {
                 ParentName = Name, Name = "device.paramTxId", Index = BaseIndex, SubIndex = subIndex++,
                 GetValue = () => Ids.ParamTx, SetValue = val => Ids.ParamTx = (int)val,
                 ValueType = Ids.ParamTx.GetType(),
-                DefaultValue = 0x100
+                DefaultValue = DefaultIds.ParamTx
             },
             new DeviceParameter
             {
                 ParentName = Name, Name = "device.paramRxId", Index = BaseIndex, SubIndex = subIndex++,
                 GetValue = () => Ids.ParamRx, SetValue = val => Ids.ParamRx = (int)val,
                 ValueType = Ids.ParamRx.GetType(),
-                DefaultValue = 0x101
+                DefaultValue = DefaultIds.ParamRx
             },
             new DeviceParameter
             {
@@ -699,14 +701,15 @@ public class CanboardDevice : IDeviceConfigurable
         baseIdParam.SetValue(newIds.Base);
         modifyParams.Add(baseIdParam);
         
+        //Send Rx first
+        var rxIdParam = Params.First(p => p is { Index: 0x0000, SubIndex: 2});
+        rxIdParam.SetValue(newIds.ParamRx);
+        modifyParams.Add(rxIdParam);
+        
         var txIdParam = Params.First(p => p is { Index: 0x0000, SubIndex: 1});
         var oldTxId = (int)txIdParam.GetValue();
         txIdParam.SetValue(newIds.ParamTx);
         modifyParams.Add(txIdParam);
-        
-        var rxIdParam = Params.First(p => p is { Index: 0x0000, SubIndex: 2});
-        rxIdParam.SetValue(newIds.ParamRx);
-        modifyParams.Add(rxIdParam);
         
         List<DeviceCanFrame> msgs = [];
 

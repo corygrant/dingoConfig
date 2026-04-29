@@ -4,6 +4,8 @@
 @using domain.Devices.dingoPdm
 @using application.Services
 @using domain.Devices.Canboard
+@using domain.Devices.Keypad.BlinkMarine
+@using domain.Devices.Keypad.Grayhill
 @using domain.Models
 @inject DeviceManager DeviceManager
 @inject NotificationService Notification
@@ -99,30 +101,24 @@
                 </MudGrid>
                 <MudGrid>
                     <MudItem xs="12" sm="4">
-                        <MudTextField    Value="@_newDeviceBaseIdString"
-                                         ValueChanged="OnIdChanged"
+                        <MudTextField @bind-Value="_newDeviceBaseIdString"
                                          Label="Base ID"
                                          Required="true"
-                                         Variant="Variant.Outlined"
-                                         T="string" />
+                                         Variant="Variant.Outlined" />
                     </MudItem>
                     @if (IsDeviceTypeConfigurable(_newDeviceType))
                     {
                         <MudItem xs="12" sm="4">
-                            <MudTextField    Value="@_newDeviceParamTxString"
-                                             ValueChanged="OnIdChanged"
+                            <MudTextField @bind-Value="_newDeviceParamTxString"
                                              Label="Param Tx ID"
                                              Required="true"
-                                             Variant="Variant.Outlined"
-                                             T="string" />
+                                             Variant="Variant.Outlined" />
                         </MudItem>
                         <MudItem xs="12" sm="4">
-                            <MudTextField    Value="@_newDeviceParamRxString"
-                                             ValueChanged="OnIdChanged"
+                            <MudTextField @bind-Value="_newDeviceParamRxString"
                                              Label="Param Rx ID"
                                              Required="true"
-                                             Variant="Variant.Outlined"
-                                             T="string" />
+                                             Variant="Variant.Outlined" />
                         </MudItem>
                     }
                 </MudGrid>
@@ -150,7 +146,7 @@
             <MudCardContent>
             <MudGrid>
                 <MudItem xs="12" sm="4">
-                    <MudTextField @bind-Value="_newDeviceName"
+                    <MudTextField @bind-Value="_modifyDeviceName"
                                   Label="Device Name"
                                   Required="true"
                                   Variant="Variant.Outlined" />
@@ -158,30 +154,24 @@
             </MudGrid>
             <MudGrid>
                 <MudItem xs="12" sm="4">
-                    <MudTextField    Value="@_newDeviceBaseIdString"
-                                     ValueChanged="OnIdChanged"
+                    <MudTextField @bind-Value="_modifyDeviceBaseIdString"
                                      Label="Base ID"
                                      Required="true"
-                                     Variant="Variant.Outlined"
-                                     T="string" />
+                                     Variant="Variant.Outlined" />
                 </MudItem>
                 @if (_modifyDevice is IDeviceConfigurable)
                 {
                     <MudItem xs="12" sm="4">
-                        <MudTextField    Value="@_newDeviceParamTxString"
-                                         ValueChanged="OnIdChanged"
+                        <MudTextField @bind-Value="_modifyDeviceParamTxString"
                                          Label="Param Tx ID"
                                          Required="true"
-                                         Variant="Variant.Outlined"
-                                         T="string" />
+                                         Variant="Variant.Outlined" />
                     </MudItem>
                     <MudItem xs="12" sm="4">
-                        <MudTextField    Value="@_newDeviceParamRxString"
-                                         ValueChanged="OnIdChanged"
+                        <MudTextField @bind-Value="_modifyDeviceParamRxString"
                                          Label="Param Rx ID"
                                          Required="true"
-                                         Variant="Variant.Outlined"
-                                         T="string" />
+                                         Variant="Variant.Outlined" />
                     </MudItem>
                 }
             </MudGrid>
@@ -191,7 +181,7 @@
                 <MudButton Color="Color.Tertiary"
                            Variant="Variant.Outlined"
                            OnClick="@ModifyDevice"
-                           Disabled="@(string.IsNullOrWhiteSpace(_newDeviceName) || string.IsNullOrWhiteSpace(_newDeviceType))">
+                           Disabled="@(string.IsNullOrWhiteSpace(_modifyDeviceName) || string.IsNullOrWhiteSpace(_modifyDeviceType))">
                     Modify
                 </MudButton>
             </MudCardActions>
@@ -286,8 +276,13 @@
     private string _newDeviceBaseIdString = string.Empty;
     private string _newDeviceParamTxString = string.Empty;
     private string _newDeviceParamRxString = string.Empty;
-    private DeviceIds _newDeviceIds = new DeviceIds();
     private string _newDeviceModel = string.Empty;
+
+    private string _modifyDeviceName = string.Empty;
+    private string _modifyDeviceType = string.Empty;
+    private string _modifyDeviceBaseIdString = string.Empty;
+    private string _modifyDeviceParamTxString = string.Empty;
+    private string _modifyDeviceParamRxString = string.Empty;
 
     private IDevice? _modifyDevice;
 
@@ -304,14 +299,6 @@
                 StateHasChanged();
             });
         }, null, TimeSpan.FromMilliseconds(50), TimeSpan.FromMilliseconds(50));
-    }
-
-    protected override void OnAfterRender(bool firstRender)
-    {
-        _newDeviceBaseIdString = Utils.FormatId(_newDeviceIds.Base, UserPrefs.Preferences.IdFormat);
-        _newDeviceParamTxString = Utils.FormatId(_newDeviceIds.ParamTx, UserPrefs.Preferences.IdFormat);
-        _newDeviceParamRxString = Utils.FormatId(_newDeviceIds.ParamRx, UserPrefs.Preferences.IdFormat);
-        base.OnAfterRender(firstRender);
     }
 
     private void LoadDevices()
@@ -335,27 +322,27 @@
     private void ToggleCreateForm()
     {
         _showCreateForm = !_showCreateForm;
+        _showModifyForm = false;
         if (!_showCreateForm) return;
-        
-        // Reset form fields
+
         _newDeviceName = string.Empty;
         _newDeviceType = string.Empty;
-        _newDeviceIds.Base = 0x0DE;
-        _newDeviceIds.ParamTx = 0x80;
-        _newDeviceIds.ParamRx = 0x81;
+        _newDeviceBaseIdString = "0x0";
+        _newDeviceParamTxString = "0x0";
+        _newDeviceParamRxString = "0x0";
     }
 
     private void ShowModifyForm(IDevice device)
     {
         _showModifyForm = true;
+        _showCreateForm = false;
 
         _modifyDevice = device;
-        
-        _newDeviceName = device.Name;
-        _newDeviceIds.Base = device.Ids.Base;
-        _newDeviceIds.ParamTx = device.Ids.ParamTx;
-        _newDeviceIds.ParamRx = device.Ids.ParamRx;
-        _newDeviceType = device.Type;
+        _modifyDeviceName = device.Name;
+        _modifyDeviceBaseIdString = Utils.FormatId(device.Ids.Base, UserPrefs.Preferences.IdFormat);
+        _modifyDeviceParamTxString = Utils.FormatId(device.Ids.ParamTx, UserPrefs.Preferences.IdFormat);
+        _modifyDeviceParamRxString = Utils.FormatId(device.Ids.ParamRx, UserPrefs.Preferences.IdFormat);
+        _modifyDeviceType = device.Type;
     }
 
     private void CloseModifyForm()
@@ -367,10 +354,15 @@
     {
         try
         {
+            var ids = new DeviceIds(
+                Utils.ParseId(_newDeviceBaseIdString, UserPrefs.Preferences.IdFormat, Notification),
+                Utils.ParseId(_newDeviceParamTxString, UserPrefs.Preferences.IdFormat, Notification),
+                Utils.ParseId(_newDeviceParamRxString, UserPrefs.Preferences.IdFormat, Notification));
+
             if (_newDeviceType is "BlinkKeypad" or "GrayhillKeypad")
-                DeviceManager.AddDevice($"{_newDeviceType}-{_newDeviceModel}", _newDeviceName, _newDeviceIds.Base);
+                DeviceManager.AddDevice($"{_newDeviceType}-{_newDeviceModel}", _newDeviceName, ids);
             else
-                DeviceManager.AddDevice(_newDeviceType, _newDeviceName, _newDeviceIds.Base);
+                DeviceManager.AddDevice(_newDeviceType, _newDeviceName, ids);
 
             Notification.NewSuccess($"Device '{_newDeviceName}' created successfully");
             _showCreateForm = false;
@@ -388,20 +380,25 @@
         {
             if (_modifyDevice == null)
             {
-                Notification.NewError($"Device '{_newDeviceName}' could not be modified");
+                Notification.NewError($"Device '{_modifyDeviceName}' could not be modified");
                 return;
             }
 
-            DeviceManager.ModifyDeviceConfig(_modifyDevice.Guid, _newDeviceName, _newDeviceIds);
+            var ids = new DeviceIds(
+                Utils.ParseId(_modifyDeviceBaseIdString, UserPrefs.Preferences.IdFormat, Notification),
+                Utils.ParseId(_modifyDeviceParamTxString, UserPrefs.Preferences.IdFormat, Notification),
+                Utils.ParseId(_modifyDeviceParamRxString, UserPrefs.Preferences.IdFormat, Notification));
 
-            Notification.NewSuccess($"Device '{_newDeviceName}' modify successfully sent.");
+            DeviceManager.ModifyDeviceConfig(_modifyDevice.Guid, _modifyDeviceName, ids);
+
+            Notification.NewSuccess($"Device '{_modifyDeviceName}' modify successfully sent.");
             Notification.NewWarning("Remember to Burn after modifying device base ID to store new ID on device");
             _showModifyForm = false;
             
         }
         catch (Exception ex)
         {
-            Notification.NewError($"Error modifying device {_newDeviceName}", ex);
+            Notification.NewError($"Error modifying device {_modifyDeviceName}", ex);
         }
     }
 
@@ -444,21 +441,19 @@
                 _newDeviceName = _newDeviceType.Trim().Replace(" ", "");
         }
 
-        //Default CANopen Node IDs
-        if (_newDeviceType.StartsWith("pdm"))
+        //Default IDs based on device type
+        DeviceIds defaultIds = _newDeviceType switch
         {
-            _newDeviceIds.Base = 0x0DE;
-            _newDeviceIds.ParamTx = 0x080;
-            _newDeviceIds.ParamRx = 0x081;
-        }
-        if (_newDeviceType.StartsWith("Canboard"))
-        {
-            _newDeviceIds.Base = 0x640;
-            _newDeviceIds.ParamTx = 0x100;
-            _newDeviceIds.ParamRx = 0x101;
-        }
-        if (_newDeviceType == "BlinkKeypad") _newDeviceIds.Base = 0x15;
-        if (_newDeviceType == "GrayhillKeypad") _newDeviceIds.Base = 0x0A;
+            var t when t.StartsWith("pdm")       => PdmDevice.DefaultIds,
+            var t when t.StartsWith("Canboard")  => CanboardDevice.DefaultIds,
+            "BlinkKeypad"                         => BlinkMarineKeypadDevice.DefaultIds,
+            "GrayhillKeypad"                      => GrayhillKeypadDevice.DefaultIds,
+            _                                     => new DeviceIds(0, 0, 0)
+        };
+
+        _newDeviceBaseIdString = Utils.FormatId(defaultIds.Base, UserPrefs.Preferences.IdFormat);
+        _newDeviceParamTxString = Utils.FormatId(defaultIds.ParamTx, UserPrefs.Preferences.IdFormat);
+        _newDeviceParamRxString = Utils.FormatId(defaultIds.ParamRx, UserPrefs.Preferences.IdFormat);
     }
 
     private void NavigateToDevice(Guid deviceId)
@@ -489,13 +484,6 @@
         if (type.StartsWith("Canboard")) return true;
 
         return false;
-    }
-
-    private void OnIdChanged()
-    {
-        _newDeviceIds.Base = Utils.ParseId(_newDeviceBaseIdString, UserPrefs.Preferences.IdFormat, Notification);
-        _newDeviceIds.ParamTx = Utils.ParseId(_newDeviceParamTxString, UserPrefs.Preferences.IdFormat, Notification);
-        _newDeviceIds.ParamRx = Utils.ParseId(_newDeviceParamRxString, UserPrefs.Preferences.IdFormat, Notification);
     }
 
 }

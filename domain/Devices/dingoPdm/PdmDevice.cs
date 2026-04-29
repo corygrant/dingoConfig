@@ -44,7 +44,9 @@ public class PdmDevice : IDeviceConfigurable
     [JsonIgnore] public string Icon { get; private set; } = string.Empty;
     [JsonIgnore] public int ConfigVersion { get; set; }
     [JsonPropertyName("name")] public string Name { get; set; }
-    [JsonPropertyName("ids")] public DeviceIds Ids { get; set; } = new DeviceIds();
+    [JsonPropertyName("ids")] public DeviceIds Ids { get; set; }
+    
+    [JsonIgnore] public static DeviceIds DefaultIds { get; } = new DeviceIds(0x0DE, 0x080, 0x081);
     
     [JsonIgnore] public List<DeviceVariable> VarMap { get; set; } = null!;
     [JsonIgnore] public List<DeviceParameter> Params { get; set; } = null!;
@@ -98,10 +100,10 @@ public class PdmDevice : IDeviceConfigurable
     }
     
     [JsonConstructor]
-    public PdmDevice(string name, int baseId)
+    public PdmDevice(string name, DeviceIds ids)
     {
         Name = name;
-        Ids.Base = baseId;
+        Ids = ids;
         Guid = Guid.NewGuid();
 
         InitFunctions();
@@ -115,10 +117,10 @@ public class PdmDevice : IDeviceConfigurable
         _paramProtocol.SetLogger(logger);
     }
 
-    public PdmDevice(PdmDeviceDefinition definition, string name, int baseId)
+    public PdmDevice(PdmDeviceDefinition definition, string name, DeviceIds ids)
     {
         Name = name;
-        Ids.Base = baseId;
+        Ids = ids;
         Guid = Guid.NewGuid();
         NumDigitalInputs = definition.NumDigitalInputs;
         NumOutputs = definition.NumOutputs;
@@ -656,21 +658,21 @@ public class PdmDevice : IDeviceConfigurable
                 ParentName = Name, Name = "device.baseId", Index = BaseIndex, SubIndex = subIndex++,
                 GetValue = () => Ids.Base, SetValue = val => Ids.Base = (int)val,
                 ValueType = Ids.Base.GetType(),
-                DefaultValue = 0x0DE
+                DefaultValue = DefaultIds.Base
             },
             new DeviceParameter
             {
                 ParentName = Name, Name = "device.paramTxId", Index = BaseIndex, SubIndex = subIndex++,
                 GetValue = () => Ids.ParamTx, SetValue = val => Ids.ParamTx = (int)val,
                 ValueType = Ids.ParamTx.GetType(),
-                DefaultValue = 0x080
+                DefaultValue = DefaultIds.ParamTx
             },
             new DeviceParameter
             {
                 ParentName = Name, Name = "device.paramRxId", Index = BaseIndex, SubIndex = subIndex++,
                 GetValue = () => Ids.ParamRx, SetValue = val => Ids.ParamRx = (int)val,
                 ValueType = Ids.ParamRx.GetType(),
-                DefaultValue = 0x081
+                DefaultValue = DefaultIds.ParamRx
             },
             new DeviceParameter
             {
@@ -921,14 +923,15 @@ public class PdmDevice : IDeviceConfigurable
         baseIdParam.SetValue(newIds.Base);
         modifyParams.Add(baseIdParam);
         
+        //Send the Rx Id first
+        var rxIdParam = Params.First(p => p is { Index: 0x0000, SubIndex: 2});
+        rxIdParam.SetValue(newIds.ParamRx);
+        modifyParams.Add(rxIdParam);
+        
         var txIdParam = Params.First(p => p is { Index: 0x0000, SubIndex: 1});
         var oldTxId = (int)txIdParam.GetValue();
         txIdParam.SetValue(newIds.ParamTx);
         modifyParams.Add(txIdParam);
-        
-        var rxIdParam = Params.First(p => p is { Index: 0x0000, SubIndex: 2});
-        rxIdParam.SetValue(newIds.ParamRx);
-        modifyParams.Add(rxIdParam);
         
         List<DeviceCanFrame> msgs = [];
 
