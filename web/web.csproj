@@ -28,15 +28,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <AdditionalFiles Include="Components\Devices\dingoPdm\Functions\CanInputsGrid.razor" />
-    <AdditionalFiles Include="Components\Devices\dingoPdm\Functions\ConditionsGrid.razor" />
-    <AdditionalFiles Include="Components\Devices\dingoPdm\Functions\CountersGrid.razor" />
-    <AdditionalFiles Include="Components\Devices\dingoPdm\Functions\FlashersGrid.razor" />
-    <AdditionalFiles Include="Components\Devices\dingoPdm\Functions\InputsGrid.razor" />
     <AdditionalFiles Include="Components\Devices\dingoPdm\Functions\OutputsGrid.razor" />
     <AdditionalFiles Include="Components\Devices\dingoPdm\Functions\OutputsPwmGrid.razor" />
     <AdditionalFiles Include="Components\Devices\dingoPdm\Functions\StarterDisableConfig.razor" />
-    <AdditionalFiles Include="Components\Devices\dingoPdm\Functions\VirtualInputsGrid.razor" />
     <AdditionalFiles Include="Components\Devices\dingoPdm\Functions\WiperConfig.razor" />
   </ItemGroup>
 

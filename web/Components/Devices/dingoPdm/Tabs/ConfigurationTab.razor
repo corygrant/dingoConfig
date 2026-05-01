@@ -1,7 +1,7 @@
-@using application.Models
 @using application.Services
 @using domain.Devices.dingoPdm
 @using web.Components.Devices.dingoPdm.Functions
+@using web.Components.Devices.Functions
 @using domain.Enums
 @using web.Services
 @inject UserPreferencesManager UserPrefs
@@ -87,7 +87,7 @@
                            ExpandedChanged="@((bool expanded) => _inputsExpanded = expanded)">
             @if (_inputsExpanded)
             {
-                <InputsGrid Inputs="Device.Inputs"/>
+                <DigitalInputsGrid Inputs="Device.Inputs"/>
             }
         </MudExpansionPanel>
 
