@@ -14,4 +14,8 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <PropertyGroup>
+    <NoWarn>NU1903</NoWarn>
+  </PropertyGroup>
+  
 </Project>

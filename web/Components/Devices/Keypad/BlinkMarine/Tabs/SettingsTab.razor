@@ -98,9 +98,9 @@
 </div>
 
 @code {
-    [Parameter] public BlinkMarineKeypadDevice Device { get; set; } = default!;
+    [Parameter] public required BlinkMarineKeypadDevice Device { get; set; }
 
-    private List<(string Name, string Value)> _icons;
+    private List<(string Name, string Value)> _icons = null!;
     
     protected override void OnInitialized()
     {

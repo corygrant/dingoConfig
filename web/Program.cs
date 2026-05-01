@@ -57,7 +57,6 @@ builder.Services.AddScoped<NotificationService>();
 builder.Services.AddTransient<UsbAdapter>();
 builder.Services.AddTransient<SlcanAdapter>();
 #if LINUX
-#warning Building with LINUX define enabled
 builder.Services.AddTransient<SocketCanAdapter>();
 #endif
 builder.Services.AddTransient<PcanAdapter>();

@@ -57,9 +57,9 @@
 </div>
 
 @code {
-    [Parameter] public GrayhillKeypadDevice Device { get; set; } = default!;
+    [Parameter] public required GrayhillKeypadDevice Device { get; set; }
     
-    private List<(string Name, string Value)> _icons;
+    private List<(string Name, string Value)> _icons = null!;
     
     protected override void OnInitialized()
     {

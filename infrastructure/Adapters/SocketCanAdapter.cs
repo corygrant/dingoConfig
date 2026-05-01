@@ -1,6 +1,5 @@
 
 #if LINUX
-#warning Building with LINUX define enabled
 using System;
 using System.Diagnostics;
 using System.Runtime.InteropServices;

@@ -33,8 +33,8 @@ public class CommsAdapterManager(IServiceProvider serviceProvider, ILogger<Comms
         {
             canIfaces = Directory.GetDirectories("/sys/class/net")
                 .Select(Path.GetFileName)
-                .Where(n => n.StartsWith("can") || n.StartsWith("vcan"))
-                .ToArray();
+                .Where(n => n != null && (n.StartsWith("can") || n.StartsWith("vcan")))
+                .ToArray()!;
         }
         catch
         {
@@ -45,7 +45,6 @@ public class CommsAdapterManager(IServiceProvider serviceProvider, ILogger<Comms
         var adapters = new List<string> { "USB", "SLCAN", "PCAN", "Sim" };
 
         #if LINUX
-        #warning Building with LINUX define enabled
         adapters.Add("SocketCAN");
         #endif
 
@@ -71,7 +70,6 @@ public class CommsAdapterManager(IServiceProvider serviceProvider, ILogger<Comms
             "USB" => serviceProvider.GetRequiredService<UsbAdapter>(),
             "SLCAN" => serviceProvider.GetRequiredService<SlcanAdapter>(),
             #if LINUX
-            #warning Building with LINUX define enabled
             "SocketCAN" => serviceProvider.GetRequiredService<SocketCanAdapter>(),
             #endif
             "PCAN" => serviceProvider.GetRequiredService<PcanAdapter>(),

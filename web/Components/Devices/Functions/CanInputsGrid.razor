@@ -51,8 +51,7 @@
                     <MudTextField @key="@($"id-{context.Item.Number}-{_refreshCounter}")"
                                   Value="@_id[context.Item.Number-1]"
                                   Disabled="!context.Item.Enabled"
-                                  ValueChanged="@((string val) => @context.Item.Id = Utils.ParseId(val, UserPrefs.Preferences.IdFormat, Notification))"
-                                  Step="1"/>
+                                  ValueChanged="@((string val) => @context.Item.Id = Utils.ParseId(val, UserPrefs.Preferences.IdFormat, Notification))"/>
                 </EditTemplate>
             </TemplateColumn>
             <PropertyColumn Property="x => x.Ide" Title="Extended" CellStyle="max-width: 100px">
@@ -144,7 +143,7 @@
     [Parameter, EditorRequired] public List<CanInput> CanInputs { get; set; } = null!;
     [Parameter, EditorRequired] public TDevice Device { get; set; } = default!;
     
-    private string[] _id;
+    private string[] _id = null!;
     
     private int _refreshCounter;
 

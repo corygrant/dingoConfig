@@ -17,8 +17,11 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
 
-<PropertyGroup Condition="'$(TargetPlatformIdentifier)' == 'linux'">
-  <DefineConstants>LINUX;$(DefineConstants)</DefineConstants>
-</PropertyGroup>
+  <PropertyGroup Condition="'$(TargetPlatformIdentifier)' == 'linux'">
+    <DefineConstants>LINUX;$(DefineConstants)</DefineConstants>
+  </PropertyGroup>
 
+  <PropertyGroup>
+    <NoWarn>NU1903</NoWarn>
+  </PropertyGroup>
 </Project>

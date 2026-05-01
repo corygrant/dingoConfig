@@ -314,7 +314,8 @@
             "3kx08" => KeypadModel.Grayhill8Key,
             "3kx12" => KeypadModel.Grayhill12Key,
             "3kx15" => KeypadModel.Grayhill15Key,
-            "3kx20" => KeypadModel.Grayhill20Key
+            "3kx20" => KeypadModel.Grayhill20Key,
+            _ => throw new ArgumentOutOfRangeException(nameof(model), model, null)
         };
     }
 
