@@ -8,8 +8,8 @@ public interface IDevice
     Guid Guid { get; }
     string Type { get; }
     string Name { get; set; }
-    DeviceIds Ids {get; set; }
-    static DeviceIds DefaultIds { get; } = null!;
+    int BaseId {get; set; }
+    static int DefaultId { get; }
     bool Connected {get;}
     TimeSpan CyclicGap {get;}
     TimeSpan CyclicPause {get;}

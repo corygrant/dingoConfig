@@ -14,12 +14,12 @@ public class DbcDevice : IDevice
     [JsonIgnore] public Guid Guid { get; }
     [JsonIgnore] public string Type => "DbcDevice";
     [JsonPropertyName("name")] public string Name { get; set; }
-    [JsonPropertyName("ids")] public DeviceIds Ids { get; set; }
+    [JsonPropertyName("baseId")] public int BaseId { get; set; }
     [JsonIgnore] private DateTime LastRxTime { get; set; }
     [JsonIgnore] public TimeSpan CyclicGap { get; } =  TimeSpan.FromSeconds(0);
     [JsonIgnore] public TimeSpan CyclicPause { get; } = TimeSpan.FromMilliseconds(0);
     
-    [JsonIgnore] public static DeviceIds DefaultIds { get; } = new DeviceIds(0x0A, 0x0, 0x0);
+    [JsonIgnore] public static int DefaultId { get; } = 0x0A;
     
     public event EventHandler? SignalsChanged;
 
@@ -45,10 +45,10 @@ public class DbcDevice : IDevice
     [JsonPropertyName("dbcSignal")] public List<DbcSignal> DbcSignals { get; init; } = [];
 
     [JsonConstructor]
-    public DbcDevice(string name, DeviceIds ids)
+    public DbcDevice(string name, int id)
     {
         Name = name;
-        Ids = ids;
+        BaseId = id;
         Guid =  Guid.NewGuid();
     }
     

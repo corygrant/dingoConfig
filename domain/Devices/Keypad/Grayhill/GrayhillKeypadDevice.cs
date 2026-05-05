@@ -16,13 +16,13 @@ public class GrayhillKeypadDevice : IKeypadDevice
     [JsonIgnore] public Guid Guid { get; }
     [JsonIgnore] public string Type => "GrayhillKeypad";
     [JsonPropertyName("name")] public string Name { get; set; }
-    [JsonPropertyName("ids")] public DeviceIds Ids { get; set; }
+    [JsonPropertyName("baseId")] public int BaseId { get; set; }
     [JsonPropertyName("cyclicGap")] public TimeSpan CyclicGap { get; } = TimeSpan.FromSeconds(1);
     [JsonPropertyName("cyclicPause")] public TimeSpan CyclicPause { get; } = TimeSpan.FromMilliseconds(1);
     [JsonPropertyName("isSim")] public bool IsSim { get; set; }
     [JsonIgnore] private DateTime _lastRxTime = DateTime.Now;
 
-    [JsonIgnore] public static DeviceIds DefaultIds { get; } = new DeviceIds(0x0A, 0x0, 0x0);
+    [JsonIgnore] public static int DefaultId { get; } = 0x0A;
 
     [JsonIgnore]
     public bool Connected
@@ -46,10 +46,10 @@ public class GrayhillKeypadDevice : IKeypadDevice
     [JsonIgnore] public Dictionary<int, List<(DbcSignal Signal, Action<double> SetValue)>> StatusSigs { get; set; } = null!;
 
     [JsonConstructor]
-    public GrayhillKeypadDevice(string name, DeviceIds ids, string model)
+    public GrayhillKeypadDevice(string name, int id, string model)
     {
         Name = name;
-        Ids = ids;
+        BaseId = id;
         Model = model;
         NumButtons = GrayhillModels.Lookup(model);
         Guid = Guid.NewGuid();
@@ -108,13 +108,13 @@ public class GrayhillKeypadDevice : IKeypadDevice
     {
         // CANopen uses BaseId as node ID (1-127)
         // Message IDs: 0x180 + nodeId, 0x200 + nodeId, etc.
-        return id == ((int)MessageId.ButtonState + Ids.Base) ||
-               id == ((int)MessageId.LedControl + Ids.Base);
+        return id == ((int)MessageId.ButtonState + BaseId) ||
+               id == ((int)MessageId.LedControl + BaseId);
     }
 
     public void Read(int id, byte[] data, ref ConcurrentDictionary<(int BaseId, int Index, int SubIndex), DeviceCanFrame> queue, List<DeviceCanFrame> outgoing)
     {
-        switch ((MessageId)id - Ids.Base)
+        switch ((MessageId)id - BaseId)
         {
             case MessageId.ButtonState:
                 //Only read button state when not sim
@@ -191,14 +191,14 @@ public class GrayhillKeypadDevice : IKeypadDevice
             DbcSignalCodec.InsertBool(data, button.State, i);
         }
     
-        return new CanFrame((int)MessageId.ButtonState + Ids.Base, 3, data);
+        return new CanFrame((int)MessageId.ButtonState + BaseId, 3, data);
     }
 
     public IEnumerable<(int MessageId, DbcSignal Signal)> GetStatusSigs()
     {
         foreach (var kvp in StatusSigs)
         {
-            var messageId = Ids.Base + kvp.Key;
+            var messageId = BaseId + kvp.Key;
             foreach (var (signal, _) in kvp.Value)
             {
                 // Create a copy with the ID populated

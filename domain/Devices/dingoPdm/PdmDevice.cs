@@ -44,13 +44,14 @@ public class PdmDevice : IDeviceConfigurable
     [JsonIgnore] public string Icon { get; private set; } = string.Empty;
     [JsonIgnore] public int ConfigVersion { get; set; }
     [JsonPropertyName("name")] public string Name { get; set; }
-    [JsonPropertyName("ids")] public DeviceIds Ids { get; set; }
-    
-    [JsonIgnore] public static DeviceIds DefaultIds { get; } = new DeviceIds(0x0DE, 0x080, 0x081);
-    
+    [JsonPropertyName("baseId")] public int BaseId { get; set; }
+    [JsonIgnore] public static int DefaultId { get; set; } = 0x0DE;
+    [JsonIgnore] public const int ConfigRxOffset = 0;
+    [JsonIgnore] public const int ConfigTxOffset = 1;
+    [JsonIgnore] public int MaxCyclicId { get; private set; }
+
     [JsonIgnore] public List<DeviceVariable> VarMap { get; set; } = null!;
     [JsonIgnore] public List<DeviceParameter> Params { get; set; } = null!;
-
     
     [JsonIgnore][Plotable(displayName:"DevState")] public DeviceState DeviceState { get; private set; }
     [JsonIgnore][Plotable(displayName:"TotalCurrent", unit:"A")] public double TotalCurrent { get; private set; }
@@ -100,10 +101,10 @@ public class PdmDevice : IDeviceConfigurable
     }
     
     [JsonConstructor]
-    public PdmDevice(string name, DeviceIds ids)
+    public PdmDevice(string name, int id)
     {
         Name = name;
-        Ids = ids;
+        BaseId = id;
         Guid = Guid.NewGuid();
 
         InitFunctions();
@@ -117,10 +118,10 @@ public class PdmDevice : IDeviceConfigurable
         _paramProtocol.SetLogger(logger);
     }
 
-    public PdmDevice(PdmDeviceDefinition definition, string name, DeviceIds ids)
+    public PdmDevice(PdmDeviceDefinition definition, string name, int id)
     {
         Name = name;
-        Ids = ids;
+        BaseId = id;
         Guid = Guid.NewGuid();
         NumDigitalInputs = definition.NumDigitalInputs;
         NumOutputs = definition.NumOutputs;
@@ -197,17 +198,19 @@ public class PdmDevice : IDeviceConfigurable
     {
         StatusSigs = new Dictionary<int, List<(DbcSignal Signal, Action<double> SetValue)>>();
 
+        var cyclicIndex = 0;
+
         // Message 0: System status
-        StatusSigs[0] = new List<(DbcSignal, Action<double>)>();
+        StatusSigs[cyclicIndex] = new List<(DbcSignal, Action<double>)>();
         for (var i = 0; i < NumDigitalInputs; i++)
         {
-            var inputIndex = i;
+            var index = i;
             StatusSigs[0].Add((
-                new DbcSignal { Name = $"Input{inputIndex + 1}.State", StartBit = i, Length = 1 },
-                val => Inputs[inputIndex].State = val != 0
+                new DbcSignal { Name = $"Input{index + 1}.State", StartBit = i, Length = 1 },
+                val => Inputs[index].State = val != 0
             ));
         }
-        StatusSigs[0].AddRange(new List<(DbcSignal, Action<double>)>
+        StatusSigs[cyclicIndex].AddRange(new List<(DbcSignal, Action<double>)>
         {
             (new DbcSignal { Name = "DeviceState", StartBit = 8, Length = 4 },
                 val => DeviceState = (DeviceState)val),
@@ -220,40 +223,45 @@ public class PdmDevice : IDeviceConfigurable
             (new DbcSignal { Name = "BoardTemp", StartBit = 48, Length = 16, Factor = 0.1, Unit = "°C" },
                 val => BoardTempC = Math.Round(val, 1))
         });
+        cyclicIndex++;
 
         // Message 1: Output currents 0-3
-        StatusSigs[1] = [];
+        StatusSigs[cyclicIndex] = [];
         for (var i = 0; i < 4 && i < NumOutputs; i++)
         {
-            var outputIndex = i;
-            StatusSigs[1].Add((
-                new DbcSignal { Name = $"Output{outputIndex + 1}.Current", StartBit = i * 16, Length = 16, Factor = 1.0, Unit = "A" },
-                val => Outputs[outputIndex].Current = val
+            var index = i;
+            StatusSigs[cyclicIndex].Add((
+                new DbcSignal { Name = $"Output{index + 1}.Current", StartBit = i * 16, Length = 16, Factor = 1.0, Unit = "A" },
+                val => Outputs[index].Current = val
             ));
         }
+
+        cyclicIndex++;
 
         // Message 2: Output currents 4-7
-        StatusSigs[2] = [];
+        StatusSigs[cyclicIndex] = [];
         for (var i = 4; i < NumOutputs; i++)
         {
-            var outputIndex = i;
-            StatusSigs[2].Add((
-                new DbcSignal { Name = $"Output{outputIndex + 1}.Current", StartBit = (i - 4) * 16, Length = 16, Factor = 1.0, Unit = "A" },
-                val => Outputs[outputIndex].Current = val
+            var index = i;
+            StatusSigs[cyclicIndex].Add((
+                new DbcSignal { Name = $"Output{index + 1}.Current", StartBit = (i - 4) * 16, Length = 16, Factor = 1.0, Unit = "A" },
+                val => Outputs[index].Current = val
             ));
         }
 
+        cyclicIndex++;
+
         // Message 3: Output states, wiper, flashers
-        StatusSigs[3] = [];
+        StatusSigs[cyclicIndex] = [];
         for (var i = 0; i < NumOutputs; i++)
         {
-            var outputIndex = i;
-            StatusSigs[3].Add((
-                new DbcSignal { Name = $"Output{outputIndex + 1}.State", StartBit = i * 4, Length = 4 },
-                val => Outputs[outputIndex].State = (OutState)val
+            var index = i;
+            StatusSigs[cyclicIndex].Add((
+                new DbcSignal { Name = $"Output{index + 1}.State", StartBit = i * 4, Length = 4 },
+                val => Outputs[index].State = (OutState)val
             ));
         }
-        StatusSigs[3].AddRange(new List<(DbcSignal, Action<double>)>
+        StatusSigs[cyclicIndex].AddRange(new List<(DbcSignal, Action<double>)>
         {
             (new DbcSignal { Name = "WiperSlowState", StartBit = 32, Length = 1 },
                 val => Wipers.SlowState = val != 0),
@@ -266,89 +274,98 @@ public class PdmDevice : IDeviceConfigurable
         });
         for (var i = 0; i < NumFlashers; i++)
         {
-            var flasherIndex = i;
-            StatusSigs[3].Add((
-                new DbcSignal { Name = $"Flasher{flasherIndex + 1}", StartBit = 48 + i, Length = 1 },
-                val => Flashers[flasherIndex].Value = val != 0 && Flashers[flasherIndex].Enabled
+            var index = i;
+            StatusSigs[cyclicIndex].Add((
+                new DbcSignal { Name = $"Flasher{index + 1}", StartBit = 48 + i, Length = 1 },
+                val => Flashers[index].Value = val != 0 && Flashers[index].Enabled
             ));
         }
+        cyclicIndex++;
 
         // Message 4: Output reset counts
-        StatusSigs[4] = [];
+        StatusSigs[cyclicIndex] = [];
         for (var i = 0; i < NumOutputs; i++)
         {
-            var outputIndex = i;
-            StatusSigs[4].Add((
-                new DbcSignal { Name = $"Output{outputIndex + 1}.ResetCount", StartBit = i * 8, Length = 8 },
-                val => Outputs[outputIndex].ResetCount = (int)val
+            var index = i;
+            StatusSigs[cyclicIndex].Add((
+                new DbcSignal { Name = $"Output{index + 1}.ResetCount", StartBit = i * 8, Length = 8 },
+                val => Outputs[index].ResetCount = (int)val
             ));
         }
 
+        cyclicIndex++;
+
         // Message 5: CAN inputs & virtual inputs
-        StatusSigs[5] = [];
+        StatusSigs[cyclicIndex] = [];
         for (var i = 0; i < NumCanInputs; i++)
         {
-            var canInputIndex = i;
-            StatusSigs[5].Add((
-                new DbcSignal { Name = $"CanInput{canInputIndex + 1}", StartBit = i, Length = 1 },
-                val => CanInputs[canInputIndex].Output = val != 0
+            var index = i;
+            StatusSigs[cyclicIndex].Add((
+                new DbcSignal { Name = $"CanInput{index + 1}", StartBit = i, Length = 1 },
+                val => CanInputs[index].Output = val != 0
             ));
         }
         for (var i = 0; i < NumVirtualInputs; i++)
         {
-            var virtualInputIndex = i;
-            StatusSigs[5].Add((
-                new DbcSignal { Name = $"VirtualInput{virtualInputIndex + 1}", StartBit = 32 + i, Length = 1 },
-                val => VirtualInputs[virtualInputIndex].Value = val != 0
+            var index = i;
+            StatusSigs[cyclicIndex].Add((
+                new DbcSignal { Name = $"VirtualInput{index + 1}", StartBit = 32 + i, Length = 1 },
+                val => VirtualInputs[index].Value = val != 0
             ));
         }
+        cyclicIndex++;
 
         // Message 6: Counters & conditions
-        StatusSigs[6] = [];
+        StatusSigs[cyclicIndex] = [];
         for (var i = 0; i < NumCounters; i++)
         {
-            var counterIndex = i;
-            StatusSigs[6].Add((
-                new DbcSignal { Name = $"Counter{counterIndex + 1}", StartBit = i * 8, Length = 8 },
-                val => Counters[counterIndex].Value = (int)val
+            var index = i;
+            StatusSigs[cyclicIndex].Add((
+                new DbcSignal { Name = $"Counter{index + 1}", StartBit = i * 8, Length = 8 },
+                val => Counters[index].Value = (int)val
             ));
         }
         for (var i = 0; i < NumConditions; i++)
         {
-            var conditionIndex = i;
-            StatusSigs[6].Add((
-                new DbcSignal { Name = $"Condition{conditionIndex + 1}", StartBit = 32 + i, Length = 1 },
-                val => Conditions[conditionIndex].Value = (int)val
+            var index = i;
+            StatusSigs[cyclicIndex].Add((
+                new DbcSignal { Name = $"Condition{index + 1}", StartBit = 32 + i, Length = 1 },
+                val => Conditions[index].Value = (int)val
             ));
         }
+        cyclicIndex++;
 
         // Messages 7-22: CAN input values (2 per message)
-        for (var msg = 7; msg <= 22; msg++)
+        for (var msg = cyclicIndex; msg <= 22; msg++)
         {
             StatusSigs[msg] = [];
             for (var i = 0; i < 2; i++)
             {
-                var canInputIndex = (msg - 7) * 2 + i;
-                if (canInputIndex < NumCanInputs)
+                var index = (msg - cyclicIndex) * 2 + i;
+                if (index < NumCanInputs)
                 {
                     StatusSigs[msg].Add((
-                        new DbcSignal { Name = $"CanInput{canInputIndex + 1}.Value", StartBit = i * 32, Length = 32 },
-                        val => CanInputs[canInputIndex].Value = (int)val
+                        new DbcSignal { Name = $"CanInput{index + 1}.Value", StartBit = i * 32, Length = 32 },
+                        val => CanInputs[index].Value = (int)val
                     ));
                 }
             }
         }
 
+        cyclicIndex++;
+
         // Message 23: Output duty cycles
-        StatusSigs[23] = [];
+        StatusSigs[cyclicIndex] = [];
         for (var i = 0; i < NumOutputs; i++)
         {
-            var outputIndex = i;
-            StatusSigs[23].Add((
-                new DbcSignal { Name = $"Output{outputIndex + 1}.DutyCycle", StartBit = i * 8, Length = 8, Unit = "%" },
-                val => Outputs[outputIndex].CurrentDutyCycle = val
+            var index = i;
+            StatusSigs[cyclicIndex].Add((
+                new DbcSignal { Name = $"Output{index + 1}.DutyCycle", StartBit = i * 8, Length = 8, Unit = "%" },
+                val => Outputs[index].CurrentDutyCycle = val
             ));
         }
+
+        MaxCyclicId = cyclicIndex;
     }
 
     private void InitVarMap()
@@ -656,23 +673,9 @@ public class PdmDevice : IDeviceConfigurable
             new DeviceParameter
             {
                 ParentName = Name, Name = "device.baseId", Index = BaseIndex, SubIndex = subIndex++,
-                GetValue = () => Ids.Base, SetValue = val => Ids.Base = (int)val,
-                ValueType = Ids.Base.GetType(),
-                DefaultValue = DefaultIds.Base
-            },
-            new DeviceParameter
-            {
-                ParentName = Name, Name = "device.paramTxId", Index = BaseIndex, SubIndex = subIndex++,
-                GetValue = () => Ids.ParamTx, SetValue = val => Ids.ParamTx = (int)val,
-                ValueType = Ids.ParamTx.GetType(),
-                DefaultValue = DefaultIds.ParamTx
-            },
-            new DeviceParameter
-            {
-                ParentName = Name, Name = "device.paramRxId", Index = BaseIndex, SubIndex = subIndex++,
-                GetValue = () => Ids.ParamRx, SetValue = val => Ids.ParamRx = (int)val,
-                ValueType = Ids.ParamRx.GetType(),
-                DefaultValue = DefaultIds.ParamRx
+                GetValue = () => BaseId, SetValue = val => BaseId = (int)val,
+                ValueType = BaseId.GetType(),
+                DefaultValue = DefaultId
             },
             new DeviceParameter
             {
@@ -760,14 +763,14 @@ public class PdmDevice : IDeviceConfigurable
     
     public bool InIdRange(int id)
     {
-        return ((id >= Ids.Base - 1) && (id <= Ids.Base + 31)) || (id == Ids.ParamRx);
+        return (id >= BaseId) && (id <= MaxCyclicId);
     }
     
     public void Read(int id, byte[] data, 
             ref ConcurrentDictionary<(int BaseId, int Index, int SubIndex), DeviceCanFrame> queue, 
             List<DeviceCanFrame> outgoing)
     {
-        var offset = id - Ids.Base;
+        var offset = id - BaseId;
 
         // Use dictionary lookup for status messages
         if (StatusSigs.TryGetValue(offset, out var signals))
@@ -781,17 +784,14 @@ public class PdmDevice : IDeviceConfigurable
         // Handle param, version and info/warn/error messages
         else
         {
-            if (offset == 31)
+            if (id == BaseId + ConfigRxOffset)
             {
+                _paramProtocol.HandleMessage(BaseId,BaseId + ConfigTxOffset, Name, data, queue, outgoing);
+                
                 ReadInfoWarnErrorMessage(data);
-            }
-
-            if (id == Ids.ParamRx)
-            {
+                
                 if (((MessageCommand)data[0]) == MessageCommand.Version)
-                    ReadVersion(Ids.Base, Name, data, queue);
-                    
-                _paramProtocol.HandleMessage(Ids.Base, Ids.ParamTx, Name, data, queue, outgoing);
+                    ReadVersion(BaseId, Name, data, queue);
             }
         }
 
@@ -802,7 +802,7 @@ public class PdmDevice : IDeviceConfigurable
     {
         foreach (var kvp in StatusSigs)
         {
-            int messageId = Ids.Base + kvp.Key;
+            int messageId = BaseId + kvp.Key;
             foreach (var (signal, _) in kvp.Value)
             {
                 // Create a copy with the ID populated
@@ -834,22 +834,22 @@ public class PdmDevice : IDeviceConfigurable
         {
             case MessageType.Info:
                 Logger.LogInformation("{Name} ID: {BaseId}, Src: {MessageSrc} {I} {I1} {I2}", 
-                    Name, Ids.Base, src, (data[3] << 8) + data[2], (data[5] << 8) + data[4], (data[7] << 8) + data[6]);
+                    Name, BaseId, src, (data[3] << 8) + data[2], (data[5] << 8) + data[4], (data[7] << 8) + data[6]);
                 break;
             case MessageType.Warning:
                 Logger.LogWarning("{Name} ID: {BaseId}, Src: {MessageSrc} {I} {I1} {I2}", 
-                    Name, Ids.Base, src, (data[3] << 8) + data[2], (data[5] << 8) + data[4], (data[7] << 8) + data[6]);
+                    Name, BaseId, src, (data[3] << 8) + data[2], (data[5] << 8) + data[4], (data[7] << 8) + data[6]);
                 break;
             case MessageType.Error:
                 Logger.LogError("{Name} ID: {BaseId}, Src: {MessageSrc} {I} {I1} {I2}", 
-                    Name, Ids.Base, src, (data[3] << 8) + data[2], (data[5] << 8) + data[4], (data[7] << 8) + data[6]);
+                    Name, BaseId, src, (data[3] << 8) + data[2], (data[5] << 8) + data[4], (data[7] << 8) + data[6]);
                 break;
         }
     }
 
     public List<DeviceCanFrame> GetReadMsgs(bool allParams)
     {
-        var id = Ids.Base;
+        var id = BaseId;
 
         var cmd = allParams ? MessageCommand.ReadAll : MessageCommand.ReadAllModified;
         var name = allParams ? "ReadAll" : "ReadAllModified";
@@ -859,10 +859,10 @@ public class PdmDevice : IDeviceConfigurable
             GetVersionMsg(),
             new()
             {
-                DeviceBaseId = Ids.Base,
+                DeviceBaseId = BaseId,
                 SendOnly = true,
                 Frame = new CanFrame(
-                    Id: Ids.ParamTx,
+                    Id: BaseId + ConfigTxOffset,
                     Len: 8,
                     Payload: [Convert.ToByte(cmd), 0, 0, 0, 0, 0, 0, 0]),
                 Name = name
@@ -881,10 +881,10 @@ public class PdmDevice : IDeviceConfigurable
         [
             new()
             {
-                DeviceBaseId = Ids.Base,
+                DeviceBaseId = BaseId,
                 Frame = new CanFrame
                 (
-                    Id: Ids.ParamTx,
+                    Id: BaseId + ConfigTxOffset,
                     Len: 8,
                     Payload: [Convert.ToByte(cmd), 0, 0, 0, 0, 0, 0, 0]
                 ),
@@ -899,11 +899,11 @@ public class PdmDevice : IDeviceConfigurable
     {
         return new DeviceCanFrame
         {
-            DeviceBaseId = Ids.Base,
+            DeviceBaseId = BaseId,
             SendOnly = true,
             Frame = new CanFrame
             (
-                Id: Ids.ParamTx,
+                Id: BaseId + ConfigTxOffset,
                 Len: 8,
                 Payload: [Convert.ToByte(MessageCommand.CheckCrc), 0, 0, 0, 0, 0, 0, 0]
             ),
@@ -911,27 +911,15 @@ public class PdmDevice : IDeviceConfigurable
         };
     }
 
-    public List<DeviceCanFrame> GetModifyMsgs(DeviceIds newIds)
+    public List<DeviceCanFrame> GetModifyMsgs(int newId)
     {
         List<DeviceParameter> modifyParams = [];
         
         //Copy params:
         //ID: 0x0000, Subindex: 0, Base ID
-        //ID: 0x0000, Subindex: 1, ParamTxId
-        //ID: 0x0000, Subindex: 2, ParamRxId
         var baseIdParam = Params.First(p => p is { Index: 0x0000, SubIndex: 0});
-        baseIdParam.SetValue(newIds.Base);
+        baseIdParam.SetValue(newId);
         modifyParams.Add(baseIdParam);
-        
-        //Send the Rx Id first
-        var rxIdParam = Params.First(p => p is { Index: 0x0000, SubIndex: 2});
-        rxIdParam.SetValue(newIds.ParamRx);
-        modifyParams.Add(rxIdParam);
-        
-        var txIdParam = Params.First(p => p is { Index: 0x0000, SubIndex: 1});
-        var oldTxId = (int)txIdParam.GetValue();
-        txIdParam.SetValue(newIds.ParamTx);
-        modifyParams.Add(txIdParam);
         
         List<DeviceCanFrame> msgs = [];
 
@@ -940,8 +928,8 @@ public class PdmDevice : IDeviceConfigurable
             msgs.Add(new DeviceCanFrame
             {
                 SendOnly = true,
-                DeviceBaseId = newIds.Base,
-                Frame = ParamCodec.ToFrame(MessageCommand.Write, parameter, oldTxId),
+                DeviceBaseId = newId,
+                Frame = ParamCodec.ToFrame(MessageCommand.Write, parameter, BaseId),
                 Name = $"Modify {parameter.Index}:{parameter.SubIndex}"
             });
         }
@@ -953,10 +941,10 @@ public class PdmDevice : IDeviceConfigurable
     {
         return new DeviceCanFrame
         {
-            DeviceBaseId = Ids.Base,
+            DeviceBaseId = BaseId,
             Frame = new CanFrame
             (
-                Id: Ids.ParamTx,
+                Id: BaseId + ConfigTxOffset,
                 Len: 8,
                 Payload: [Convert.ToByte(MessageCommand.BurnParams), 1, 3, 8, 0, 0, 0, 0]
             ),
@@ -969,10 +957,10 @@ public class PdmDevice : IDeviceConfigurable
         return new DeviceCanFrame
         {
             SendOnly = true,
-            DeviceBaseId = Ids.Base,
+            DeviceBaseId = BaseId,
             Frame = new CanFrame
             (
-                Id: Ids.ParamTx,
+                Id: BaseId + ConfigTxOffset,
                 Len: 8,
                 Payload: [Convert.ToByte(MessageCommand.Sleep), Convert.ToByte('Q'), Convert.ToByte('U'), 
                             Convert.ToByte('I'), Convert.ToByte('T'), 0, 0, 0
@@ -986,10 +974,10 @@ public class PdmDevice : IDeviceConfigurable
     {
         return new DeviceCanFrame
         {
-            DeviceBaseId = Ids.Base,
+            DeviceBaseId = BaseId,
             Frame = new CanFrame
             (
-                Id: Ids.ParamTx,
+                Id: BaseId + ConfigTxOffset,
                 Len: 8,
                 Payload: [Convert.ToByte(MessageCommand.Version), 0, 0, 0, 0, 0, 0, 0]
             ),
@@ -1002,10 +990,10 @@ public class PdmDevice : IDeviceConfigurable
         return new DeviceCanFrame
         {
             SendOnly = true,
-            DeviceBaseId = Ids.Base,
+            DeviceBaseId = BaseId,
             Frame = new CanFrame
             (
-                Id: Ids.ParamTx,
+                Id: BaseId + ConfigTxOffset,
                 Len: 8,
                 Payload: [Convert.ToByte('!'), 0, 0, 0, 0, 0, 0, 0]
             ),
@@ -1018,10 +1006,10 @@ public class PdmDevice : IDeviceConfigurable
         return new DeviceCanFrame
         {
             SendOnly = true,
-            DeviceBaseId = Ids.Base,
+            DeviceBaseId = BaseId,
             Frame = new CanFrame
             (
-                Id: Ids.ParamTx,
+                Id: BaseId + ConfigTxOffset,
                 Len: 8,
                 Payload: [
                     Convert.ToByte(MessageCommand.Bootloader), (byte)'B', (byte)'O', (byte)'O', (byte)'T', (byte)'L', 0,

@@ -44,9 +44,11 @@ public class CanboardDevice : IDeviceConfigurable
     [JsonIgnore] public string Icon { get; private set; } = string.Empty;
     [JsonIgnore] public int ConfigVersion { get; set; }
     [JsonPropertyName("name")] public string Name { get; set; }
-    [JsonPropertyName("ids")] public DeviceIds Ids { get; set; }
-    
-    [JsonIgnore] public static DeviceIds DefaultIds { get; } = new DeviceIds(0x640, 0x100, 0x101);
+    [JsonPropertyName("baseId")] public int BaseId { get; set; }
+    [JsonIgnore] public static int DefaultId { get; } = 0x640;
+    [JsonIgnore] public const int ConfigRxOffset = 0;
+    [JsonIgnore] public const int ConfigTxOffset = 1;
+    [JsonIgnore] public int MaxCyclicId { get; private set; }
     
     [JsonIgnore] public List<DeviceVariable> VarMap { get; set; } = null!;
     [JsonIgnore] public List<DeviceParameter> Params { get; set; } = null!;
@@ -93,11 +95,11 @@ public class CanboardDevice : IDeviceConfigurable
     [JsonIgnore] private ParamProtocol _paramProtocol = null!;
     
     [JsonConstructor]
-    public CanboardDevice(string name, DeviceIds ids)
+    public CanboardDevice(string name, int baseId)
     {
         Guid = Guid.NewGuid();
         Name = name;
-        Ids = ids;
+        BaseId =  baseId;
 
         // ReSharper disable VirtualMemberCallInConstructor
         InitFunctions();
@@ -105,11 +107,11 @@ public class CanboardDevice : IDeviceConfigurable
         InitParams();
     }
     
-    public CanboardDevice(CanboardDeviceDefinition definition, string name, DeviceIds ids)
+    public CanboardDevice(CanboardDeviceDefinition definition, string name, int baseId)
     {
         Guid = Guid.NewGuid();
         Name = name;
-        Ids = ids;
+        BaseId =  baseId;
 
         NumDigitalInputs = definition.NumDigitalInputs;
         NumDigitalOutputs = definition.NumOutputs;
@@ -190,19 +192,23 @@ public class CanboardDevice : IDeviceConfigurable
     {
         StatusSigs = new Dictionary<int, List<(DbcSignal Signal, Action<double> SetValue)>>();
 
+        var cyclicIndex = 0;
+        
         // Message 0 (BaseId + 0): Analog inputs 0-3 millivolts
-        StatusSigs[0] = new List<(DbcSignal, Action<double>)>();
+        StatusSigs[cyclicIndex] = new List<(DbcSignal, Action<double>)>();
         for (var i = 0; i < 4 && i < NumAnalogInputs; i++)
         {
             var index = i;
-            StatusSigs[0].Add((
+            StatusSigs[cyclicIndex].Add((
                 new DbcSignal { Name = $"AnalogInput{index + 1}.Millivolts", StartBit = index * 16, Length = 16, Unit = "mV"},
                 val => AnalogInputs[index].Millivolts = val
             ));
         }
 
+        cyclicIndex++;
+
         // Message 1 (BaseId + 1): Analog input 4 millivolts + board temperature
-        StatusSigs[1] =
+        StatusSigs[cyclicIndex] =
         [
             (new DbcSignal { Name = "AnalogInput5.Millivolts", StartBit = 0, Length = 16, Unit = "mV"},
                 val => AnalogInputs[4].Millivolts = val),
@@ -211,15 +217,16 @@ public class CanboardDevice : IDeviceConfigurable
             (new DbcSignal { Name = "BoardTempC", StartBit = 48, Length = 16, Factor = 0.01, Unit = "degC"},
                 val => BoardTempC = val)
         ];
+        cyclicIndex++;
 
         // Message 2 (BaseId + 2): Rotary switches, digital I/O, heartbeat
-        StatusSigs[2] = [];
+        StatusSigs[cyclicIndex] = [];
 
         // Rotary switch positions (4-bit each)
         for (var i = 0; i < NumAnalogInputs; i++)
         {
             var index = i;
-            StatusSigs[2].Add((
+            StatusSigs[cyclicIndex].Add((
                 new DbcSignal { Name = $"RotarySwitch{index + 1}.Pos", StartBit = index * 4, Length = 4 },
                 val => AnalogInputs[index].Rotary.Pos = (short)val
             ));
@@ -229,7 +236,7 @@ public class CanboardDevice : IDeviceConfigurable
         for (var i = 0; i < NumDigitalInputs; i++)
         {
             var index = i;
-            StatusSigs[2].Add((
+            StatusSigs[cyclicIndex].Add((
                 new DbcSignal { Name = $"DigitalInput{index + 1}.State", StartBit = 32 + index, Length = 1 },
                 val => DigitalInputs[index].State = val != 0
             ));
@@ -239,7 +246,7 @@ public class CanboardDevice : IDeviceConfigurable
         for (var i = 0; i < NumAnalogInputs; i++)
         {
             var index = i;
-            StatusSigs[2].Add((
+            StatusSigs[cyclicIndex].Add((
                 new DbcSignal { Name = $"AnalogInput{index + 1}.DigitalMode", StartBit = 40 + index, Length = 1 },
                 val => AnalogInputs[index].Switch.State = val != 0
             ));
@@ -249,17 +256,19 @@ public class CanboardDevice : IDeviceConfigurable
         for (var i = 0; i < NumDigitalOutputs; i++)
         {
             var index = i;
-            StatusSigs[2].Add((
+            StatusSigs[cyclicIndex].Add((
                 new DbcSignal { Name = $"DigitalOutput{index + 1}.State", StartBit = 48 + index, Length = 1 },
                 val => DigitalOutputs[index].State = val != 0
             ));
         }
 
         // Heartbeat (8-bit at bit 56)
-        StatusSigs[2].Add((
+        StatusSigs[cyclicIndex].Add((
             new DbcSignal { Name = "Heartbeat", StartBit = 56, Length = 8 },
             val => Heartbeat = (int)val
         ));
+
+        MaxCyclicId = cyclicIndex;
     }
     
     private void InitVarMap()
@@ -456,23 +465,9 @@ public class CanboardDevice : IDeviceConfigurable
             new DeviceParameter
             {
                 ParentName = Name, Name = "device.baseId", Index = BaseIndex, SubIndex = subIndex++,
-                GetValue = () => Ids.Base, SetValue = val => Ids.Base = (int)val,
-                ValueType = Ids.Base.GetType(),
-                DefaultValue = DefaultIds.Base
-            },
-            new DeviceParameter
-            {
-                ParentName = Name, Name = "device.paramTxId", Index = BaseIndex, SubIndex = subIndex++,
-                GetValue = () => Ids.ParamTx, SetValue = val => Ids.ParamTx = (int)val,
-                ValueType = Ids.ParamTx.GetType(),
-                DefaultValue = DefaultIds.ParamTx
-            },
-            new DeviceParameter
-            {
-                ParentName = Name, Name = "device.paramRxId", Index = BaseIndex, SubIndex = subIndex++,
-                GetValue = () => Ids.ParamRx, SetValue = val => Ids.ParamRx = (int)val,
-                ValueType = Ids.ParamRx.GetType(),
-                DefaultValue = DefaultIds.ParamRx
+                GetValue = () => BaseId, SetValue = val => BaseId = (int)val,
+                ValueType = BaseId.GetType(),
+                DefaultValue = DefaultId
             },
             new DeviceParameter
             {
@@ -539,14 +534,14 @@ public class CanboardDevice : IDeviceConfigurable
 
     public bool InIdRange(int id)
     {
-        return (id >= Ids.Base) && (id <= Ids.Base + 2) || (id == Ids.ParamRx);
+        return (id >= BaseId) && (id <= BaseId + 4);
     }
 
     public void Read(int id, byte[] data, 
                      ref ConcurrentDictionary<(int BaseId, int Index, int SubIndex), DeviceCanFrame> queue, 
                      List<DeviceCanFrame> outgoing)
     {
-        var offset = id - Ids.Base;
+        var offset = id - BaseId;
 
         // Use dictionary lookup for status messages
         if (StatusSigs.TryGetValue(offset, out var signals))
@@ -565,12 +560,12 @@ public class CanboardDevice : IDeviceConfigurable
                 ReadInfoWarnErrorMessage(data);
             }
 
-            if (id == Ids.ParamRx)
+            if (id == BaseId + ConfigRxOffset)
             {
                 if (((MessageCommand)data[0]) == MessageCommand.Version)
-                    ReadVersion(Ids.Base, Name, data, queue);
+                    ReadVersion(BaseId, Name, data, queue);
                     
-                _paramProtocol.HandleMessage(Ids.Base, Ids.ParamTx, Name, data, queue, outgoing);
+                _paramProtocol.HandleMessage(BaseId, BaseId + ConfigTxOffset, Name, data, queue, outgoing);
             }
         }
 
@@ -581,7 +576,7 @@ public class CanboardDevice : IDeviceConfigurable
     {
         foreach (var kvp in StatusSigs)
         {
-            var messageId = Ids.Base + kvp.Key;
+            var messageId = BaseId + kvp.Key;
             foreach (var (signal, _) in kvp.Value)
             {
                 // Create a copy with the ID populated
@@ -614,15 +609,15 @@ public class CanboardDevice : IDeviceConfigurable
         {
             case MessageType.Info:
                 Logger.LogInformation("{Name} ID: {BaseId}, Src: {MessageSrc} {I} {I1} {I2}", 
-                    Name, Ids.Base, src, (data[3] << 8) + data[2], (data[5] << 8) + data[4], (data[7] << 8) + data[6]);
+                    Name, BaseId, src, (data[3] << 8) + data[2], (data[5] << 8) + data[4], (data[7] << 8) + data[6]);
                 break;
             case MessageType.Warning:
                 Logger.LogWarning("{Name} ID: {BaseId}, Src: {MessageSrc} {I} {I1} {I2}", 
-                    Name, Ids.Base, src, (data[3] << 8) + data[2], (data[5] << 8) + data[4], (data[7] << 8) + data[6]);
+                    Name, BaseId, src, (data[3] << 8) + data[2], (data[5] << 8) + data[4], (data[7] << 8) + data[6]);
                 break;
             case MessageType.Error:
                 Logger.LogError("{Name} ID: {BaseId}, Src: {MessageSrc} {I} {I1} {I2}", 
-                    Name, Ids.Base, src, (data[3] << 8) + data[2], (data[5] << 8) + data[4], (data[7] << 8) + data[6]);
+                    Name, BaseId, src, (data[3] << 8) + data[2], (data[5] << 8) + data[4], (data[7] << 8) + data[6]);
                 break;
         }
     }
@@ -637,10 +632,10 @@ public class CanboardDevice : IDeviceConfigurable
             GetVersionMsg(),
             new()
             {
-                DeviceBaseId = Ids.Base,
+                DeviceBaseId = BaseId,
                 SendOnly = true,
                 Frame = new CanFrame(
-                    Id: Ids.ParamTx,
+                    Id: BaseId + ConfigTxOffset,
                     Len: 8,
                     Payload: [Convert.ToByte(cmd), 0, 0, 0, 0, 0, 0, 0]),
                 Name = name
@@ -659,10 +654,10 @@ public class CanboardDevice : IDeviceConfigurable
         [
             new()
             {
-                DeviceBaseId = Ids.Base,
+                DeviceBaseId = BaseId,
                 Frame = new CanFrame
                 (
-                    Id: Ids.ParamTx,
+                    Id: BaseId + ConfigTxOffset,
                     Len: 8,
                     Payload: [Convert.ToByte(cmd), 0, 0, 0, 0, 0, 0, 0]
                 ),
@@ -677,11 +672,11 @@ public class CanboardDevice : IDeviceConfigurable
     {
         return new DeviceCanFrame
         {
-            DeviceBaseId = Ids.Base,
+            DeviceBaseId = BaseId,
             SendOnly = true,
             Frame = new CanFrame
             (
-                Id: Ids.ParamTx,
+                Id: BaseId + ConfigTxOffset,
                 Len: 8,
                 Payload: [Convert.ToByte(MessageCommand.CheckCrc), 0, 0, 0, 0, 0, 0, 0]
             ),
@@ -689,27 +684,15 @@ public class CanboardDevice : IDeviceConfigurable
         };
     }
     
-    public List<DeviceCanFrame> GetModifyMsgs(DeviceIds newIds)
+    public List<DeviceCanFrame> GetModifyMsgs(int newId)
     {
         List<DeviceParameter> modifyParams = [];
         
         //Copy params:
         //ID: 0x0000, Subindex: 0, Base ID
-        //ID: 0x0000, Subindex: 1, ParamTxId
-        //ID: 0x0000, Subindex: 2, ParamRxId
         var baseIdParam = Params.First(p => p is { Index: 0x0000, SubIndex: 0});
-        baseIdParam.SetValue(newIds.Base);
+        baseIdParam.SetValue(newId);
         modifyParams.Add(baseIdParam);
-        
-        //Send Rx first
-        var rxIdParam = Params.First(p => p is { Index: 0x0000, SubIndex: 2});
-        rxIdParam.SetValue(newIds.ParamRx);
-        modifyParams.Add(rxIdParam);
-        
-        var txIdParam = Params.First(p => p is { Index: 0x0000, SubIndex: 1});
-        var oldTxId = (int)txIdParam.GetValue();
-        txIdParam.SetValue(newIds.ParamTx);
-        modifyParams.Add(txIdParam);
         
         List<DeviceCanFrame> msgs = [];
 
@@ -718,8 +701,8 @@ public class CanboardDevice : IDeviceConfigurable
             msgs.Add(new DeviceCanFrame
             {
                 SendOnly = true,
-                DeviceBaseId = newIds.Base,
-                Frame = ParamCodec.ToFrame(MessageCommand.Write, parameter, oldTxId),
+                DeviceBaseId = newId,
+                Frame = ParamCodec.ToFrame(MessageCommand.Write, parameter, BaseId),
                 Name = $"Modify {parameter.Index}:{parameter.SubIndex}"
             });
         }
@@ -731,10 +714,10 @@ public class CanboardDevice : IDeviceConfigurable
     {
         return new DeviceCanFrame
         {
-            DeviceBaseId = Ids.Base,
+            DeviceBaseId = BaseId,
             Frame = new CanFrame
             (
-                Id: Ids.ParamTx,
+                Id: BaseId + ConfigTxOffset,
                 Len: 8,
                 Payload: [Convert.ToByte(MessageCommand.BurnParams), 1, 3, 8, 0, 0, 0, 0]
             ),
@@ -751,10 +734,10 @@ public class CanboardDevice : IDeviceConfigurable
     {
         return new DeviceCanFrame
         {
-            DeviceBaseId = Ids.Base,
+            DeviceBaseId = BaseId,
             Frame = new CanFrame
             (
-                Id: Ids.ParamTx,
+                Id: BaseId + ConfigTxOffset,
                 Len: 8,
                 Payload: [Convert.ToByte(MessageCommand.Version), 0, 0, 0, 0, 0, 0, 0]
             ),

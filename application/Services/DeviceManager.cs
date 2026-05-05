@@ -50,7 +50,7 @@ public class DeviceManager(ILogger<DeviceManager> logger, ILoggerFactory loggerF
     /// <summary>
     /// Create and add a device of the specified type
     /// </summary>
-    public void AddDevice(string deviceType, string name, DeviceIds ids)
+    public void AddDevice(string deviceType, string name, int baseId)
     {
         var parts = deviceType.ToLower().Split('-', 2); // Limit to 2 parts max
         var devType = parts[0];
@@ -69,11 +69,11 @@ public class DeviceManager(ILogger<DeviceManager> logger, ILoggerFactory loggerF
         {
             "pdm" => new PdmDevice(
                 deviceDefinitionManager.GetByPdmType(pdmTypeId) ?? DeviceDefinitionManager.DefaultPdm,
-                name, ids),
-            "canboard" => new CanboardDevice(name, ids),
-            "dbcdevice" => new DbcDevice(name, ids),
-            "blinkkeypad" => new BlinkMarineKeypadDevice(name, ids, model),
-            "grayhillkeypad" => new GrayhillKeypadDevice(name, ids, model),
+                name, baseId),
+            "canboard" => new CanboardDevice(name, baseId),
+            "dbcdevice" => new DbcDevice(name, baseId),
+            "blinkkeypad" => new BlinkMarineKeypadDevice(name, baseId, model),
+            "grayhillkeypad" => new GrayhillKeypadDevice(name, baseId, model),
             _ => throw new ArgumentException($"Unknown device type: '{deviceType}'")
         };
 
@@ -85,7 +85,7 @@ public class DeviceManager(ILogger<DeviceManager> logger, ILoggerFactory loggerF
         GetDeviceUiState(device.Guid).NeedsRead = needsRead;
 
         logger.LogInformation("Device added: {DeviceType} '{Name}' (ID: {BaseId}, Guid: {Guid})",
-            deviceType, name, ids.Base, device.Guid);
+            deviceType, name, baseId, device.Guid);
 
         SetCyclicTimer(device);
         OnDeviceAdded(new DeviceEventArgs(device));
@@ -115,7 +115,7 @@ public class DeviceManager(ILogger<DeviceManager> logger, ILoggerFactory loggerF
     /// </summary>
     private IDevice? GetDeviceByBaseId(int baseId)
     {
-        return _devices.Values.FirstOrDefault(d => d.Ids.Base == baseId);
+        return _devices.Values.FirstOrDefault(d => d.BaseId == baseId);
     }
 
     /// <summary>
@@ -496,7 +496,7 @@ public class DeviceManager(ILogger<DeviceManager> logger, ILoggerFactory loggerF
     /// Modify device, name and base ID
     /// Sends modify message to device
     /// </summary>
-    public void ModifyDeviceConfig(Guid deviceId, string newName, DeviceIds newIds)
+    public void ModifyDeviceConfig(Guid deviceId, string newName, int baseId)
     {
         var device = GetDevice(deviceId);
         if (device is not IDeviceConfigurable configurable)
@@ -504,11 +504,11 @@ public class DeviceManager(ILogger<DeviceManager> logger, ILoggerFactory loggerF
             if (device == null) return;
             
             device.Name = newName;
-            device.Ids = newIds;
+            device.BaseId = baseId;
             return;
         }
 
-        var modifyMsgs = configurable.GetModifyMsgs(newIds);
+        var modifyMsgs = configurable.GetModifyMsgs(baseId);
         foreach (var msg in modifyMsgs)
         {
             QueueMessage(msg);
@@ -521,7 +521,7 @@ public class DeviceManager(ILogger<DeviceManager> logger, ILoggerFactory loggerF
         Thread.Sleep(300);
 
         device.Name = newName;
-        device.Ids = newIds;
+        device.BaseId = baseId;
     }
 
     /// <summary>

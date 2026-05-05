@@ -10,7 +10,7 @@ public interface IDeviceConfigurable : IDevice
     DeviceCanFrame GetCheckMsg();
     List<DeviceCanFrame> GetReadMsgs(bool allParams);
     List<DeviceCanFrame> GetWriteMsgs(bool allParams);
-    List<DeviceCanFrame> GetModifyMsgs(DeviceIds ids);
+    List<DeviceCanFrame> GetModifyMsgs(int baseId);
     DeviceCanFrame GetBurnMsg();
     DeviceCanFrame GetVersionMsg();
     bool CanSleep { get; }

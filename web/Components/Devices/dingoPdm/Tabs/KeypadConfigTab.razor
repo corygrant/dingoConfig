@@ -200,7 +200,7 @@
         // Re-establish live reference to the keypad device by matching BaseId
         _selectedKeypad = DeviceManager.GetAllDevices()
             .OfType<IKeypadDevice>()
-            .FirstOrDefault(d => d.Ids.Base == Keypad.Id);
+            .FirstOrDefault(d => d.BaseId == Keypad.Id);
 
         if (_selectedKeypad == null) return;
 
@@ -235,11 +235,11 @@
         if ((Keypad.IsBlinkMarine() && e.Device.GetType() == typeof(BlinkMarineKeypadDevice)) ||
             (Keypad.IsGrayhill() && e.Device.GetType() == typeof(GrayhillKeypadDevice)))
         {
-            if (e.Device.Ids.Base == Keypad.Id)
+            if (e.Device.BaseId == Keypad.Id)
                 Keypad.Name = e.Device.Name;
 
             if (e.Device.Name == Keypad.Name)
-                Keypad.Id = e.Device.Ids.Base;
+                Keypad.Id = e.Device.BaseId;
         }
 
         // Re-establish (or clear) the live device reference after any device change
@@ -258,7 +258,7 @@
         _selectedKeypad = dev;
 
         Keypad.Name = dev.Name;
-        Keypad.Id = dev.Ids.Base;
+        Keypad.Id = dev.BaseId;
         Keypad.Model = ModelToKeypadModel(dev.Model);
 
         if (Keypad.IsBlinkMarine())

@@ -138,7 +138,7 @@
                 Notification.NewSuccess($"Opened {fileName} - {devices.Count} device(s) loaded");
                 
                 foreach(var device in devices)
-                    Notification.NewSuccess($"Loaded device: {device.Name}, ID: {device.Ids.Base}");
+                    Notification.NewSuccess($"Loaded device: {device.Name}, ID: {device.BaseId}");
             }
             else
             {
