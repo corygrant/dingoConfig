@@ -48,6 +48,8 @@ public class CanboardDevice : IDeviceConfigurable
     [JsonIgnore] public static int DefaultId { get; } = 0x640;
     [JsonIgnore] public const int ConfigRxOffset = 0;
     [JsonIgnore] public const int ConfigTxOffset = 1;
+    [JsonIgnore] public const int CyclicRxOffset = 2;
+    
     [JsonIgnore] public int MaxCyclicId { get; private set; }
     
     [JsonIgnore] public List<DeviceVariable> VarMap { get; set; } = null!;
@@ -192,9 +194,9 @@ public class CanboardDevice : IDeviceConfigurable
     {
         StatusSigs = new Dictionary<int, List<(DbcSignal Signal, Action<double> SetValue)>>();
 
-        var cyclicIndex = 0;
+        var cyclicIndex = CyclicRxOffset;
         
-        // Message 0 (BaseId + 0): Analog inputs 0-3 millivolts
+        // Message 0 (BaseId + 2): Analog inputs 0-3 millivolts
         StatusSigs[cyclicIndex] = new List<(DbcSignal, Action<double>)>();
         for (var i = 0; i < 4 && i < NumAnalogInputs; i++)
         {
@@ -207,7 +209,7 @@ public class CanboardDevice : IDeviceConfigurable
 
         cyclicIndex++;
 
-        // Message 1 (BaseId + 1): Analog input 4 millivolts + board temperature
+        // Message 1 (BaseId + 3): Analog input 4 millivolts + board temperature
         StatusSigs[cyclicIndex] =
         [
             (new DbcSignal { Name = "AnalogInput5.Millivolts", StartBit = 0, Length = 16, Unit = "mV"},
@@ -219,7 +221,7 @@ public class CanboardDevice : IDeviceConfigurable
         ];
         cyclicIndex++;
 
-        // Message 2 (BaseId + 2): Rotary switches, digital I/O, heartbeat
+        // Message 2 (BaseId + 4): Rotary switches, digital I/O, heartbeat
         StatusSigs[cyclicIndex] = [];
 
         // Rotary switch positions (4-bit each)
@@ -534,7 +536,7 @@ public class CanboardDevice : IDeviceConfigurable
 
     public bool InIdRange(int id)
     {
-        return (id >= BaseId) && (id <= BaseId + 4);
+        return (id >= BaseId) && (id <= MaxCyclicId);
     }
 
     public void Read(int id, byte[] data, 
@@ -555,17 +557,14 @@ public class CanboardDevice : IDeviceConfigurable
         // Handle param, version and info/warn/error messages
         else
         {
-            if (offset == 31)
-            {
-                ReadInfoWarnErrorMessage(data);
-            }
-
             if (id == BaseId + ConfigRxOffset)
             {
+                _paramProtocol.HandleMessage(BaseId,BaseId + ConfigTxOffset, Name, data, queue, outgoing);
+                
+                ReadInfoWarnErrorMessage(data);
+                
                 if (((MessageCommand)data[0]) == MessageCommand.Version)
                     ReadVersion(BaseId, Name, data, queue);
-                    
-                _paramProtocol.HandleMessage(BaseId, BaseId + ConfigTxOffset, Name, data, queue, outgoing);
             }
         }
 

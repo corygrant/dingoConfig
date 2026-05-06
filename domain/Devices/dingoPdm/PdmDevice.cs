@@ -48,6 +48,7 @@ public class PdmDevice : IDeviceConfigurable
     [JsonIgnore] public static int DefaultId { get; set; } = 0x0DE;
     [JsonIgnore] public const int ConfigRxOffset = 0;
     [JsonIgnore] public const int ConfigTxOffset = 1;
+    [JsonIgnore] public const int CyclicRxOffset = 2;
     [JsonIgnore] public int MaxCyclicId { get; private set; }
 
     [JsonIgnore] public List<DeviceVariable> VarMap { get; set; } = null!;
@@ -198,7 +199,7 @@ public class PdmDevice : IDeviceConfigurable
     {
         StatusSigs = new Dictionary<int, List<(DbcSignal Signal, Action<double> SetValue)>>();
 
-        var cyclicIndex = 0;
+        var cyclicIndex = CyclicRxOffset;
 
         // Message 0: System status
         StatusSigs[cyclicIndex] = new List<(DbcSignal, Action<double>)>();
