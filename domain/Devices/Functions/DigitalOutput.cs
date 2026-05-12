@@ -3,7 +3,7 @@ using domain.Common;
 using domain.Interfaces;
 using domain.Models;
 
-namespace domain.Devices.Functions.Canboard;
+namespace domain.Devices.Functions;
 
 public class DigitalOutput : IDeviceFunction
 {

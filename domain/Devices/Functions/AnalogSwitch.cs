@@ -4,7 +4,7 @@ using domain.Enums;
 using domain.Interfaces;
 using domain.Models;
 
-namespace domain.Devices.Functions.Canboard;
+namespace domain.Devices.Functions;
 
 [method: JsonConstructor]
 public class AnalogSwitch(int number, string name) : IDeviceFunction

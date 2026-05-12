@@ -4,7 +4,6 @@ using domain.Common;
 using domain.Enums;
 using domain.Enums.Canboard;
 using domain.Devices.Functions;
-using domain.Devices.Functions.Canboard;
 using domain.Interfaces;
 using domain.Models;
 using Microsoft.Extensions.Logging;
@@ -17,9 +16,9 @@ public class CanboardDevice : IDeviceConfigurable
 {
     [JsonIgnore] protected ILogger<CanboardDevice> Logger = null!;
 
-    [JsonIgnore] protected int MinMajorVersion { get; private set; } = 3;
-    [JsonIgnore] protected int MinMinorVersion { get; private set; } = 0;
-    [JsonIgnore] protected int MinBuildVersion { get; private set; } = 0;
+    [JsonIgnore] protected int MinMajorVersion { get; private set; } = 0;
+    [JsonIgnore] protected int MinMinorVersion { get; private set; } = 5;
+    [JsonIgnore] protected int MinBuildVersion { get; private set; } = 1;
 
     [JsonIgnore] protected int NumAnalogInputs { get; private set; } = 5; //Also serve as rotary switches and analog/dig inputs
     [JsonIgnore] protected int NumDigitalInputs { get; private set; } = 8;
@@ -62,7 +61,9 @@ public class CanboardDevice : IDeviceConfigurable
     public event Action<string>? SuccessNotification;
     
     [JsonIgnore] private DateTime LastRxTime { get; set; }
+    [JsonPropertyName("sleepEnabled")] public bool SleepEnabled { get; set; }
     [JsonPropertyName("filtersEnabled")] public bool CanFiltersEnabled { get; set; }
+    [JsonPropertyName("connectUsbToCan")] public bool ConnectUsbToCan { get; set; } = true;
     [JsonPropertyName("bitrate")] public CanBitRate BitRate { get; set; } = CanBitRate.BitRate500K;
     [JsonIgnore] public TimeSpan CyclicGap { get; } =  TimeSpan.FromSeconds(0);
     [JsonIgnore] public TimeSpan CyclicPause { get; } = TimeSpan.FromMilliseconds(0);
@@ -221,7 +222,7 @@ public class CanboardDevice : IDeviceConfigurable
         ];
         cyclicIndex++;
 
-        // Message 2 (BaseId + 4): Rotary switches, digital I/O, heartbeat
+        // Message 2 (BaseId + 4): Rotary switches, flashers, digital I/O, heartbeat
         StatusSigs[cyclicIndex] = [];
 
         // Rotary switch positions (4-bit each)
@@ -231,6 +232,16 @@ public class CanboardDevice : IDeviceConfigurable
             StatusSigs[cyclicIndex].Add((
                 new DbcSignal { Name = $"RotarySwitch{index + 1}.Pos", StartBit = index * 4, Length = 4 },
                 val => AnalogInputs[index].Rotary.Pos = (short)val
+            ));
+        }
+        
+        // Flashers (1-bit each starting at bit 24)
+        for (var i = 0; i < NumFlashers; i++)
+        {
+            var index = i;
+            StatusSigs[cyclicIndex].Add((
+                new DbcSignal { Name = $"Flasher{index + 1}.State", StartBit = 24 + index, Length = 1 },
+                val => Flashers[index].Value = val != 0
             ));
         }
 
@@ -269,6 +280,66 @@ public class CanboardDevice : IDeviceConfigurable
             new DbcSignal { Name = "Heartbeat", StartBit = 56, Length = 8 },
             val => Heartbeat = (int)val
         ));
+        
+        cyclicIndex++;
+
+        // Message 3 (BaseId + 4): CAN inputs & virtual inputs
+        StatusSigs[cyclicIndex] = [];
+        for (var i = 0; i < NumCanInputs; i++)
+        {
+            var index = i;
+            StatusSigs[cyclicIndex].Add((
+                new DbcSignal { Name = $"CanInput{index + 1}", StartBit = i, Length = 1 },
+                val => CanInputs[index].Output = val != 0
+            ));
+        }
+        for (var i = 0; i < NumVirtualInputs; i++)
+        {
+            var index = i;
+            StatusSigs[cyclicIndex].Add((
+                new DbcSignal { Name = $"VirtualInput{index + 1}", StartBit = 32 + i, Length = 1 },
+                val => VirtualInputs[index].Value = val != 0
+            ));
+        }
+        
+        cyclicIndex++;
+
+        // Message 4 (BaseId + 5): Counters & conditions
+        StatusSigs[cyclicIndex] = [];
+        for (var i = 0; i < NumCounters; i++)
+        {
+            var index = i;
+            StatusSigs[cyclicIndex].Add((
+                new DbcSignal { Name = $"Counter{index + 1}", StartBit = i * 8, Length = 8 },
+                val => Counters[index].Value = (int)val
+            ));
+        }
+        for (var i = 0; i < NumConditions; i++)
+        {
+            var index = i;
+            StatusSigs[cyclicIndex].Add((
+                new DbcSignal { Name = $"Condition{index + 1}", StartBit = 32 + i, Length = 1 },
+                val => Conditions[index].Value = (int)val
+            ));
+        }
+        cyclicIndex++;
+
+        // Message 5-8 (BaseId + 6 to BaseId + 9): CAN input values (2 per message)
+        for (var msg = cyclicIndex; msg <= 10; msg++)
+        {
+            StatusSigs[msg] = [];
+            for (var i = 0; i < 2; i++)
+            {
+                var index = (msg - cyclicIndex) * 2 + i;
+                if (index < NumCanInputs)
+                {
+                    StatusSigs[msg].Add((
+                        new DbcSignal { Name = $"CanInput{index + 1}.Value", StartBit = i * 32, Length = 32 },
+                        val => CanInputs[index].Value = (int)val
+                    ));
+                }
+            }
+        }
 
         MaxCyclicId = cyclicIndex;
     }
@@ -293,6 +364,15 @@ public class CanboardDevice : IDeviceConfigurable
             GetName = () => "Always On",
             PropertyName = "Value",
             DataType = "bool",
+            VariableIndex = index++,
+            SingleVariable = true
+        });
+        
+        VarMap.Add(new DeviceVariable
+        {
+            GetName = () => "State",
+            PropertyName = "State",
+            DataType = "int",
             VariableIndex = index++,
             SingleVariable = true
         });
@@ -480,10 +560,24 @@ public class CanboardDevice : IDeviceConfigurable
             },
             new DeviceParameter
             {
+                ParentName = Name, Name = "device.sleepEnabled", Index = BaseIndex, SubIndex = subIndex++,
+                GetValue = () => SleepEnabled, SetValue = val => SleepEnabled = (bool)val,
+                ValueType = SleepEnabled.GetType(),
+                DefaultValue = false
+            },
+            new DeviceParameter
+            {
                 ParentName = Name, Name = "device.canFiltersEnabled", Index = BaseIndex, SubIndex = subIndex++,
                 GetValue = () => CanFiltersEnabled, SetValue = val => CanFiltersEnabled = (bool)val,
                 ValueType = CanFiltersEnabled.GetType(),
                 DefaultValue = false
+            },
+            new DeviceParameter
+            {
+                ParentName = Name, Name = "device.connectUsbToCan", Index = BaseIndex, SubIndex = subIndex++,
+                GetValue = () => ConnectUsbToCan, SetValue = val => ConnectUsbToCan = (bool)val,
+                ValueType = ConnectUsbToCan.GetType(),
+                DefaultValue = true
             }
         ]);
         
@@ -496,6 +590,7 @@ public class CanboardDevice : IDeviceConfigurable
         foreach (var canOutput in CanOutputs) allParams.AddRange(canOutput.Params);
         foreach (var digitalOutput in DigitalOutputs) allParams.AddRange(digitalOutput.Params);
         foreach (var analogInput in AnalogInputs) allParams.AddRange(analogInput.Params);
+        
         Params = allParams;
 
         _paramProtocol = new ParamProtocol(this, Params)
@@ -536,7 +631,7 @@ public class CanboardDevice : IDeviceConfigurable
 
     public bool InIdRange(int id)
     {
-        return (id >= BaseId) && (id <= MaxCyclicId);
+        return (id >= BaseId) && (id <= MaxCyclicId + BaseId);
     }
 
     public void Read(int id, byte[] data, 

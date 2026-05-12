@@ -19,7 +19,7 @@ public class PdmDevice : IDeviceConfigurable
 
     [JsonIgnore] protected int MinMajorVersion { get; private set; } = 0;
     [JsonIgnore] protected int MinMinorVersion { get; private set; } = 5;
-    [JsonIgnore] protected int MinBuildVersion { get; private set; } = 0;
+    [JsonIgnore] protected int MinBuildVersion { get; private set; } = 1;
 
     [JsonIgnore] protected int NumDigitalInputs { get; private set; } = 2;
     [JsonIgnore] protected int NumOutputs { get; private set; } = 8;
@@ -708,7 +708,6 @@ public class PdmDevice : IDeviceConfigurable
             }
         ]);
         
-        foreach (var canOutput in CanOutputs) allParams.AddRange(canOutput.Params);
         foreach (var output in Outputs) allParams.AddRange(output.Params);
         foreach (var input in Inputs) allParams.AddRange(input.Params);
         foreach (var canInput in CanInputs) allParams.AddRange(canInput.Params);
@@ -718,7 +717,7 @@ public class PdmDevice : IDeviceConfigurable
         foreach (var flasher in Flashers) allParams.AddRange(flasher.Params);
         allParams.AddRange(StarterDisable.Params);
         allParams.AddRange(Wipers.Params);
-        // Firmware groups all keypad base params first, then all buttons, then all dials
+        foreach (var canOutput in CanOutputs) allParams.AddRange(canOutput.Params);
         foreach (var keypad in Keypads) allParams.AddRange(keypad.BaseParams);
         foreach (var keypad in Keypads) allParams.AddRange(keypad.ButtonParams);
         foreach (var keypad in Keypads) allParams.AddRange(keypad.DialParams);
