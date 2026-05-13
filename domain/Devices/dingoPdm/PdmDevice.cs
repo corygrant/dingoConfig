@@ -206,7 +206,7 @@ public class PdmDevice : IDeviceConfigurable
         for (var i = 0; i < NumDigitalInputs; i++)
         {
             var index = i;
-            StatusSigs[0].Add((
+            StatusSigs[cyclicIndex].Add((
                 new DbcSignal { Name = $"Input{index + 1}.State", StartBit = i, Length = 1 },
                 val => Inputs[index].State = val != 0
             ));

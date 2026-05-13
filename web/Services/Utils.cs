@@ -33,12 +33,13 @@ public static class Utils
         return 0;
     }
     
-    public static string GetIcon(string icon)
+    public static string GetIcon(string icon, string webRootPath = "")
     {
         //If icon in catalog is svg, read svg contents
         if (icon.EndsWith(".svg"))
         {
-            return File.ReadAllText(icon);
+            var path = Path.Combine(webRootPath, "Icons", icon);
+            return File.ReadAllText(path);
         }
 
         return typeof(Icons.Material.Filled).GetField(icon)?.GetValue(null) as string

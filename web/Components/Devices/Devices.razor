@@ -9,6 +9,7 @@
 @using domain.Models
 @inject DeviceManager DeviceManager
 @inject NotificationService Notification
+@inject IWebHostEnvironment Env
 @inject IDialogService DialogService
 @inject UserPreferencesManager UserPrefs
 @inject NavigationManager Navigation
@@ -406,9 +407,9 @@
         Navigation.NavigateTo($"/device/{deviceId}");
     }
     
-    private static string GetDeviceIcon(IDevice device) => device switch
+    private string GetDeviceIcon(IDevice device) => device switch
     {
-        PdmDevice pdm => Utils.GetIcon(pdm.Icon),
+        PdmDevice pdm => Utils.GetIcon(pdm.Icon, Env.WebRootPath),
         _ => device.GetType().Name switch
         {
             "CanboardDevice" => Icons.Material.Filled.DeveloperBoard,

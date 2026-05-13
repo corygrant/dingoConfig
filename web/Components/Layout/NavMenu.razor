@@ -4,6 +4,7 @@
 @using application.Services
 @inject DeviceManager DeviceManager
 @inject IHostApplicationLifetime AppLifetime
+@inject IWebHostEnvironment Env
 @inject IDialogService DialogService
 @inject NotificationService Notification
 @rendermode InteractiveServer
@@ -97,7 +98,7 @@
         // https://mudblazor.com/features/icons#icons
         return device switch
         {
-            domain.Devices.dingoPdm.PdmDevice pdm => Utils.GetIcon(pdm.Icon),
+            domain.Devices.dingoPdm.PdmDevice pdm => Utils.GetIcon(pdm.Icon, Env.WebRootPath),
             _ => device.GetType().Name switch
             {
                 "CanboardDevice" => Icons.Material.Filled.DeveloperBoard,

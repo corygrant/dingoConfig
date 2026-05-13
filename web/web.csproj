@@ -38,6 +38,10 @@
     <Folder Include="wwwroot\lib\" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Include="wwwroot\Icons\PTDPDM.svg" />
+  </ItemGroup>
+
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <AssemblyName>dingoConfig</AssemblyName>
