@@ -358,6 +358,7 @@ public class SlcanAdapter : ICommsAdapter
     {
         return canBitRate switch
         {
+            CanBitRate.BitRate100K => 3,
             CanBitRate.BitRate125K => 4,
             CanBitRate.BitRate250K => 5,
             CanBitRate.BitRate500K => 6,

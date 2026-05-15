@@ -241,6 +241,7 @@ public class PcanAdapter  : ICommsAdapter
             CanBitRate.BitRate500K => Bitrate.Pcan500,
             CanBitRate.BitRate250K => Bitrate.Pcan250,
             CanBitRate.BitRate125K => Bitrate.Pcan125,
+            CanBitRate.BitRate100K => Bitrate.Pcan100,
             _ => Bitrate.Pcan500
         };
     }

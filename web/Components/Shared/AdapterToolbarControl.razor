@@ -100,16 +100,16 @@
                 @* Show bitrate selector for SLCAN and PCAN (not USB or Sim) *@
                 @if (!string.IsNullOrEmpty(_selectedAdapterType) && _selectedAdapterType != "USB" && _selectedAdapterType != "Sim")
                 {
-                    <MudSelect @bind-Value="_selectedBitrate"
+                    <MudSelect @bind-Value="@_selectedBitrate"
                                Label="Bitrate"
                                Variant="Variant.Outlined"
                                Dense="true"
-                               Class="mb-3"
-                               T="string">
-                        <MudSelectItem T="string" Value="@("1000K")">1000K</MudSelectItem>
-                        <MudSelectItem T="string" Value="@("500K")">500K</MudSelectItem>
-                        <MudSelectItem T="string" Value="@("250K")">250K</MudSelectItem>
-                        <MudSelectItem T="string" Value="@("125K")">125K</MudSelectItem>
+                               Class="mb-3">
+                        <MudSelectItem Value="@CanBitRate.BitRate1000K">1000K</MudSelectItem>
+                        <MudSelectItem Value="@CanBitRate.BitRate500K">500K</MudSelectItem>
+                        <MudSelectItem Value="@CanBitRate.BitRate250K">250K</MudSelectItem>
+                        <MudSelectItem Value="@CanBitRate.BitRate125K">125K</MudSelectItem>
+                        <MudSelectItem Value="@CanBitRate.BitRate100K">100K</MudSelectItem>
                     </MudSelect>
                 }
                 else
@@ -175,7 +175,7 @@
 
     private string _selectedAdapterType = string.Empty;
     private string _selectedPort = string.Empty;
-    private string _selectedBitrate = "500K";
+    private CanBitRate _selectedBitrate = CanBitRate.BitRate500K;
 
     protected override void OnInitialized()
     {
@@ -185,9 +185,8 @@
 
         if (!string.IsNullOrEmpty(UserPrefs.Preferences.SelectedPort))
             _selectedPort = UserPrefs.Preferences.SelectedPort;
-
-        if (!string.IsNullOrEmpty(UserPrefs.Preferences.SelectedBitrate))
-            _selectedBitrate = UserPrefs.Preferences.SelectedBitrate;
+        
+        _selectedBitrate = UserPrefs.Preferences.SelectedBitrate;
 
         LoadData();
         Refresh();
@@ -283,24 +282,9 @@
                 _ => _selectedPort
             };
 
-            // Set bitrate based on adapter type
-            var bitrateString = _selectedAdapterType is "Sim" or "USB"
-                ? "1000K"
-                : _selectedBitrate;
-
-            // Parse bitrate enum
-            CanBitRate bitrate = bitrateString switch
-            {
-                "1000K" => CanBitRate.BitRate1000K,
-                "500K" => CanBitRate.BitRate500K,
-                "250K" => CanBitRate.BitRate250K,
-                "125K" => CanBitRate.BitRate125K,
-                _ => CanBitRate.BitRate500K
-            };
-
             // Get adapter instance
             var adapter = CommsAdapterManager.ToAdapter(_selectedAdapterType);
-            var success = await CommsAdapterManager.ConnectAsync(adapter, port, bitrate, CancellationToken.None);
+            var success = await CommsAdapterManager.ConnectAsync(adapter, port, _selectedBitrate, CancellationToken.None);
 
             if (success)
             {
@@ -365,10 +349,10 @@
 
         // PCAN needs bitrate but not port
         if (_selectedAdapterType == "PCAN")
-            return !string.IsNullOrWhiteSpace(_selectedBitrate);
+            return true;
 
         // SLCAN needs both port and bitrate
-        return !string.IsNullOrWhiteSpace(_selectedPort) && !string.IsNullOrWhiteSpace(_selectedBitrate);
+        return !string.IsNullOrWhiteSpace(_selectedPort);
     }
 
     private Color GetAdapterChipColor()
