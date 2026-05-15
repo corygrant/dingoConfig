@@ -763,7 +763,7 @@ public class PdmDevice : IDeviceConfigurable
     
     public bool InIdRange(int id)
     {
-        return (id >= BaseId) && (id <= MaxCyclicId);
+        return (id >= BaseId) && (id <= MaxCyclicId + BaseId);
     }
     
     public void Read(int id, byte[] data, 
