@@ -33,6 +33,7 @@ public class Output : IDeviceFunction
 
     [JsonPropertyName("dutyCycleDenominator")]
     public int DutyCycleDenominator { get; set; } = 100;
+    [JsonPropertyName("minDutyCycle")] public  int MinDutyCycle { get; set; } = 0;
     [JsonPropertyName("primaryOutput")] public int PrimaryOutput { get; set; } = -1; //-1 = pairing disabled
     
     [JsonIgnore][Plotable(displayName:"Current", unit:"A")] public double Current { get; set; }
@@ -176,6 +177,13 @@ public class Output : IDeviceFunction
                 GetValue = () => DutyCycleDenominator, SetValue = val => DutyCycleDenominator = (int)val,
                 ValueType = DutyCycleDenominator.GetType(),
                 DefaultValue = 100
+            },
+            new DeviceParameter
+            {
+                ParentName  = Name, Name = $"output[{Number}].minDutyCycle",  Index = BaseIndex + (Number - 1), SubIndex = subIndex++,
+                GetValue = () => MinDutyCycle, SetValue = val => MinDutyCycle = (int)val,
+                ValueType = MinDutyCycle.GetType(),
+                DefaultValue = 0
             },
             new DeviceParameter
             {

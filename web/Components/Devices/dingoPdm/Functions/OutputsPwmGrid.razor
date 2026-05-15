@@ -61,7 +61,7 @@
                     <MudIconButton Icon="@Icons.Material.Filled.Search"
                                    Color="Color.Primary"
                                    Size="Size.Small"
-                                   Disabled="(!context.Item.PwmEnabled) || context.Item.PrimaryOutput >= 0"
+                                   Disabled="(!context.Item.PwmEnabled) || context.Item.PrimaryOutput >= 0 || !context.Item.VariableDutyCycle"
                                    Style="max-width: 20px"
                                    OnClick="@(() => OpenVariableSelectorAsync(["int"], v => context.Item.DutyCycleInput = v))">
                     </MudIconButton>
@@ -73,8 +73,16 @@
             <EditTemplate>
                 <MudNumericField @key="@($"dcDenom-{context.Item.Number}-{_refreshCounter}")"
                                  Value="@context.Item.DutyCycleDenominator"
-                                 Disabled="!context.Item.PwmEnabled || context.Item.PrimaryOutput >= 0"
+                                 Disabled="!context.Item.PwmEnabled || context.Item.PrimaryOutput >= 0 || !context.Item.VariableDutyCycle"
                                  ValueChanged="@((int val) => OnDutyCycleDenominatorChanged(context.Item, val))"/>
+            </EditTemplate>
+        </TemplateColumn>
+        <TemplateColumn Title="Min DC (%)" Resizable="true" CellStyle="max-width: 100px">
+            <EditTemplate>
+                <MudNumericField @key="@($"mindc-{context.Item.Number}-{_refreshCounter}")"
+                                 Value="@context.Item.MinDutyCycle"
+                                 Disabled="!context.Item.PwmEnabled || context.Item.PrimaryOutput >= 0 || (!context.Item.VariableDutyCycle && !context.Item.SoftStartEnabled)"
+                                 ValueChanged="@((int val) => OnMinDutyCycleChanged(context.Item, val))"/>
             </EditTemplate>
         </TemplateColumn>
         <PropertyColumn Property="x => x.SoftStartEnabled" Title="Soft Start" CellStyle="max-width: 100px">
@@ -122,6 +130,18 @@
             Notification.NewWarning($"{item.Name}.DutyCycle must be {min} to {max}");
         }
         item.FixedDutyCycle = Math.Clamp(value, min, max);
+        _refreshCounter++;
+    }
+    
+    private void OnMinDutyCycleChanged(Output item, int value)
+    {
+        const int min = 0;
+        const int max = 100;
+        if (value < min || value > max)
+        {
+            Notification.NewWarning($"{item.Name}.MinDutyCycle must be {min} to {max}");
+        }
+        item.MinDutyCycle = Math.Clamp(value, min, max);
         _refreshCounter++;
     }
 
