@@ -102,10 +102,10 @@ public class PdmDevice : IDeviceConfigurable
     }
     
     [JsonConstructor]
-    public PdmDevice(string name, int id)
+    public PdmDevice(string name, int baseId)
     {
         Name = name;
-        BaseId = id;
+        BaseId = baseId;
         Guid = Guid.NewGuid();
 
         InitFunctions();
