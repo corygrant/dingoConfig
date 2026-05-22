@@ -195,4 +195,46 @@ public class Output : IDeviceFunction
             }
         ];
     }
+    
+    public List<DeviceVariable> GetVarMap(ref int index)
+    {
+        List<DeviceVariable> varMap =
+        [
+            new()
+            {
+                GetName = () => Name,
+                PropertyName = "On",
+                DataType = "bool",
+                VariableIndex = index++,
+                SingleVariable = false
+            },
+            new()
+            {
+                GetName = () => Name,
+                PropertyName = "Current",
+                DataType = "float",
+                VariableIndex = index++,
+                SingleVariable = false
+            },
+            new()
+            {
+                GetName = () => Name,
+                PropertyName = "Overcurrent",
+                DataType = "bool",
+                VariableIndex = index++,
+                SingleVariable = false
+            },
+            new()
+            {
+                GetName = () => Name,
+                PropertyName = "Fault",
+                DataType = "bool",
+                VariableIndex = index++,
+                SingleVariable = false
+            }
+
+        ];
+
+        return varMap;
+    }
 }

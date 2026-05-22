@@ -152,6 +152,52 @@ public class KeypadMaster : IDeviceFunction
         DialParams = Dials.SelectMany(d => d.Params).ToList();
         Params = [..BaseParams, ..ButtonParams, ..DialParams];
     }
+    
+    public List<DeviceVariable> GetVarMap(ref int index)
+    {
+        var varMap = new List<DeviceVariable>();
+        
+        for (var j = 0; j < MaxButtons; j++)
+        {
+            var num = j;
+            varMap.Add(new DeviceVariable
+            {
+                GetName = () => $"{Name} - {Buttons[num].Name}",
+                PropertyName = "State",
+                DataType = "bool",
+                VariableIndex = index++,
+                SingleVariable = false
+            });
+        }
+            
+        for (var j = 0; j < MaxDials; j++)
+        {
+            var num = j;
+            varMap.Add(new DeviceVariable
+            {
+                GetName = () => $"{Name} - {Dials[num].Name}",
+                PropertyName = "Position",
+                DataType = "int",
+                VariableIndex = index++,
+                SingleVariable = false
+            });
+        }
+            
+        for (var j = 0; j < KeypadMaster.MaxAnalogInputs; j++)
+        {
+            var num = j;
+            varMap.Add(new DeviceVariable
+            {
+                GetName = () => $"{Name} - analogIn{num}",
+                PropertyName = "Value",
+                DataType = "float",
+                VariableIndex = index++,
+                SingleVariable = false
+            });
+        }
+
+        return varMap;
+    }
 
     public bool IsBlinkMarine()
     {

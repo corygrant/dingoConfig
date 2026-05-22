@@ -139,11 +139,20 @@ public class ConfigFileManager(ILogger<ConfigFileManager> logger, DeviceDefiniti
 
             CurrentFileName = Path.GetFileName(fileName);
 
-            // Apply definitions to PDM devices (restores Type, PdmType, counts, rebuilds VarMap/Params)
+            // Apply definitions to PDM devices (restores Type, PdmType, counts, rebuilds CyclicSigs/VarMap/Params)
+            var pdmSigsConfig = deviceDefinitionManager.GetPdmCyclicSigsConfig();
             foreach (var device in config.PdmDevices)
             {
                 var def = deviceDefinitionManager.GetByPdmType(device.PdmType) ?? DeviceDefinitionManager.DefaultPdm;
-                device.ApplyDefinition(def);
+                device.ApplyDefinition(def, pdmSigsConfig);
+            }
+
+            // Bind cyclic sigs for CANboard devices
+            var canboardSigsConfig = deviceDefinitionManager.GetCanboardCyclicSigsConfig();
+            if (canboardSigsConfig != null)
+            {
+                foreach (var device in config.CanboardDevices)
+                    device.BindCyclicSigs(canboardSigsConfig);
             }
 
             var allDevices = new List<IDevice>();

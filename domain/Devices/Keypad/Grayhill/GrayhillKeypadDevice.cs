@@ -43,7 +43,7 @@ public class GrayhillKeypadDevice : IKeypadDevice
 
     [JsonPropertyName("buttons")] public List<Button> Buttons { get; init; } = [];
 
-    [JsonIgnore] public Dictionary<int, List<(DbcSignal Signal, Action<double> SetValue)>> StatusSigs { get; set; } = null!;
+    [JsonIgnore] public Dictionary<int, List<(DbcSignal Signal, Action<double> SetValue)>> CyclicSigs { get; set; } = null!;
 
     [JsonConstructor]
     public GrayhillKeypadDevice(string name, int id, string model)
@@ -54,7 +54,7 @@ public class GrayhillKeypadDevice : IKeypadDevice
         NumButtons = GrayhillModels.Lookup(model);
         Guid = Guid.NewGuid();
         InitCollections();
-        InitStatusSigs();
+        InitCyclicSigs();
     }
 
     public void SetLogger(ILogger<GrayhillKeypadDevice> logger)
@@ -68,16 +68,16 @@ public class GrayhillKeypadDevice : IKeypadDevice
             Buttons.Add(new Button(i + 1, $"button{i + 1}"));
     }
 
-    private void InitStatusSigs()
+    private void InitCyclicSigs()
     {
-        StatusSigs = new Dictionary<int, List<(DbcSignal Signal, Action<double> SetValue)>>();
+        CyclicSigs = new Dictionary<int, List<(DbcSignal Signal, Action<double> SetValue)>>();
 
         // Button States
-        StatusSigs[0] = [];
+        CyclicSigs[0] = [];
         for (var i = 0; i < NumButtons; i++)
         {
             var button = Buttons[i]; // No cast needed - strongly typed!
-            StatusSigs[0].Add((
+            CyclicSigs[0].Add((
                 new DbcSignal { Name = $"Button{i + 1}.State", StartBit = i, Length = 1},
                 val => button.State = val != 0
             ));
@@ -194,9 +194,9 @@ public class GrayhillKeypadDevice : IKeypadDevice
         return new CanFrame((int)MessageId.ButtonState + BaseId, 3, data);
     }
 
-    public IEnumerable<(int MessageId, DbcSignal Signal)> GetStatusSigs()
+    public IEnumerable<(int MessageId, DbcSignal Signal)> GetCyclicSigs()
     {
-        foreach (var kvp in StatusSigs)
+        foreach (var kvp in CyclicSigs)
         {
             var messageId = BaseId + kvp.Key;
             foreach (var (signal, _) in kvp.Value)

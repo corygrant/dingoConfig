@@ -18,6 +18,6 @@ public interface IDevice
                 ref ConcurrentDictionary<(int BaseId, int Index, int SubIndex), DeviceCanFrame> queue, 
                 List<DeviceCanFrame> outgoing);
     bool InIdRange(int id);
-    IEnumerable<(int MessageId, DbcSignal Signal)> GetStatusSigs();
+    IEnumerable<(int MessageId, DbcSignal Signal)> GetCyclicSigs();
     List<CanFrame> GetCyclicMsgs();
 }

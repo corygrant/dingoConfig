@@ -77,6 +77,16 @@ public class DeviceManager(ILogger<DeviceManager> logger, ILoggerFactory loggerF
             _ => throw new ArgumentException($"Unknown device type: '{deviceType}'")
         };
 
+        switch (device)
+        {
+            case PdmDevice pdm when deviceDefinitionManager.GetPdmCyclicSigsConfig() is { } pdmSigs:
+                pdm.BindCyclicSigs(pdmSigs);
+                break;
+            case CanboardDevice canboard when deviceDefinitionManager.GetCanboardCyclicSigsConfig() is { } canboardSigs:
+                canboard.BindCyclicSigs(canboardSigs);
+                break;
+        }
+
         SetLoggers(device);
         _devices[device.Guid] = device;
 

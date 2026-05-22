@@ -49,7 +49,7 @@ public class BlinkMarineKeypadDevice : IKeypadDevice
     [JsonPropertyName("analogInputs")] public List<AnalogInput> AnalogInputs { get; init; } = [];
 
     [JsonIgnore]
-    public Dictionary<int, List<(DbcSignal Signal, Action<double> SetValue)>> StatusSigs { get; set; } =
+    public Dictionary<int, List<(DbcSignal Signal, Action<double> SetValue)>> CyclicSigs { get; set; } =
         null!;
 
     [JsonConstructor]
@@ -64,7 +64,7 @@ public class BlinkMarineKeypadDevice : IKeypadDevice
         NumAnalogInputs = config.numAnalogInputs;
         Guid = Guid.NewGuid();
         InitCollections();
-        InitStatusSigs();
+        InitCyclicSigs();
     }
 
     public void SetLogger(ILogger<BlinkMarineKeypadDevice> logger)
@@ -84,16 +84,16 @@ public class BlinkMarineKeypadDevice : IKeypadDevice
             AnalogInputs.Add(new AnalogInput(i + 1, $"analogInput{i + 1}"));
     }
 
-    private void InitStatusSigs()
+    private void InitCyclicSigs()
     {
-        StatusSigs = new Dictionary<int, List<(DbcSignal Signal, Action<double> SetValue)>>();
+        CyclicSigs = new Dictionary<int, List<(DbcSignal Signal, Action<double> SetValue)>>();
 
         // Button States
-        StatusSigs[(int)MessageId.ButtonState] = [];
+        CyclicSigs[(int)MessageId.ButtonState] = [];
         for (var i = 0; i < NumButtons; i++)
         {
             var button = Buttons[i];
-            StatusSigs[(int)MessageId.ButtonState].Add((
+            CyclicSigs[(int)MessageId.ButtonState].Add((
                 new DbcSignal { Name = $"Button{i + 1}.State", StartBit = i, Length = 1 },
                 val => button.State = val != 0
             ));
@@ -102,7 +102,7 @@ public class BlinkMarineKeypadDevice : IKeypadDevice
         if (NumDials > 0)
         {
             // Dial 1 
-            StatusSigs[(int)MessageId.DialState1] =
+            CyclicSigs[(int)MessageId.DialState1] =
             [
                 //Direction
                 (
@@ -125,7 +125,7 @@ public class BlinkMarineKeypadDevice : IKeypadDevice
         if (NumDials > 1)
         {
             // Dial 2 
-            StatusSigs[(int)MessageId.DialState2] =
+            CyclicSigs[(int)MessageId.DialState2] =
             [
                 //Direction
                 (
@@ -146,11 +146,11 @@ public class BlinkMarineKeypadDevice : IKeypadDevice
         }
 
         // Analog Inputs
-        StatusSigs[(int)MessageId.AnalogInput] = [];
+        CyclicSigs[(int)MessageId.AnalogInput] = [];
         for (var i = 0; i < NumAnalogInputs; i++)
         {
             var input = AnalogInputs[i];
-            StatusSigs[(int)MessageId.AnalogInput].Add((
+            CyclicSigs[(int)MessageId.AnalogInput].Add((
                 new DbcSignal
                     { Name = $"AnalogInput{i + 1}.Value", StartBit = i * 16, Length = 16, Factor = 0.01 }, // 5/500
                 val => input.Voltage = val
@@ -459,9 +459,9 @@ public class BlinkMarineKeypadDevice : IKeypadDevice
         return new CanFrame((int)MessageId.AnalogInput + BaseId, 8, data);
     }
 
-    public IEnumerable<(int MessageId, DbcSignal Signal)> GetStatusSigs()
+    public IEnumerable<(int MessageId, DbcSignal Signal)> GetCyclicSigs()
     {
-        foreach (var kvp in StatusSigs)
+        foreach (var kvp in CyclicSigs)
         {
             // Create a copy with the ID populated
             var messageId = BaseId + kvp.Key;

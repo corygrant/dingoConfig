@@ -93,7 +93,9 @@ public class CanboardDevice : IDeviceConfigurable
     [JsonPropertyName("counters")] public List<Counter> Counters { get; init; } = [];
     [JsonPropertyName("conditions")] public List<Condition> Conditions { get; init; } = [];
 
-    [JsonIgnore] private Dictionary<int, List<(DbcSignal Signal, Action<double> SetValue)>> StatusSigs { get; set; } = null!;
+    [JsonIgnore] private Dictionary<int, List<(DbcSignal Signal, Action<double> SetValue)>> CyclicSigs { get; set; } = new();
+    [JsonIgnore] private Dictionary<string, Action<double>> _setters = new();
+    [JsonIgnore] private Dictionary<string, Action<int, double>> _indexedSetters = new();
 
     [JsonIgnore] private ParamProtocol _paramProtocol = null!;
     
@@ -136,7 +138,7 @@ public class CanboardDevice : IDeviceConfigurable
         _paramProtocol.SetLogger(logger);
     }
 
-    public void ApplyDefinition(CanboardDeviceDefinition definition)
+    public void ApplyDefinition(CanboardDeviceDefinition definition, CyclicSigsConfig? cyclicSigsConfig = null)
     {
         CanboardType = definition.CanboardType;
         Type = definition.TypeName;
@@ -153,10 +155,72 @@ public class CanboardDevice : IDeviceConfigurable
         NumFlashers = definition.NumFlashers;
         NumCounters = definition.NumCounters;
         NumConditions = definition.NumConditions;
-        
-        InitStatusSigs();
+
+        if (cyclicSigsConfig != null)
+            BindCyclicSigs(cyclicSigsConfig);
         InitVarMap();
         InitParams();
+    }
+
+    private void RegisterAccessors()
+    {
+        _setters["BoardTempC"]  = val => BoardTempC = val;
+        _setters["Heartbeat"]   = val => Heartbeat = (int)val;
+
+        _indexedSetters["AnalogInput.Millivolts"]   = (i, val) => AnalogInputs[i].Millivolts = val;
+        _indexedSetters["AnalogInput.RotaryPos"]    = (i, val) => AnalogInputs[i].Rotary.Pos = (short)val;
+        _indexedSetters["AnalogInput.DigitalMode"]  = (i, val) => AnalogInputs[i].Switch.State = val != 0;
+        _indexedSetters["Flasher.Value"]            = (i, val) => Flashers[i].Value = val != 0;
+        _indexedSetters["DigitalInput.State"]       = (i, val) => DigitalInputs[i].State = val != 0;
+        _indexedSetters["DigitalOutput.State"]      = (i, val) => DigitalOutputs[i].State = val != 0;
+        _indexedSetters["CanInput.Output"]          = (i, val) => CanInputs[i].Output = val != 0;
+        _indexedSetters["CanInput.Value"]           = (i, val) => CanInputs[i].Value = (int)val;
+        _indexedSetters["VirtualInput.Value"]       = (i, val) => VirtualInputs[i].Value = val != 0;
+        _indexedSetters["Counter.Value"]            = (i, val) => Counters[i].Value = (int)val;
+        _indexedSetters["Condition.Value"]          = (i, val) => Conditions[i].Value = (int)val;
+    }
+
+    public void BindCyclicSigs(CyclicSigsConfig config)
+    {
+        RegisterAccessors();
+        CyclicSigs = new Dictionary<int, List<(DbcSignal Signal, Action<double> SetValue)>>();
+
+        foreach (var msgDef in config.Messages)
+        {
+            CyclicSigs[msgDef.Offset] = [];
+
+            foreach (var sigDef in msgDef.Signals)
+            {
+                for (var i = 0; i < sigDef.Count; i++)
+                {
+                    var globalIdx = sigDef.StartIndex + i;
+                    var name = sigDef.Name.Replace("{n}", $"{globalIdx + 1}");
+
+                    CyclicSigs[msgDef.Offset].Add((new DbcSignal
+                    {
+                        Name      = name,
+                        StartBit  = sigDef.StartBit + i * sigDef.Length,
+                        Length    = sigDef.Length,
+                        ByteOrder = sigDef.ByteOrder,
+                        IsSigned  = sigDef.IsSigned,
+                        Factor    = sigDef.Factor,
+                        Unit      = sigDef.Unit
+                    }, ResolveSetter(sigDef.Target, globalIdx)));
+                }
+            }
+
+            if (msgDef.Offset > MaxCyclicId)
+                MaxCyclicId = msgDef.Offset;
+        }
+    }
+
+    private Action<double> ResolveSetter(string target, int index)
+    {
+        if (_indexedSetters.TryGetValue(target, out var indexed))
+            return val => indexed(index, val);
+        if (_setters.TryGetValue(target, out var scalar))
+            return scalar;
+        throw new InvalidOperationException($"Unknown CyclicSig target: '{target}'");
     }
 
     private void InitFunctions()
@@ -188,162 +252,8 @@ public class CanboardDevice : IDeviceConfigurable
         for (var i = 0; i < NumConditions; i++)
             Conditions.Add(new Condition(i + 1, "condition" + (i + 1)));
         
-        InitStatusSigs();
     }
 
-    protected virtual void InitStatusSigs()
-    {
-        StatusSigs = new Dictionary<int, List<(DbcSignal Signal, Action<double> SetValue)>>();
-
-        var cyclicIndex = CyclicRxOffset;
-        
-        // Message 0 (BaseId + 2): Analog inputs 0-3 millivolts
-        StatusSigs[cyclicIndex] = new List<(DbcSignal, Action<double>)>();
-        for (var i = 0; i < 4 && i < NumAnalogInputs; i++)
-        {
-            var index = i;
-            StatusSigs[cyclicIndex].Add((
-                new DbcSignal { Name = $"AnalogInput{index + 1}.Millivolts", StartBit = index * 16, Length = 16, Unit = "mV"},
-                val => AnalogInputs[index].Millivolts = val
-            ));
-        }
-
-        cyclicIndex++;
-
-        // Message 1 (BaseId + 3): Analog input 4 millivolts + board temperature
-        StatusSigs[cyclicIndex] =
-        [
-            (new DbcSignal { Name = "AnalogInput5.Millivolts", StartBit = 0, Length = 16, Unit = "mV"},
-                val => AnalogInputs[4].Millivolts = val),
-
-
-            (new DbcSignal { Name = "BoardTempC", StartBit = 48, Length = 16, Factor = 0.01, Unit = "degC"},
-                val => BoardTempC = val)
-        ];
-        cyclicIndex++;
-
-        // Message 2 (BaseId + 4): Rotary switches, flashers, digital I/O, heartbeat
-        StatusSigs[cyclicIndex] = [];
-
-        // Rotary switch positions (4-bit each)
-        for (var i = 0; i < NumAnalogInputs; i++)
-        {
-            var index = i;
-            StatusSigs[cyclicIndex].Add((
-                new DbcSignal { Name = $"RotarySwitch{index + 1}.Pos", StartBit = index * 4, Length = 4 },
-                val => AnalogInputs[index].Rotary.Pos = (short)val
-            ));
-        }
-        
-        // Flashers (1-bit each starting at bit 24)
-        for (var i = 0; i < NumFlashers; i++)
-        {
-            var index = i;
-            StatusSigs[cyclicIndex].Add((
-                new DbcSignal { Name = $"Flasher{index + 1}.State", StartBit = 24 + index, Length = 1 },
-                val => Flashers[index].Value = val != 0
-            ));
-        }
-
-        // Digital inputs (1-bit each starting at bit 32)
-        for (var i = 0; i < NumDigitalInputs; i++)
-        {
-            var index = i;
-            StatusSigs[cyclicIndex].Add((
-                new DbcSignal { Name = $"DigitalInput{index + 1}.State", StartBit = 32 + index, Length = 1 },
-                val => DigitalInputs[index].State = val != 0
-            ));
-        }
-
-        // Analog inputs digital mode (1-bit each starting at bit 40)
-        for (var i = 0; i < NumAnalogInputs; i++)
-        {
-            var index = i;
-            StatusSigs[cyclicIndex].Add((
-                new DbcSignal { Name = $"AnalogInput{index + 1}.DigitalMode", StartBit = 40 + index, Length = 1 },
-                val => AnalogInputs[index].Switch.State = val != 0
-            ));
-        }
-
-        // Digital outputs (1-bit each starting at bit 48)
-        for (var i = 0; i < NumDigitalOutputs; i++)
-        {
-            var index = i;
-            StatusSigs[cyclicIndex].Add((
-                new DbcSignal { Name = $"DigitalOutput{index + 1}.State", StartBit = 48 + index, Length = 1 },
-                val => DigitalOutputs[index].State = val != 0
-            ));
-        }
-
-        // Heartbeat (8-bit at bit 56)
-        StatusSigs[cyclicIndex].Add((
-            new DbcSignal { Name = "Heartbeat", StartBit = 56, Length = 8 },
-            val => Heartbeat = (int)val
-        ));
-        
-        cyclicIndex++;
-
-        // Message 3 (BaseId + 4): CAN inputs & virtual inputs
-        StatusSigs[cyclicIndex] = [];
-        for (var i = 0; i < NumCanInputs; i++)
-        {
-            var index = i;
-            StatusSigs[cyclicIndex].Add((
-                new DbcSignal { Name = $"CanInput{index + 1}", StartBit = i, Length = 1 },
-                val => CanInputs[index].Output = val != 0
-            ));
-        }
-        for (var i = 0; i < NumVirtualInputs; i++)
-        {
-            var index = i;
-            StatusSigs[cyclicIndex].Add((
-                new DbcSignal { Name = $"VirtualInput{index + 1}", StartBit = 32 + i, Length = 1 },
-                val => VirtualInputs[index].Value = val != 0
-            ));
-        }
-        
-        cyclicIndex++;
-
-        // Message 4 (BaseId + 5): Counters & conditions
-        StatusSigs[cyclicIndex] = [];
-        for (var i = 0; i < NumCounters; i++)
-        {
-            var index = i;
-            StatusSigs[cyclicIndex].Add((
-                new DbcSignal { Name = $"Counter{index + 1}", StartBit = i * 8, Length = 8 },
-                val => Counters[index].Value = (int)val
-            ));
-        }
-        for (var i = 0; i < NumConditions; i++)
-        {
-            var index = i;
-            StatusSigs[cyclicIndex].Add((
-                new DbcSignal { Name = $"Condition{index + 1}", StartBit = 32 + i, Length = 1 },
-                val => Conditions[index].Value = (int)val
-            ));
-        }
-        cyclicIndex++;
-
-        // Message 5-8 (BaseId + 6 to BaseId + 9): CAN input values (2 per message)
-        for (var msg = cyclicIndex; msg <= 10; msg++)
-        {
-            StatusSigs[msg] = [];
-            for (var i = 0; i < 2; i++)
-            {
-                var index = (msg - cyclicIndex) * 2 + i;
-                if (index < NumCanInputs)
-                {
-                    StatusSigs[msg].Add((
-                        new DbcSignal { Name = $"CanInput{index + 1}.Value", StartBit = i * 32, Length = 32 },
-                        val => CanInputs[index].Value = (int)val
-                    ));
-                }
-            }
-        }
-
-        MaxCyclicId = cyclicIndex;
-    }
-    
     private void InitVarMap()
     {
         VarMap = [];
@@ -641,7 +551,7 @@ public class CanboardDevice : IDeviceConfigurable
         var offset = id - BaseId;
 
         // Use dictionary lookup for status messages
-        if (StatusSigs.TryGetValue(offset, out var signals))
+        if (CyclicSigs.TryGetValue(offset, out var signals))
         {
             foreach (var (signal, setValue) in signals)
             {
@@ -666,9 +576,9 @@ public class CanboardDevice : IDeviceConfigurable
         LastRxTime = DateTime.Now;
     }
 
-    public IEnumerable<(int MessageId, DbcSignal Signal)> GetStatusSigs()
+    public IEnumerable<(int MessageId, DbcSignal Signal)> GetCyclicSigs()
     {
-        foreach (var kvp in StatusSigs)
+        foreach (var kvp in CyclicSigs)
         {
             var messageId = BaseId + kvp.Key;
             foreach (var (signal, _) in kvp.Value)

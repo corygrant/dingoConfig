@@ -1,0 +1,48 @@
+{
+  "messages": [
+    {
+      "offset": 2,
+      "signals": [
+        { "name": "AnalogInput{n}.Millivolts", "target": "AnalogInput.Millivolts", "startBit": 0, "length": 16, "unit": "mV", "count": 4}
+      ]
+    },
+    {
+      "offset": 3,
+      "signals": [
+        { "name": "AnalogInput5.Millivolts", "target": "AnalogInput.Millivolts", "startBit": 0, "length": 16, "unit": "mV", "startIndex": 4 },
+        { "name": "BoardTempC",              "target": "BoardTempC",              "startBit": 48, "length": 16, "factor": 0.01, "unit": "degC" }
+      ]
+    },
+    {
+      "offset": 4,
+      "signals": [
+        { "name": "RotarySwitch{n}.Pos",        "target": "AnalogInput.RotaryPos",   "startBit": 0,   "length": 4},
+        { "name": "Flasher{n}.State",            "target": "Flasher.Value",           "startBit": 24, "length": 1},
+        { "name": "DigitalInput{n}.State",       "target": "DigitalInput.State",      "startBit": 32, "length": 1},
+        { "name": "AnalogInput{n}.DigitalMode",  "target": "AnalogInput.DigitalMode", "startBit": 40, "length": 1},
+        { "name": "DigitalOutput{n}.State",      "target": "DigitalOutput.State",     "startBit": 48, "length": 1},
+        { "name": "Heartbeat",                   "target": "Heartbeat",               "startBit": 56, "length": 8 }
+      ]
+    },
+    {
+      "offset": 5,
+      "signals": [
+        { "name": "CanInput{n}",     "target": "CanInput.Output",    "startBit": 0,  "length": 1},
+        { "name": "VirtualInput{n}", "target": "VirtualInput.Value", "startBit": 32, "length": 1}
+      ]
+    },
+    {
+      "offset": 6,
+      "signals": [
+        { "name": "Counter{n}",   "target": "Counter.Value",   "startBit": 0,  "length": 8},
+        { "name": "Condition{n}", "target": "Condition.Value", "startBit": 32, "length": 1}
+      ]
+    },
+    {
+      "offset": 7,
+      "signals": [
+        { "name": "CanInput{n}.Value", "target": "CanInput.Value", "startBit": 0, "length": 32, "count": 2}
+      ]
+    }
+  ]
+}

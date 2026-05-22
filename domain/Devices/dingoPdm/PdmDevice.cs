@@ -82,7 +82,9 @@ public class PdmDevice : IDeviceConfigurable
     
     [JsonIgnore] private DateTime LastRxTime { get; set; }
 
-    [JsonIgnore] private Dictionary<int, List<(DbcSignal Signal, Action<double> SetValue)>> StatusSigs { get; set; } = null!;
+    [JsonIgnore] private Dictionary<int, List<(DbcSignal Signal, Action<double> SetValue)>> CyclicSigs { get; set; } = new();
+    [JsonIgnore] private Dictionary<string, Action<double>> _setters = new();
+    [JsonIgnore] private Dictionary<string, Action<int, double>> _indexedSetters = new();
 
     [JsonIgnore] private ParamProtocol _paramProtocol = null!;
 
@@ -137,7 +139,7 @@ public class PdmDevice : IDeviceConfigurable
         ApplyDefinition(definition);
     }
 
-    public void ApplyDefinition(PdmDeviceDefinition definition)
+    public void ApplyDefinition(PdmDeviceDefinition definition, CyclicSigsConfig? cyclicSigsConfig = null)
     {
         PdmType = definition.PdmType;
         Type = definition.TypeName;
@@ -154,9 +156,78 @@ public class PdmDevice : IDeviceConfigurable
         NumCounters = Counters.Count;
         NumConditions = Conditions.Count;
         NumKeypads = Keypads.Count;
-        InitStatusSigs();
+        if (cyclicSigsConfig != null)
+            BindCyclicSigs(cyclicSigsConfig);
         InitVarMap();
         InitParams();
+    }
+
+    private void RegisterAccessors()
+    {
+        _setters["DeviceState"]      = val => DeviceState = (DeviceState)val;
+        _setters["PdmTypeCheck"]     = val => PdmTypeOk = PdmType == (int)val;
+        _setters["TotalCurrent"]     = val => TotalCurrent = val;
+        _setters["BatteryVoltage"]   = val => BatteryVoltage = val;
+        _setters["BoardTempC"]       = val => BoardTempC = val;
+        _setters["Wiper.SlowState"]  = val => Wipers.SlowState = val != 0;
+        _setters["Wiper.FastState"]  = val => Wipers.FastState = val != 0;
+        _setters["Wiper.Speed"]      = val => Wipers.Speed = (WiperSpeed)val;
+        _setters["Wiper.State"]      = val => Wipers.State = (WiperState)val;
+
+        _indexedSetters["Input.State"]        = (i, val) => Inputs[i].State = val != 0;
+        _indexedSetters["Output.Current"]     = (i, val) => Outputs[i].Current = val;
+        _indexedSetters["Output.State"]       = (i, val) => Outputs[i].State = (OutState)val;
+        _indexedSetters["Output.ResetCount"]  = (i, val) => Outputs[i].ResetCount = (int)val;
+        _indexedSetters["Output.DutyCycle"]   = (i, val) => Outputs[i].CurrentDutyCycle = val;
+        _indexedSetters["CanInput.Output"]    = (i, val) => CanInputs[i].Output = val != 0;
+        _indexedSetters["CanInput.Value"]     = (i, val) => CanInputs[i].Value = (int)val;
+        _indexedSetters["VirtualInput.Value"] = (i, val) => VirtualInputs[i].Value = val != 0;
+        _indexedSetters["Flasher.Value"]      = (i, val) => Flashers[i].Value = val != 0;
+        _indexedSetters["Counter.Value"]      = (i, val) => Counters[i].Value = (int)val;
+        _indexedSetters["Condition.Value"]    = (i, val) => Conditions[i].Value = (int)val;
+    }
+
+    public void BindCyclicSigs(CyclicSigsConfig config)
+    {
+        RegisterAccessors();
+        CyclicSigs = new Dictionary<int, List<(DbcSignal Signal, Action<double> SetValue)>>();
+
+        foreach (var msgDef in config.Messages)
+        {
+            CyclicSigs[msgDef.Offset] = [];
+
+            foreach (var sigDef in msgDef.Signals)
+            {
+                for (var i = 0; i < sigDef.Count; i++)
+                {
+                    var globalIdx = sigDef.StartIndex + i;
+                    var name = sigDef.Name.Replace("{n}", $"{globalIdx + 1}");
+
+                    CyclicSigs[msgDef.Offset].Add((new DbcSignal
+                    {
+                        Name      = name,
+                        StartBit  = sigDef.StartBit + i * sigDef.Length,
+                        Length    = sigDef.Length,
+                        ByteOrder = sigDef.ByteOrder,
+                        IsSigned  = sigDef.IsSigned,
+                        Factor    = sigDef.Factor,
+                        Unit      = sigDef.Unit
+                    }, ResolveSetter(sigDef.Target, globalIdx)));
+                }
+            }
+
+            if (msgDef.Offset > MaxCyclicId)
+                MaxCyclicId = msgDef.Offset;
+        }
+    }
+
+    private Action<double> ResolveSetter(string target, int index)
+    {
+        if (_indexedSetters.TryGetValue(target, out var indexed))
+            return val => indexed(index, val);
+        if (_setters.TryGetValue(target, out var scalar))
+            return scalar;
+        throw new InvalidOperationException($"Unknown CyclicSig target: '{target}'");
     }
 
     private void InitFunctions()
@@ -191,182 +262,6 @@ public class PdmDevice : IDeviceConfigurable
         
         for (var i = 0; i < NumKeypads; i++)
             Keypads.Add(new KeypadMaster(i + 1, "keypad" + (i + 1)));
-
-        InitStatusSigs();
-    }
-
-    private void InitStatusSigs()
-    {
-        StatusSigs = new Dictionary<int, List<(DbcSignal Signal, Action<double> SetValue)>>();
-
-        var cyclicIndex = CyclicRxOffset;
-
-        // Message 0: System status
-        StatusSigs[cyclicIndex] = new List<(DbcSignal, Action<double>)>();
-        for (var i = 0; i < NumDigitalInputs; i++)
-        {
-            var index = i;
-            StatusSigs[cyclicIndex].Add((
-                new DbcSignal { Name = $"Input{index + 1}.State", StartBit = i, Length = 1 },
-                val => Inputs[index].State = val != 0
-            ));
-        }
-        StatusSigs[cyclicIndex].AddRange(new List<(DbcSignal, Action<double>)>
-        {
-            (new DbcSignal { Name = "DeviceState", StartBit = 8, Length = 4 },
-                val => DeviceState = (DeviceState)val),
-            (new DbcSignal { Name = "PdmType", StartBit = 12, Length = 4 },
-                val => PdmTypeOk = PdmType == (int)val),
-            (new DbcSignal { Name = "TotalCurrent", StartBit = 16, Length = 16, Factor = 1.0, Unit = "A" },
-                val => TotalCurrent = val),
-            (new DbcSignal { Name = "BatteryVoltage", StartBit = 32, Length = 16, Factor = 0.1, Unit = "V" },
-                val => BatteryVoltage = val),
-            (new DbcSignal { Name = "BoardTemp", StartBit = 48, Length = 16, Factor = 0.1, Unit = "°C" },
-                val => BoardTempC = Math.Round(val, 1))
-        });
-        cyclicIndex++;
-
-        // Message 1: Output currents 0-3
-        StatusSigs[cyclicIndex] = [];
-        for (var i = 0; i < 4 && i < NumOutputs; i++)
-        {
-            var index = i;
-            StatusSigs[cyclicIndex].Add((
-                new DbcSignal { Name = $"Output{index + 1}.Current", StartBit = i * 16, Length = 16, Factor = 1.0, Unit = "A" },
-                val => Outputs[index].Current = val
-            ));
-        }
-
-        cyclicIndex++;
-
-        // Message 2: Output currents 4-7
-        StatusSigs[cyclicIndex] = [];
-        for (var i = 4; i < NumOutputs; i++)
-        {
-            var index = i;
-            StatusSigs[cyclicIndex].Add((
-                new DbcSignal { Name = $"Output{index + 1}.Current", StartBit = (i - 4) * 16, Length = 16, Factor = 1.0, Unit = "A" },
-                val => Outputs[index].Current = val
-            ));
-        }
-
-        cyclicIndex++;
-
-        // Message 3: Output states, wiper, flashers
-        StatusSigs[cyclicIndex] = [];
-        for (var i = 0; i < NumOutputs; i++)
-        {
-            var index = i;
-            StatusSigs[cyclicIndex].Add((
-                new DbcSignal { Name = $"Output{index + 1}.State", StartBit = i * 4, Length = 4 },
-                val => Outputs[index].State = (OutState)val
-            ));
-        }
-        StatusSigs[cyclicIndex].AddRange(new List<(DbcSignal, Action<double>)>
-        {
-            (new DbcSignal { Name = "WiperSlowState", StartBit = 32, Length = 1 },
-                val => Wipers.SlowState = val != 0),
-            (new DbcSignal { Name = "WiperFastState", StartBit = 33, Length = 1 },
-                val => Wipers.FastState = val != 0),
-            (new DbcSignal { Name = "WiperSpeed", StartBit = 40, Length = 4 },
-                val => Wipers.Speed = (WiperSpeed)val),
-            (new DbcSignal { Name = "WiperState", StartBit = 44, Length = 4 },
-                val => Wipers.State = (WiperState)val)
-        });
-        for (var i = 0; i < NumFlashers; i++)
-        {
-            var index = i;
-            StatusSigs[cyclicIndex].Add((
-                new DbcSignal { Name = $"Flasher{index + 1}", StartBit = 48 + i, Length = 1 },
-                val => Flashers[index].Value = val != 0 && Flashers[index].Enabled
-            ));
-        }
-        cyclicIndex++;
-
-        // Message 4: Output reset counts
-        StatusSigs[cyclicIndex] = [];
-        for (var i = 0; i < NumOutputs; i++)
-        {
-            var index = i;
-            StatusSigs[cyclicIndex].Add((
-                new DbcSignal { Name = $"Output{index + 1}.ResetCount", StartBit = i * 8, Length = 8 },
-                val => Outputs[index].ResetCount = (int)val
-            ));
-        }
-
-        cyclicIndex++;
-
-        // Message 5: CAN inputs & virtual inputs
-        StatusSigs[cyclicIndex] = [];
-        for (var i = 0; i < NumCanInputs; i++)
-        {
-            var index = i;
-            StatusSigs[cyclicIndex].Add((
-                new DbcSignal { Name = $"CanInput{index + 1}", StartBit = i, Length = 1 },
-                val => CanInputs[index].Output = val != 0
-            ));
-        }
-        for (var i = 0; i < NumVirtualInputs; i++)
-        {
-            var index = i;
-            StatusSigs[cyclicIndex].Add((
-                new DbcSignal { Name = $"VirtualInput{index + 1}", StartBit = 32 + i, Length = 1 },
-                val => VirtualInputs[index].Value = val != 0
-            ));
-        }
-        cyclicIndex++;
-
-        // Message 6: Counters & conditions
-        StatusSigs[cyclicIndex] = [];
-        for (var i = 0; i < NumCounters; i++)
-        {
-            var index = i;
-            StatusSigs[cyclicIndex].Add((
-                new DbcSignal { Name = $"Counter{index + 1}", StartBit = i * 8, Length = 8 },
-                val => Counters[index].Value = (int)val
-            ));
-        }
-        for (var i = 0; i < NumConditions; i++)
-        {
-            var index = i;
-            StatusSigs[cyclicIndex].Add((
-                new DbcSignal { Name = $"Condition{index + 1}", StartBit = 32 + i, Length = 1 },
-                val => Conditions[index].Value = (int)val
-            ));
-        }
-        cyclicIndex++;
-
-        // Messages 7-22: CAN input values (2 per message)
-        for (var msg = cyclicIndex; msg <= 22; msg++)
-        {
-            StatusSigs[msg] = [];
-            for (var i = 0; i < 2; i++)
-            {
-                var index = (msg - cyclicIndex) * 2 + i;
-                if (index < NumCanInputs)
-                {
-                    StatusSigs[msg].Add((
-                        new DbcSignal { Name = $"CanInput{index + 1}.Value", StartBit = i * 32, Length = 32 },
-                        val => CanInputs[index].Value = (int)val
-                    ));
-                }
-            }
-        }
-
-        cyclicIndex++;
-
-        // Message 23: Output duty cycles
-        StatusSigs[cyclicIndex] = [];
-        for (var i = 0; i < NumOutputs; i++)
-        {
-            var index = i;
-            StatusSigs[cyclicIndex].Add((
-                new DbcSignal { Name = $"Output{index + 1}.DutyCycle", StartBit = i * 8, Length = 8, Unit = "%" },
-                val => Outputs[index].CurrentDutyCycle = val
-            ));
-        }
-
-        MaxCyclicId = cyclicIndex;
     }
 
     private void InitVarMap()
@@ -420,249 +315,31 @@ public class PdmDevice : IDeviceConfigurable
             SingleVariable = true
         });
         
-        if (NumDigitalInputs > 0)
-        {
-            for (var i = 0; i < NumDigitalInputs; i++)
-            {
-                var num = i;
-                VarMap.Add(new DeviceVariable
-                {
-                    GetName  = () => Inputs[num].Name,
-                    PropertyName = "State",
-                    DataType = "bool",
-                    VariableIndex = index++,
-                    SingleVariable = false
-                });
-            }
-        }
+        for (var i = 0; i < NumDigitalInputs; i++)
+            VarMap.AddRange(Inputs[i].GetVarMap(ref index));
         
-        if (NumCanInputs > 0)
-        {
-            for (var i = 0; i < NumCanInputs; i++)
-            {
-                var num = i;
-                VarMap.Add(new DeviceVariable
-                {
-                    GetName = () => CanInputs[num].Name,
-                    PropertyName = "State",
-                    DataType = "bool",
-                    VariableIndex = index++,
-                    SingleVariable = false
-                });
-                VarMap.Add(new DeviceVariable
-                {
-                    GetName = () => CanInputs[num].Name,
-                    PropertyName = "Value",
-                    DataType = "float",
-                    VariableIndex = index++,
-                    SingleVariable = false
-                });
-            }
-        }
+        for (var i = 0; i < NumCanInputs; i++)
+            VarMap.AddRange(CanInputs[i].GetVarMap(ref index));
         
-        if (NumVirtualInputs > 0)
-        {
-            for(var i=0; i< NumVirtualInputs; i++)
-            {
-                var num = i;
-                VarMap.Add(new DeviceVariable
-                {
-                    GetName = () => VirtualInputs[num].Name,
-                    PropertyName = "State",
-                    DataType = "bool",
-                    VariableIndex = index++,
-                    SingleVariable = false
-                });
-            }  
-        }
+        for(var i=0; i< NumVirtualInputs; i++)
+            VarMap.AddRange(VirtualInputs[i].GetVarMap(ref index));
         
-        if (NumOutputs > 0)
-        {
-            for (var i = 0; i < NumOutputs; i++)
-            {
-                var num = i;
-                VarMap.Add(new DeviceVariable
-                {
-                    GetName = () => Outputs[num].Name,
-                    PropertyName = "On",
-                    DataType = "bool",
-                    VariableIndex = index++,
-                    SingleVariable = false
-                });
-                VarMap.Add(new DeviceVariable
-                {
-                    GetName = () => Outputs[num].Name,
-                    PropertyName = "Current",
-                    DataType = "float",
-                    VariableIndex = index++,
-                    SingleVariable = false
-                });
-                VarMap.Add(new DeviceVariable
-                {
-                    GetName = () => Outputs[num].Name,
-                    PropertyName = "Overcurrent",
-                    DataType = "bool",
-                    VariableIndex = index++,
-                    SingleVariable = false
-                });
-                VarMap.Add(new DeviceVariable
-                {
-                    GetName = () => Outputs[num].Name,
-                    PropertyName = "Fault",
-                    DataType = "bool",
-                    VariableIndex = index++,
-                    SingleVariable = false
-                });
-            }
-        }
+        for (var i = 0; i < NumOutputs; i++)
+            VarMap.AddRange(Outputs[i].GetVarMap(ref index));
         
-        if (NumFlashers > 0)
-        {
-            for (var i = 0; i < NumFlashers; i++)
-            {
-                var num = i;
-                VarMap.Add(new DeviceVariable
-                {
-                    GetName = () => Flashers[num].Name,
-                    PropertyName = "State",
-                    DataType = "bool",
-                    VariableIndex = index++,
-                    SingleVariable = false
-                });
-            }
-        }
+        for (var i = 0; i < NumFlashers; i++)
+            VarMap.AddRange(Flashers[i].GetVarMap(ref index));
         
-        if (NumConditions > 0)
-        {
-            for (var i = 0; i < NumConditions; i++)
-            {
-                var num = i;
-                VarMap.Add(new DeviceVariable
-                {
-                    GetName = () => Conditions[num].Name,
-                    PropertyName = "Value",
-                    DataType = "bool",
-                    VariableIndex = index++,
-                    SingleVariable = false
-                });
-            }
-        }
+        for (var i = 0; i < NumConditions; i++)
+            VarMap.AddRange(Conditions[i].GetVarMap(ref index));
         
-        if (NumCounters > 0)
-        {
-            for (var i = 0; i < NumCounters; i++)
-            {
-                var num = i;
-                VarMap.Add(new DeviceVariable
-                {
-                    GetName = () => Counters[num].Name,
-                    PropertyName = "Value",
-                    DataType = "int",
-                    VariableIndex = index++,
-                    SingleVariable = false
-                });
-            }
-        }
+        for (var i = 0; i < NumCounters; i++)
+            VarMap.AddRange(Counters[i].GetVarMap(ref index));
         
-        VarMap.Add(new DeviceVariable
-        {
-            GetName = () => Wipers.Name,
-            PropertyName = "Slow Output",
-            DataType = "bool",
-            VariableIndex = index++,
-            SingleVariable = true
-        });
+        VarMap.AddRange(Wipers.GetVarMap(ref index));
         
-        VarMap.Add(new DeviceVariable
-        {
-            GetName = () => Wipers.Name,
-            PropertyName = "Fast Output",
-            DataType = "bool",
-            VariableIndex = index++,
-            SingleVariable = true
-        });
-        
-        VarMap.Add(new DeviceVariable
-        {
-            GetName = () => Wipers.Name,
-            PropertyName = "Park Output",
-            DataType = "bool",
-            VariableIndex = index++,
-            SingleVariable = true
-        });
-        
-        VarMap.Add(new DeviceVariable
-        {
-            GetName = () => Wipers.Name,
-            PropertyName = "Inter Output",
-            DataType = "bool",
-            VariableIndex = index++,
-            SingleVariable = true
-        });
-        
-        VarMap.Add(new DeviceVariable
-        {
-            GetName = () => Wipers.Name,
-            PropertyName = "Wash Output",
-            DataType = "bool",
-            VariableIndex = index++,
-            SingleVariable = true
-        });
-        
-        VarMap.Add(new DeviceVariable
-        {
-            GetName = () => Wipers.Name,
-            PropertyName = "Swipe Output",
-            DataType = "bool",
-            VariableIndex = index++,
-            SingleVariable = true
-        });
-        
-        if (NumKeypads > 0)
-        {
-            for (var i = 0; i < NumKeypads; i++)
-            {
-                var kp = i;
-                for (var j = 0; j < KeypadMaster.MaxButtons; j++)
-                {
-                    var num = j;
-                    VarMap.Add(new DeviceVariable
-                    {
-                        GetName = () => $"{Keypads[kp].Name} - {Keypads[kp].Buttons[num].Name}",
-                        PropertyName = "State",
-                        DataType = "bool",
-                        VariableIndex = index++,
-                        SingleVariable = false
-                    });
-                }
-                
-                for (var j = 0; j < KeypadMaster.MaxDials; j++)
-                {
-                    var num = j;
-                    VarMap.Add(new DeviceVariable
-                    {
-                        GetName = () => $"{Keypads[kp].Name} - {Keypads[kp].Dials[num].Name}",
-                        PropertyName = "Position",
-                        DataType = "int",
-                        VariableIndex = index++,
-                        SingleVariable = false
-                    });
-                }
-                
-                for (var j = 0; j < KeypadMaster.MaxAnalogInputs; j++)
-                {
-                    var num = j;
-                    VarMap.Add(new DeviceVariable
-                    {
-                        GetName = () => $"{Keypads[kp].Name} - analogIn{num}",
-                        PropertyName = "Value",
-                        DataType = "float",
-                        VariableIndex = index++,
-                        SingleVariable = false
-                    });
-                }
-            }
-        }
+        for (var i = 0; i < NumKeypads; i++)
+            VarMap.AddRange(Keypads[i].GetVarMap(ref index));
     }
 
     private void InitParams()
@@ -773,7 +450,7 @@ public class PdmDevice : IDeviceConfigurable
         var offset = id - BaseId;
 
         // Use dictionary lookup for status messages
-        if (StatusSigs.TryGetValue(offset, out var signals))
+        if (CyclicSigs.TryGetValue(offset, out var signals))
         {
             foreach (var (signal, setValue) in signals)
             {
@@ -798,9 +475,9 @@ public class PdmDevice : IDeviceConfigurable
         LastRxTime = DateTime.Now;
     }
 
-    public IEnumerable<(int MessageId, DbcSignal Signal)> GetStatusSigs()
+    public IEnumerable<(int MessageId, DbcSignal Signal)> GetCyclicSigs()
     {
-        foreach (var kvp in StatusSigs)
+        foreach (var kvp in CyclicSigs)
         {
             int messageId = BaseId + kvp.Key;
             foreach (var (signal, _) in kvp.Value)

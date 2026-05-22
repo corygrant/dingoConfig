@@ -127,4 +127,22 @@ public class Counter : IDeviceFunction
             }
         ];
     }
+    
+    public List<DeviceVariable> GetVarMap(ref int index)
+    {
+        List<DeviceVariable> varMap =
+        [
+            new()
+            {
+                GetName = () => Name,
+                PropertyName = "Value",
+                DataType = "int",
+                VariableIndex = index++,
+                SingleVariable = false
+            }
+
+        ];
+
+        return varMap;
+    }
 }

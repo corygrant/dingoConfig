@@ -160,4 +160,62 @@ public class Wiper : IDeviceFunction
 
         return parameters;
     }
+    
+    public List<DeviceVariable> GetVarMap(ref int index)
+    {
+        List<DeviceVariable> varMap =
+        [
+            new()
+            {
+                GetName = () => Name,
+                PropertyName = "Slow Output",
+                DataType = "bool",
+                VariableIndex = index++,
+                SingleVariable = true
+            },
+            new()
+            {
+                GetName = () => Name,
+                PropertyName = "Fast Output",
+                DataType = "bool",
+                VariableIndex = index++,
+                SingleVariable = true
+            },
+            new()
+            {
+                GetName = () => Name,
+                PropertyName = "Park Output",
+                DataType = "bool",
+                VariableIndex = index++,
+                SingleVariable = true
+            },
+            new()
+            {
+                GetName = () => Name,
+                PropertyName = "Inter Output",
+                DataType = "bool",
+                VariableIndex = index++,
+                SingleVariable = true
+            },
+            new()
+            {
+                GetName = () => Name,
+                PropertyName = "Wash Output",
+                DataType = "bool",
+                VariableIndex = index++,
+                SingleVariable = true
+            },
+            new()
+            {
+                GetName = () => Name,
+                PropertyName = "Swipe Output",
+                DataType = "bool",
+                VariableIndex = index++,
+                SingleVariable = true
+            }
+
+        ];
+
+        return varMap;
+    }
 }

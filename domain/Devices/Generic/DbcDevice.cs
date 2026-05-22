@@ -153,7 +153,7 @@ public class DbcDevice : IDevice
         MaxId = DbcSignals.Max(p => p.Id);
     }
 
-    public IEnumerable<(int MessageId, DbcSignal Signal)> GetStatusSigs()
+    public IEnumerable<(int MessageId, DbcSignal Signal)> GetCyclicSigs()
     {
         // DbcSignals already have Id populated from DBC file
         foreach (var signal in DbcSignals)
