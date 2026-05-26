@@ -1,0 +1,66 @@
+{
+  "messages": [
+    {
+      "idOffset": 2,
+      "signals": [
+        { "target": "AnalogInput.Millivolts", "count": 4,                  "dbc": { "name": "AnalogInput{n}.Millivolts", "length": 16, "unit": "mV" } }
+      ]
+    },
+    {
+      "idOffset": 3,
+      "signals": [
+        { "target": "AnalogInput.Millivolts", "count": 1, "startIndex": 4, "dbc": { "name": "AnalogInput5.Millivolts", "length": 16, "unit": "mV" } },
+        { "target": "BoardTempC",                                            "dbc": { "name": "BoardTempC",              "startBit": 48, "length": 16, "factor": 0.01, "unit": "degC" } }
+      ]
+    },
+    {
+      "idOffset": 4,
+      "signals": [
+        { "target": "AnalogInput.RotaryPos",  "count": 5,                  "dbc": { "name": "RotarySwitch{n}.Pos",       "length": 4 } },
+        { "target": "Flasher.Value",          "count": 4,                  "dbc": { "name": "Flasher{n}.State",           "startBit": 24, "length": 1 } },
+        { "target": "DigitalInput.State",     "count": 8,                  "dbc": { "name": "DigitalInput{n}.State",      "startBit": 32, "length": 1 } },
+        { "target": "AnalogInput.DigitalMode","count": 5,                  "dbc": { "name": "AnalogInput{n}.DigitalMode", "startBit": 40, "length": 1 } },
+        { "target": "DigitalOutput.State",    "count": 4,                  "dbc": { "name": "DigitalOutput{n}.State",     "startBit": 48, "length": 1 } },
+        { "target": "Heartbeat",                                            "dbc": { "name": "Heartbeat",                  "startBit": 56, "length": 8 } }
+      ]
+    },
+    {
+      "idOffset": 5,
+      "signals": [
+        { "target": "CanInput.Output",    "count": 8,                      "dbc": { "name": "CanInput{n}",       "length": 1 } },
+        { "target": "VirtualInput.Value", "count": 8,                      "dbc": { "name": "VirtualInput{n}",   "startBit": 32, "length": 1 } }
+      ]
+    },
+    {
+      "idOffset": 6,
+      "signals": [
+        { "target": "Counter.Value",   "count": 4,                         "dbc": { "name": "Counter{n}",   "length": 8 } },
+        { "target": "Condition.Value", "count": 8,                         "dbc": { "name": "Condition{n}", "startBit": 32, "length": 1 } }
+      ]
+    },
+    {
+      "idOffset": 7,
+      "signals": [
+        { "target": "CanInput.Value", "count": 2,                          "dbc": { "name": "CanInput{n}.Value", "length": 32 } }
+      ]
+    },
+    {
+      "idOffset": 8,
+      "signals": [
+        { "target": "CanInput.Value", "count": 2, "startIndex": 2,        "dbc": { "name": "CanInput{n}.Value", "length": 32 } }
+      ]
+    },
+    {
+      "idOffset": 9,
+      "signals": [
+        { "target": "CanInput.Value", "count": 2, "startIndex": 4,        "dbc": { "name": "CanInput{n}.Value", "length": 32 } }
+      ]
+    },
+    {
+      "idOffset": 10,
+      "signals": [
+        { "target": "CanInput.Value", "count": 2, "startIndex": 6,        "dbc": { "name": "CanInput{n}.Value", "length": 32 } }
+      ]
+    }
+  ]
+}

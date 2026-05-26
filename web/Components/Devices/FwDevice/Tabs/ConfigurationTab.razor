@@ -1,0 +1,213 @@
+@using application.Services
+@using domain.Enums
+@using web.Services
+@inject UserPreferencesManager UserPrefs
+@inject NotificationService Notification
+@typeparam TDevice where TDevice : domain.Devices.FwDevice
+
+<div
+    style="overflow-y: auto; height: calc(100vh - 250px); padding: 24px; scrollbar-width: auto; scrollbar-color: #888 transparent;">
+    <MudExpansionPanels MultiExpansion="true">
+
+        <MudExpansionPanel Text="Device">
+            <MudStack>
+                <MudTextField    Value="@_baseId"
+                                 ValueChanged="@((string val) => @Device.BaseId = Utils.ParseId(val, UserPrefs.Preferences.IdFormat, Notification))"
+                                 Label="Base ID"
+                                 Variant="Variant.Outlined"
+                                 Style="max-width: 20%"
+                                 T="string" />
+                <MudSelect @bind-Value="@Device.BitRate"
+                           Label="Bitrate"
+                           Variant="Variant.Outlined"
+                           Dense="true"
+                           Class="mb-3"
+                           T="CanBitRate"
+                           Style="max-width: 20%">
+                    <MudSelectItem T="CanBitRate" Value="@(CanBitRate.BitRate1000K)">1000K</MudSelectItem>
+                    <MudSelectItem T="CanBitRate" Value="@(CanBitRate.BitRate500K)">500K</MudSelectItem>
+                    <MudSelectItem T="CanBitRate" Value="@(CanBitRate.BitRate250K)">250K</MudSelectItem>
+                    <MudSelectItem T="CanBitRate" Value="@(CanBitRate.BitRate125K)">125K</MudSelectItem>
+                    <MudSelectItem T="CanBitRate" Value="@(CanBitRate.BitRate100K)">100K</MudSelectItem>
+                </MudSelect>
+                <MudSwitch @bind-Value="@Device.SleepEnabled"
+                           Color="Color.Success"
+                           Label="Sleep Enabled"/>
+                <MudSwitch @bind-Value="@Device.CanFiltersEnabled"
+                           Color="Color.Success"
+                           Label="CAN Filters Enabled"/>
+                <MudSwitch @bind-Value="@Device.ConnectUsbToCan"
+                           Color="Color.Success"
+                           Label="Connect USB to CAN"/>
+                @foreach (var kp in Device.Keypads)
+                {
+                    var label = $"Keypad {kp.Number} Enabled";
+                    <MudSwitch @bind-Value="kp.Enabled"
+                               Color="Color.Success"
+                               Label=@label/>
+                }
+            </MudStack>
+        </MudExpansionPanel>
+
+        @* Outputs *@
+        <MudExpansionPanel Text="@($"Outputs ({Device.Outputs.Count})")"
+                           ExpandedChanged="@((bool expanded) => _outputsExpanded = expanded)">
+            @if (_outputsExpanded)
+            {
+                <OutputsGrid Outputs="Device.Outputs" Device="Device"/>
+            }
+        </MudExpansionPanel>
+
+
+        @* Outputs PWM *@
+        <MudExpansionPanel Text="@($"Outputs PWM ({Device.Outputs.Count})")"
+                           ExpandedChanged="@((bool expanded) => _outputsPwmExpanded = expanded)">
+            @if (_outputsPwmExpanded)
+            {
+                <OutputsPwmGrid Outputs="Device.Outputs" Device="Device"/>
+            }
+        </MudExpansionPanel>
+
+        @* Analog Inputs *@
+        <MudExpansionPanel Text="@($"Analog Inputs ({Device.AnalogInputs.Count})")"
+                           ExpandedChanged="@((bool expanded) => _analogInputsExpanded = expanded)">
+            @if (_analogInputsExpanded)
+            {
+                <AnalogInputsGrid Inputs="Device.AnalogInputs"/>
+            }
+        </MudExpansionPanel>
+        
+        @* Rotary Switch *@
+        <MudExpansionPanel Text="@($"Rotary Switch ({Device.AnalogInputs.Count})")"
+                           ExpandedChanged="@((bool expanded) => _rotarySwitchExpanded = expanded)">
+            @if (_rotarySwitchExpanded)
+            {
+                <RotarySwitchGrid Inputs="Device.AnalogInputs"/>
+            }
+        </MudExpansionPanel>
+        
+        @* Digital Inputs *@
+        <MudExpansionPanel Text="@($"Digital Inputs ({Device.DigitalInputs.Count})")"
+                           ExpandedChanged="@((bool expanded) => _digitalInputsExpanded = expanded)">
+            @if (_digitalInputsExpanded)
+            {
+                <DigitalInputsGrid Inputs="Device.DigitalInputs"/>
+            }
+        </MudExpansionPanel>
+        
+        @* Digital Outputs *@
+        <MudExpansionPanel Text="@($"Digital Outputs ({Device.DigitalOutputs.Count})")"
+                           ExpandedChanged="@((bool expanded) => _digitalOutputsExpanded = expanded)">
+            @if (_digitalOutputsExpanded)
+            {
+                <DigitalOutputsGrid Outputs="Device.DigitalOutputs" Device="Device"/>
+            }
+        </MudExpansionPanel>
+
+        @* CAN Inputs *@
+        <MudExpansionPanel Text="@($"CAN Inputs ({Device.CanInputs.Count})")"
+                           ExpandedChanged="@((bool expanded) => _canInputsExpanded = expanded)">
+            @if (_canInputsExpanded)
+            {
+                <CanInputsGrid CanInputs="Device.CanInputs" Device="Device"/>
+            }
+        </MudExpansionPanel>
+        
+        @* CAN Outputs *@
+        <MudExpansionPanel Text="@($"CAN Outputs ({Device.CanOutputs.Count})")"
+                           ExpandedChanged="@((bool expanded) => _canOutputsExpanded = expanded)">
+            @if (_canOutputsExpanded)
+            {
+                <CanOutputsGrid CanOutputs="Device.CanOutputs" Device="Device"/>
+            }
+        </MudExpansionPanel>
+
+        @* Virtual Inputs *@
+        <MudExpansionPanel Text="@($"Virtual Inputs ({Device.VirtualInputs.Count})")"
+                           ExpandedChanged="@((bool expanded) => _virtualInputsExpanded = expanded)">
+            @if (_virtualInputsExpanded)
+            {
+                <VirtualInputsGrid VirtualInputs="Device.VirtualInputs" Device="Device"/>
+            }
+        </MudExpansionPanel>
+
+
+        @* Conditions *@
+        <MudExpansionPanel Text="@($"Conditions ({Device.Conditions.Count})")"
+                           ExpandedChanged="@((bool expanded) => _conditionsExpanded = expanded)">
+            @if (_conditionsExpanded)
+            {
+                <ConditionsGrid Conditions="Device.Conditions" Device="Device"/>
+            }
+        </MudExpansionPanel>
+
+
+        @* Counters *@
+        <MudExpansionPanel Text="@($"Counters ({Device.Counters.Count})")"
+                           ExpandedChanged="@((bool expanded) => _countersExpanded = expanded)">
+            @if (_countersExpanded)
+            {
+                <CountersGrid Counters="Device.Counters" Device="Device"/>
+            }
+        </MudExpansionPanel>
+
+
+        @* Flashers *@
+        <MudExpansionPanel Text="@($"Flashers ({Device.Flashers.Count})")"
+                           ExpandedChanged="@((bool expanded) => _flashersExpanded = expanded)">
+            @if (_flashersExpanded)
+            {
+                <FlashersGrid Flashers="Device.Flashers" Device="Device"/>
+            }
+        </MudExpansionPanel>
+
+
+        @* Wiper *@
+        <MudExpansionPanel Text="Wiper"
+                           ExpandedChanged="@((bool expanded) => _wiperExpanded = expanded)">
+            @if (_wiperExpanded)
+            {
+                <WiperConfig Wiper="Device.Wipers" Device="Device"/>
+            }
+        </MudExpansionPanel>
+
+        @* Starter Disable *@
+        <MudExpansionPanel Text="Starter Disable"
+                           ExpandedChanged="@((bool expanded) => _starterDisableExpanded = expanded)">
+            @if (_starterDisableExpanded)
+            {
+                <StarterDisableConfig StarterDisable="Device.StarterDisable" Device="Device"/>
+            }
+        </MudExpansionPanel>
+    </MudExpansionPanels>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public TDevice Device { get; set; } = null!;
+
+    // Expansion panel state tracking for lazy loading
+    private bool _digitalInputsExpanded;
+    private bool _analogInputsExpanded;
+    private bool _rotarySwitchExpanded;
+    private bool _digitalOutputsExpanded;
+    private bool _outputsExpanded;
+    private bool _outputsPwmExpanded;
+    private bool _canInputsExpanded;
+    private bool _canOutputsExpanded;
+    private bool _virtualInputsExpanded;
+    private bool _conditionsExpanded;
+    private bool _countersExpanded;
+    private bool _flashersExpanded;
+    private bool _wiperExpanded;
+    private bool _starterDisableExpanded;
+
+    private string _baseId = string.Empty;
+    
+    protected override void OnParametersSet()
+    {
+        _baseId = Utils.FormatId(Device.BaseId, UserPrefs.Preferences.IdFormat);
+
+        StateHasChanged();
+        base.OnParametersSet();
+    }
+}

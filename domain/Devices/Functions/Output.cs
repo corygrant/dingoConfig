@@ -1,7 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
 using domain.Common;
-using domain.Enums.dingoPdm;
+using domain.Enums;
 using domain.Interfaces;
 using domain.Models;
 

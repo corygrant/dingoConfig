@@ -19,19 +19,27 @@
     <_ContentIncludedByDefault Remove="ClientApp\package.json" />
     <_ContentIncludedByDefault Remove="ClientApp\tsconfig.json" />
     <_ContentIncludedByDefault Remove="ClientApp\tsconfig.node.json" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Content Update="pdm-definitions.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-  </ItemGroup>
-
-  <ItemGroup>
-    <AdditionalFiles Include="Components\Devices\dingoPdm\Functions\OutputsGrid.razor" />
-    <AdditionalFiles Include="Components\Devices\dingoPdm\Functions\OutputsPwmGrid.razor" />
-    <AdditionalFiles Include="Components\Devices\dingoPdm\Functions\StarterDisableConfig.razor" />
-    <AdditionalFiles Include="Components\Devices\dingoPdm\Functions\WiperConfig.razor" />
+    <_ContentIncludedByDefault Remove="Components\Devices\dingoPdm\Functions\GrayhillKeypad\GrayhillButtonsGrid.razor" />
+    <_ContentIncludedByDefault Remove="Components\Devices\dingoPdm\Functions\GrayhillKeypad\GrayhillDeviceSettings.razor" />
+    <_ContentIncludedByDefault Remove="Components\Devices\Functions\AnalogInputsGrid.razor" />
+    <_ContentIncludedByDefault Remove="Components\Devices\Functions\BlinkMarineKeypad\BlinkMarineButtonsGrid.razor" />
+    <_ContentIncludedByDefault Remove="Components\Devices\Functions\BlinkMarineKeypad\BlinkMarineDeviceSettings.razor" />
+    <_ContentIncludedByDefault Remove="Components\Devices\Functions\BlinkMarineKeypad\BlinkMarineDialsGrid.razor" />
+    <_ContentIncludedByDefault Remove="Components\Devices\Functions\CanInputsGrid.razor" />
+    <_ContentIncludedByDefault Remove="Components\Devices\Functions\CanOutputsGrid.razor" />
+    <_ContentIncludedByDefault Remove="Components\Devices\Functions\ConditionsGrid.razor" />
+    <_ContentIncludedByDefault Remove="Components\Devices\Functions\CountersGrid.razor" />
+    <_ContentIncludedByDefault Remove="Components\Devices\Functions\DigitalInputsGrid.razor" />
+    <_ContentIncludedByDefault Remove="Components\Devices\Functions\DigitalOutputsGrid.razor" />
+    <_ContentIncludedByDefault Remove="Components\Devices\Functions\FlashersGrid.razor" />
+    <_ContentIncludedByDefault Remove="Components\Devices\Functions\GrayhillKeypad\GrayhillButtonsGrid.razor" />
+    <_ContentIncludedByDefault Remove="Components\Devices\Functions\GrayhillKeypad\GrayhillDeviceSettings.razor" />
+    <_ContentIncludedByDefault Remove="Components\Devices\Functions\OutputsGrid.razor" />
+    <_ContentIncludedByDefault Remove="Components\Devices\Functions\OutputsPwmGrid.razor" />
+    <_ContentIncludedByDefault Remove="Components\Devices\Functions\RotarySwitchGrid.razor" />
+    <_ContentIncludedByDefault Remove="Components\Devices\Functions\StarterDisableConfig.razor" />
+    <_ContentIncludedByDefault Remove="Components\Devices\Functions\VirtualInputsGrid.razor" />
+    <_ContentIncludedByDefault Remove="Components\Devices\Functions\WiperConfig.razor" />
   </ItemGroup>
 
   <ItemGroup>
@@ -40,6 +48,24 @@
 
   <ItemGroup>
     <None Include="wwwroot\Icons\PTDPDM.svg" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <AdditionalFiles Include="Components\Devices\FwDevice\Functions\AnalogInputsGrid.razor" />
+    <AdditionalFiles Include="Components\Devices\FwDevice\Functions\BlinkMarineKeypad\BlinkMarineButtonsGrid.razor" />
+    <AdditionalFiles Include="Components\Devices\FwDevice\Functions\BlinkMarineKeypad\BlinkMarineDeviceSettings.razor" />
+    <AdditionalFiles Include="Components\Devices\FwDevice\Functions\BlinkMarineKeypad\BlinkMarineDialsGrid.razor" />
+    <AdditionalFiles Include="Components\Devices\FwDevice\Functions\CanInputsGrid.razor" />
+    <AdditionalFiles Include="Components\Devices\FwDevice\Functions\CanOutputsGrid.razor" />
+    <AdditionalFiles Include="Components\Devices\FwDevice\Functions\ConditionsGrid.razor" />
+    <AdditionalFiles Include="Components\Devices\FwDevice\Functions\CountersGrid.razor" />
+    <AdditionalFiles Include="Components\Devices\FwDevice\Functions\DigitalInputsGrid.razor" />
+    <AdditionalFiles Include="Components\Devices\FwDevice\Functions\DigitalOutputsGrid.razor" />
+    <AdditionalFiles Include="Components\Devices\FwDevice\Functions\FlashersGrid.razor" />
+    <AdditionalFiles Include="Components\Devices\FwDevice\Functions\GrayhillKeypad\GrayhillButtonsGrid.razor" />
+    <AdditionalFiles Include="Components\Devices\FwDevice\Functions\GrayhillKeypad\GrayhillDeviceSettings.razor" />
+    <AdditionalFiles Include="Components\Devices\FwDevice\Functions\RotarySwitchGrid.razor" />
+    <AdditionalFiles Include="Components\Devices\FwDevice\Functions\VirtualInputsGrid.razor" />
   </ItemGroup>
 
   <PropertyGroup>

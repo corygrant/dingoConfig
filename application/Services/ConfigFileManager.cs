@@ -1,7 +1,6 @@
 using System.Text.Json;
 using application.Models;
-using domain.Devices.Canboard;
-using domain.Devices.dingoPdm;
+using domain.Devices;
 using domain.Devices.Generic;
 using domain.Devices.Keypad.BlinkMarine;
 using domain.Devices.Keypad.Grayhill;
@@ -10,7 +9,7 @@ using Microsoft.Extensions.Logging;
 
 namespace application.Services;
 
-public class ConfigFileManager(ILogger<ConfigFileManager> logger, DeviceDefinitionManager deviceDefinitionManager)
+public class ConfigFileManager(ILogger<ConfigFileManager> logger, FwDeviceDefManager fwDeviceDefManager)
 {
     private readonly JsonSerializerOptions _options = new() { WriteIndented = true, PropertyNameCaseInsensitive = true};
 
@@ -93,8 +92,7 @@ public class ConfigFileManager(ILogger<ConfigFileManager> logger, DeviceDefiniti
         {
             var config = new ConfigFile()
             {
-                PdmDevices = devices.OfType<PdmDevice>().ToList(),
-                CanboardDevices = devices.Where(d => d.GetType() == typeof(CanboardDevice)).Cast<CanboardDevice>().ToList(),
+                Devices = devices.OfType<FwDevice>().ToList(),
                 DbcDevices = devices.Where(d => d.GetType() == typeof(DbcDevice)).Cast<DbcDevice>().ToList(),
                 BlinkMarineKeypads = devices.OfType<BlinkMarineKeypadDevice>().ToList(),
                 GrayhillKeypads = devices.OfType<GrayhillKeypadDevice>().ToList()
@@ -139,25 +137,15 @@ public class ConfigFileManager(ILogger<ConfigFileManager> logger, DeviceDefiniti
 
             CurrentFileName = Path.GetFileName(fileName);
 
-            // Apply definitions to PDM devices (restores Type, PdmType, counts, rebuilds CyclicSigs/VarMap/Params)
-            var pdmSigsConfig = deviceDefinitionManager.GetPdmCyclicSigsConfig();
-            foreach (var device in config.PdmDevices)
+            // Apply definitions to devices (restores Type, DeviceType, counts, rebuilds CyclicSigs/VarMap/Params)
+            foreach (var device in config.Devices)
             {
-                var def = deviceDefinitionManager.GetByPdmType(device.PdmType) ?? DeviceDefinitionManager.DefaultPdm;
-                device.ApplyDefinition(def, pdmSigsConfig);
-            }
-
-            // Bind cyclic sigs for CANboard devices
-            var canboardSigsConfig = deviceDefinitionManager.GetCanboardCyclicSigsConfig();
-            if (canboardSigsConfig != null)
-            {
-                foreach (var device in config.CanboardDevices)
-                    device.BindCyclicSigs(canboardSigsConfig);
+                var def = fwDeviceDefManager.GetByDeviceType(device.Def.DeviceType) ?? FwDeviceDefManager.DefaultFwDevice;
+                var deviceSigsConfig = fwDeviceDefManager.GetDeviceCyclicSigsConfig(def.DeviceType);
             }
 
             var allDevices = new List<IDevice>();
-            allDevices.AddRange(config.PdmDevices);
-            allDevices.AddRange(config.CanboardDevices);
+            allDevices.AddRange(config.Devices);
             allDevices.AddRange(config.DbcDevices);
             allDevices.AddRange(config.BlinkMarineKeypads);
             allDevices.AddRange(config.GrayhillKeypads);

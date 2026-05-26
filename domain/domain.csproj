@@ -17,6 +17,10 @@
     <PackageReference Include="Peak.PCANBasic.NET" Version="4.10.0.964" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Devices\dingoFw\" />
+  </ItemGroup>
+
   <PropertyGroup>
     <NoWarn>NU1903</NoWarn>
   </PropertyGroup>

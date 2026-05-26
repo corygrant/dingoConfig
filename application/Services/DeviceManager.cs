@@ -1,7 +1,6 @@
 using System.Collections.Concurrent;
 using application.Models;
-using domain.Devices.Canboard;
-using domain.Devices.dingoPdm;
+using domain.Devices;
 using domain.Devices.Generic;
 using domain.Devices.Keypad.BlinkMarine;
 using domain.Devices.Keypad.Grayhill;
@@ -11,7 +10,7 @@ using Microsoft.Extensions.Logging;
 
 namespace application.Services;
 
-public class DeviceManager(ILogger<DeviceManager> logger, ILoggerFactory loggerFactory, SystemLogger systemLogger, DeviceDefinitionManager deviceDefinitionManager)
+public class DeviceManager(ILogger<DeviceManager> logger, ILoggerFactory loggerFactory, SystemLogger systemLogger, FwDeviceDefManager fwDeviceDefManager)
 {
     private readonly Dictionary<Guid, IDevice> _devices = new();
     private ConcurrentDictionary<(int BaseId, int Index, int SubIndex), DeviceCanFrame> _requestQueue = new();
@@ -57,35 +56,24 @@ public class DeviceManager(ILogger<DeviceManager> logger, ILoggerFactory loggerF
         var model = parts.Length > 1 ? parts[1] : string.Empty;
 
         // Handle pdm:{typeId} format
-        int pdmTypeId = 0;
+        var typeId = 0;
         if (devType.Contains(':'))
         {
-            var pdmParts = devType.Split(':', 2);
-            devType = pdmParts[0];
-            int.TryParse(pdmParts[1], out pdmTypeId);
+            var devParts = devType.Split(':', 2);
+            devType = devParts[0];
+            int.TryParse(devParts[1], out typeId);
         }
 
         IDevice device = devType switch
         {
-            "pdm" => new PdmDevice(
-                deviceDefinitionManager.GetByPdmType(pdmTypeId) ?? DeviceDefinitionManager.DefaultPdm,
-                name, baseId),
-            "canboard" => new CanboardDevice(name, baseId),
+            "fwd" => new FwDevice(name, baseId,
+                fwDeviceDefManager.GetByDeviceType(typeId) ?? FwDeviceDefManager.DefaultFwDevice,
+                fwDeviceDefManager.GetDeviceCyclicSigsConfig(typeId)),
             "dbcdevice" => new DbcDevice(name, baseId),
             "blinkkeypad" => new BlinkMarineKeypadDevice(name, baseId, model),
             "grayhillkeypad" => new GrayhillKeypadDevice(name, baseId, model),
             _ => throw new ArgumentException($"Unknown device type: '{deviceType}'")
         };
-
-        switch (device)
-        {
-            case PdmDevice pdm when deviceDefinitionManager.GetPdmCyclicSigsConfig() is { } pdmSigs:
-                pdm.BindCyclicSigs(pdmSigs);
-                break;
-            case CanboardDevice canboard when deviceDefinitionManager.GetCanboardCyclicSigsConfig() is { } canboardSigs:
-                canboard.BindCyclicSigs(canboardSigs);
-                break;
-        }
 
         SetLoggers(device);
         _devices[device.Guid] = device;
@@ -217,7 +205,7 @@ public class DeviceManager(ILogger<DeviceManager> logger, ILoggerFactory loggerF
         return devices;
     }
 
-    public void CheckConfig(Guid deviceId)
+    private void CheckConfig(Guid deviceId)
     {
         var device = GetDevice(deviceId);
         if (device is not IDeviceConfigurable) return;
@@ -248,12 +236,9 @@ public class DeviceManager(ILogger<DeviceManager> logger, ILoggerFactory loggerF
     {
         switch (device)
         {
-            case PdmDevice pdmDevice:
-                pdmDevice.SetLogger(loggerFactory.CreateLogger<PdmDevice>());
-                pdmDevice.SuccessNotification += msg => systemLogger.Notify(pdmDevice.Name, msg);
-                break;
-            case CanboardDevice canboardDevice:
-                canboardDevice.SetLogger(loggerFactory.CreateLogger<CanboardDevice>());
+            case FwDevice configDevice:
+                configDevice.SetLogger(loggerFactory.CreateLogger<FwDevice>());
+                configDevice.SuccessNotification += msg => systemLogger.Notify(configDevice.Name, msg);
                 break;
             case DbcDevice dbcDevice:
                 dbcDevice.SetLogger(loggerFactory.CreateLogger<DbcDevice>());

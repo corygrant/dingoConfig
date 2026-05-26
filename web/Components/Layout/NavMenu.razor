@@ -2,6 +2,7 @@
 @using web.Services
 @using domain.Interfaces
 @using application.Services
+@using domain.Devices
 @inject DeviceManager DeviceManager
 @inject IHostApplicationLifetime AppLifetime
 @inject IWebHostEnvironment Env
@@ -16,9 +17,7 @@
     </MudNavLink>
 
     <MudDivider Class="my-2" />
-
     
-
     <MudNavLink Href="devices" 
                 Icon="@Icons.Material.Filled.Memory"
                 IconColor= "@(AnyDeviceConnected() ? Color.Success : Color.Default)"
@@ -98,10 +97,9 @@
         // https://mudblazor.com/features/icons#icons
         return device switch
         {
-            domain.Devices.dingoPdm.PdmDevice pdm => Utils.GetIcon(pdm.Icon, Env.WebRootPath),
+            FwDevice dev => Utils.GetIcon(dev.Def.Icon, Env.WebRootPath),
             _ => device.GetType().Name switch
             {
-                "CanboardDevice" => Icons.Material.Filled.DeveloperBoard,
                 "DbcDevice" => Icons.Material.Filled.FactCheck,
                 "BlinkMarineKeypadDevice" or "GrayhillKeypadDevice" => Icons.Material.Filled.CalendarViewMonth,
                 _ => Icons.Material.Filled.DeviceUnknown

@@ -1,0 +1,320 @@
+@using application.Services
+@using domain.Devices.Functions.Keypad
+@using domain.Enums
+@using domain.Devices.Keypad
+@using domain.Devices.Keypad.BlinkMarine
+@using domain.Devices.Keypad.Grayhill
+@using web.Components.Devices.FwDevice.Functions.BlinkMarineKeypad
+@using web.Components.Devices.FwDevice.Functions.GrayhillKeypad
+@using web.Services
+@inject UserPreferencesManager UserPrefs
+@inject DeviceManager DeviceManager
+@typeparam TDevice where TDevice : domain.Devices.FwDevice
+@inherits web.Components.Devices.FwDevice.Functions.FunctionComponentBase<TDevice>
+@implements IDisposable
+
+<div style="overflow-y: auto; height: calc(100vh - 250px); padding: 24px; scrollbar-width: auto; scrollbar-color: #888 transparent;">
+    <MudExpansionPanels MultiExpansion="true">
+        <MudExpansionPanel Text="Keypad">
+            <MudStack>
+                <MudList T="string">
+                    <MudListItem Icon="@Icons.Material.Filled.Circle" IconSize="Size.Small">
+                        Select a keypad device to assign to this device
+                    </MudListItem>
+                    <MudListItem Icon="@Icons.Material.Filled.Circle" IconSize="Size.Small">
+                        Keypad must first be added as a device from Devices
+                    </MudListItem>
+                    <MudListItem Icon="@Icons.Material.Filled.Circle" IconSize="Size.Small">
+                        This device will control the keypad LEDs
+                    </MudListItem>
+                    <MudListItem Icon="@Icons.Material.Filled.Circle" IconSize="Size.Small">
+                        If the keypad ID is modified, it must be re-selected here
+                    </MudListItem>
+                </MudList>
+                <MudSelect Value="@_selectedKeypad"
+                           Label="Keypads"
+                           AdornmentText="Assign new keypad"
+                           Text="@(_selectedKeypad?.Name ?? Keypad.Name)"
+                           Variant="Variant.Outlined"
+                           Dense="true"
+                           Class="mb-3"
+                           T="IKeypadDevice"
+                           FullWidth="true"
+                           Disabled="!Keypad.Enabled"
+                           ValueChanged="OnKeypadSelected">
+                    @foreach (var dev in DeviceManager.GetAllDevices())
+                    {
+                        if (dev is IKeypadDevice keypadDev)
+                        {
+                            <MudSelectItem T="IKeypadDevice" Value="keypadDev">@dev.Name</MudSelectItem>
+                        }
+                    }
+                </MudSelect>
+                <MudDivider Vertical="false"/>
+                <MudText>Selected Keypad</MudText>
+                <MudStack Row="true">
+                    <MudTextField Value="@(_selectedKeypad?.Name ?? Keypad.Name)"
+                                  T="string"
+                                  Variant="Variant.Outlined"
+                                  ReadOnly="true"
+                                  Disabled="true"
+                                  FullWidth="true"
+                                  Label="Name"/>
+                    <MudTextField @bind-Text="@_selectedType"
+                                  T="string"
+                                  Variant="Variant.Outlined"
+                                  ReadOnly="true"
+                                  Disabled="true"
+                                  FullWidth="true"
+                                  Label="Type"/>
+                    <MudTextField Value="@Utils.FormatId(Keypad.Id, UserPrefs.Preferences.IdFormat)"
+                                  T="string"
+                                  Variant="Variant.Outlined"
+                                  ReadOnly="true"
+                                  Disabled="true"
+                                  FullWidth="true"
+                                  Label="ID"/>
+                </MudStack>
+            </MudStack>
+        </MudExpansionPanel>
+    
+    @if (_selectedKeypad != null)
+        {
+            <MudExpansionPanel Text="Button LED Vars">
+                <MudDataGrid Items="@Keypad.Buttons.Take(@Keypad.NumButtons)" Dense="true" Hover="true" Striped="false" EditMode="DataGridEditMode.Cell" ReadOnly="false"
+                             SortMode="SortMode.None" ColumnResizeMode="ResizeMode.Container" Virtualize="false"
+                             FixedHeader="true" HorizontalScrollbar="true" Style="max-height: 400px;">
+                    <Columns>
+                        <PropertyColumn Property="x => x.Number" Title="#" StickyLeft="true" Editable="false" CellStyle="max-width: 100px"/>
+                        <PropertyColumn Property="x => x.Enabled" CellStyle="max-width: 100px">
+                            <EditTemplate>
+                                <MudCheckBox @bind-Value="context.Item.Enabled" Dense="true"/>
+                            </EditTemplate>
+                        </PropertyColumn>
+                        <PropertyColumn Property="x => x.Name" CellStyle="max-width: 200px">
+                            <EditTemplate>
+                                <MudTextField @bind-Value="context.Item.Name" Variant="Variant.Outlined" Margin="Margin.Dense"/>
+                            </EditTemplate>
+                        </PropertyColumn>
+                        <PropertyColumn Property="x => x.Mode" CellStyle="max-width: 200px">
+                            <EditTemplate>
+                                <MudSelect T="domain.Enums.InputMode" @bind-Value="context.Item.Mode" Variant="Variant.Outlined" Dense="true"
+                                           Disabled="!context.Item.Enabled">
+                                    @foreach (domain.Enums.InputMode mode in Enum.GetValues(typeof(domain.Enums.InputMode)))
+                                    {
+                                        <MudSelectItem T="domain.Enums.InputMode" Value="@mode">@mode</MudSelectItem>
+                                    }
+                                </MudSelect>
+                            </EditTemplate>
+                        </PropertyColumn>
+                        @for (var i = 0; i < 4; i++)
+                        {
+                            var index = i;
+                            var title = $"Var {index}";
+                            <PropertyColumn Property="x => x.Vars[index]" Title=@title CellStyle="max-width: 250px;">
+                                <EditTemplate>
+                                    <MudStack Row="true">
+                                        <MudIconButton Icon="@Icons.Material.Filled.Search"
+                                                       Color="Color.Primary"
+                                                       Size="Size.Small"
+                                                       Disabled="(!context.Item.Enabled)"
+                                                       Style="max-width: 20px"
+                                                       OnClick="@(() => OpenVariableSelectorAsync(["bool"], v => context.Item.Vars[index] = v))">
+                                        </MudIconButton>
+                                        <MudText>@GetSelectedVarText(context.Item.Vars[index])</MudText>
+                                    </MudStack>
+                                </EditTemplate>
+                            </PropertyColumn>
+                        }
+                        <PropertyColumn Property="x => x.FaultVar" Title="Fault Var" CellStyle="max-width: 250px;">
+                            <EditTemplate>
+                                <MudStack Row="true">
+                                    <MudIconButton Icon="@Icons.Material.Filled.Search"
+                                                   Color="Color.Primary"
+                                                   Size="Size.Small"
+                                                   Disabled="(!context.Item.Enabled)"
+                                                   Style="max-width: 20px"
+                                                   OnClick="@(() => OpenVariableSelectorAsync(["bool"], v => context.Item.FaultVar = v))">
+                                    </MudIconButton>
+                                    <MudText>@GetSelectedVarText(context.Item.FaultVar)</MudText>
+                                </MudStack>
+                            </EditTemplate>
+                        </PropertyColumn>
+                    </Columns>
+                </MudDataGrid>
+            </MudExpansionPanel>
+        }
+        
+        @if (_selectedKeypad != null && Keypad.IsBlinkMarine())
+    {
+        <MudExpansionPanel Text="Device Settings">
+            <BlinkMarineDeviceSettings TDevice="TDevice" Device="Device" Keypad="Keypad"/>
+        </MudExpansionPanel>
+        <MudExpansionPanel Text="Button LED Colors">
+            <BlinkMarineButtonsGrid TDevice="TDevice" Device="Device" Buttons="Keypad.Buttons.Take(Keypad.NumButtons)"/>
+        </MudExpansionPanel>
+        
+        @if (Keypad.NumDials > 0)
+            {
+                <MudExpansionPanel Text="Dial LEDs">
+                    <BlinkMarineDialsGrid TDevice="TDevice" Device="Device" Dials="Keypad.Dials.Take(Keypad.NumDials)"/>
+                </MudExpansionPanel>
+            }
+        }
+    @if (_selectedKeypad != null && Keypad.IsGrayhill())
+    {
+        <MudExpansionPanel Text="Device Settings">
+            <GrayhillDeviceSettings TDevice="TDevice" Device="Device" Keypad="Keypad"/>
+        </MudExpansionPanel>
+        <MudExpansionPanel Text="Button LEDs">
+            <GrayhillButtonsGrid TDevice="TDevice" Device="Device" Buttons="Keypad.Buttons.Take(Keypad.NumButtons)"/>
+        </MudExpansionPanel>
+    }
+        
+    </MudExpansionPanels>
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public KeypadMaster Keypad { get; set; } = null!;
+
+    private IKeypadDevice? _selectedKeypad;
+    private string _selectedType = "";
+
+    protected override void OnInitialized()
+    {
+        DeviceManager.DeviceAdded += OnDeviceChanged;
+        DeviceManager.DeviceRemoved += OnDeviceChanged;
+        RestoreSelectedKeypad();
+    }
+
+    private void RestoreSelectedKeypad()
+    {
+        if (Keypad.Id == 0) return;
+
+        // Restore dimensions from persisted model so grids show correct row count
+        (Keypad.NumButtons, Keypad.NumDials) = GetDimensionsForModel(Keypad.Model);
+
+        // Re-establish live reference to the keypad device by matching BaseId
+        _selectedKeypad = DeviceManager.GetAllDevices()
+            .OfType<IKeypadDevice>()
+            .FirstOrDefault(d => d.BaseId == Keypad.Id);
+
+        if (_selectedKeypad == null) return;
+
+        _selectedType = Keypad.IsBlinkMarine() ? "Blink Marine" : "Grayhill";
+    }
+
+    private static (int numButtons, int numDials) GetDimensionsForModel(KeypadModel model) =>
+        model switch
+        {
+            KeypadModel.Blink1Key         => (1, 0),
+            KeypadModel.Blink2Key         => (2, 0),
+            KeypadModel.Blink4Key         => (4, 0),
+            KeypadModel.Blink5Key         => (5, 0),
+            KeypadModel.Blink6Key         => (6, 0),
+            KeypadModel.Blink8Key         => (8, 0),
+            KeypadModel.Blink10Key        => (10, 0),
+            KeypadModel.Blink12Key        => (12, 0),
+            KeypadModel.Blink13Key2Dial   => (13, 2),
+            KeypadModel.Blink15Key        => (15, 0),
+            KeypadModel.BlinkRacepad      => (8, 4),
+            KeypadModel.Grayhill6Key      => (6, 0),
+            KeypadModel.Grayhill8Key      => (8, 0),
+            KeypadModel.Grayhill12Key     => (12, 0),
+            KeypadModel.Grayhill15Key     => (15, 0),
+            KeypadModel.Grayhill20Key     => (20, 0),
+            _                             => (0, 0)
+        };
+
+    private void OnDeviceChanged(object? sender, DeviceEventArgs e)
+    {
+        // Update Name/Id copies if the linked keypad device is re-added or renamed
+        if ((Keypad.IsBlinkMarine() && e.Device.GetType() == typeof(BlinkMarineKeypadDevice)) ||
+            (Keypad.IsGrayhill() && e.Device.GetType() == typeof(GrayhillKeypadDevice)))
+        {
+            if (e.Device.BaseId == Keypad.Id)
+                Keypad.Name = e.Device.Name;
+
+            if (e.Device.Name == Keypad.Name)
+                Keypad.Id = e.Device.BaseId;
+        }
+
+        // Re-establish (or clear) the live device reference after any device change
+        RestoreSelectedKeypad();
+        InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        DeviceManager.DeviceAdded -= OnDeviceChanged;
+        DeviceManager.DeviceRemoved -= OnDeviceChanged;
+    }
+
+    private void OnKeypadSelected(IKeypadDevice dev)
+    {
+        _selectedKeypad = dev;
+
+        Keypad.Name = dev.Name;
+        Keypad.Id = dev.BaseId;
+        Keypad.Model = ModelToKeypadModel(dev.Model);
+
+        if (Keypad.IsBlinkMarine())
+        {
+            var functions = BlinkMarineModels.Lookup(dev.Model);
+            Keypad.NumButtons = functions.numButtons;
+            Keypad.NumDials = functions.numDials;
+            _selectedType = "Blink Marine";
+
+            var bmDev = (BlinkMarineKeypadDevice)dev;
+            for (var i = 0; i < Keypad.NumButtons; i++)
+            {
+                Keypad.Buttons[i].Name = bmDev.Buttons[i].Name;
+            }
+            
+            for (var i = 0; i < Keypad.NumDials; i++)
+            {
+                Keypad.Dials[i].Name = bmDev.Dials[i].Name;
+            }
+
+        }
+        if (Keypad.IsGrayhill())
+        {
+            Keypad.NumButtons = GrayhillModels.Lookup(dev.Model);
+            Keypad.NumDials = 0;
+            _selectedType = "Grayhill";
+            
+            var ghDev = (GrayhillKeypadDevice)dev;
+            for (var i = 0; i < Keypad.NumButtons; i++)
+            {
+                Keypad.Buttons[i].Name = ghDev.Buttons[i].Name;
+            }
+        }
+    }
+
+    private KeypadModel ModelToKeypadModel(string model)
+    {
+        return model switch
+        {
+            "pkp1600" => KeypadModel.Blink2Key,
+            "pkp2200" => KeypadModel.Blink4Key,
+            "pkp2300" => KeypadModel.Blink6Key,
+            "pkp2400" => KeypadModel.Blink8Key,
+            "pkp2500" => KeypadModel.Blink10Key,
+            "pkp2600" => KeypadModel.Blink12Key,
+            "pkp3500" => KeypadModel.Blink15Key,
+            "pkp1100" => KeypadModel.Blink1Key,
+            "pkp1200" => KeypadModel.Blink2Key,
+            "pkp1500" => KeypadModel.Blink5Key,
+            "pkp3500mt" => KeypadModel.Blink13Key2Dial,
+            "racepad" => KeypadModel.BlinkRacepad,
+            "3kx06" => KeypadModel.Grayhill6Key,
+            "3kx08" => KeypadModel.Grayhill8Key,
+            "3kx12" => KeypadModel.Grayhill12Key,
+            "3kx15" => KeypadModel.Grayhill15Key,
+            "3kx20" => KeypadModel.Grayhill20Key,
+            _ => throw new ArgumentOutOfRangeException(nameof(model), model, null)
+        };
+    }
+
+}

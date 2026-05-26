@@ -1,9 +1,11 @@
+using domain.Devices;
 using domain.Models;
 
 namespace domain.Interfaces;
 
 public interface IDeviceConfigurable : IDevice
 {
+    FwDeviceDef Def { get; }
     List<DeviceVariable> VarMap { get; }
     List<DeviceParameter> Params { get; }
     bool ConfigMismatch { get; set; }
@@ -13,10 +15,8 @@ public interface IDeviceConfigurable : IDevice
     List<DeviceCanFrame> GetModifyMsgs(int baseId);
     DeviceCanFrame GetBurnMsg();
     DeviceCanFrame GetVersionMsg();
-    bool CanSleep { get; }
     DeviceCanFrame? GetSleepMsg();
     DeviceCanFrame? GetWakeupMsg();
-    bool CanBootloader { get; }
     DeviceCanFrame? GetBootloaderMsg();
     
 }

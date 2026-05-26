@@ -1,7 +1,5 @@
 @using application.Services
-@using domain.Devices.Canboard
-@using domain.Devices.dingoPdm
-@using domain.Devices.Generic
+@using domain.Devices
 @using domain.Devices.Keypad.BlinkMarine
 @using domain.Devices.Keypad.Grayhill
 @using web.Services
@@ -39,7 +37,7 @@
                        Color="Color.Default"
                        Size="Size.Small"
                        StartIcon="@Icons.Material.Filled.Bedtime"
-                       Disabled="@(!Device.Connected || !AdapterConnected || !Device.CanSleep)"
+                       Disabled="@(!Device.Connected || !AdapterConnected || !Device.Def.CanSleep)"
                        OnClick="@OnSleepAsync">
                 Sleep
             </MudButton>
@@ -47,7 +45,7 @@
                        Color="Color.Default"
                        Size="Size.Small"
                        StartIcon="@Icons.Material.Filled.WbSunny"
-                       Disabled="@(!Device.Connected || !AdapterConnected || !Device.CanSleep)"
+                       Disabled="@(!Device.Connected || !AdapterConnected || !Device.Def.CanSleep)"
                        OnClick="@OnWakeupAsync">
                 Wakeup
             </MudButton>
@@ -55,7 +53,7 @@
                        Color="Color.Default"
                        Size="Size.Small"
                        StartIcon="@Icons.Material.Filled.DeveloperMode"
-                       Disabled="@(!Device.Connected || !AdapterConnected || !Device.CanBootloader)"
+                       Disabled="@(!Device.Connected || !AdapterConnected || !Device.Def.CanBootloader)"
                        OnClick="@OnEnterBootloaderAsync">
                 Bootloader
             </MudButton>
@@ -91,8 +89,7 @@
     
     private string DeviceName => Device switch
     {
-        PdmDevice pdm => pdm.Type,
-        CanboardDevice => "CANBoard",
+        FwDevice fw => fw.Def.TypeName,
         BlinkMarineKeypadDevice => "Blink Marine Keypad",
         GrayhillKeypadDevice => "Grayhill Keypad",
         _ => Device.GetType().Name

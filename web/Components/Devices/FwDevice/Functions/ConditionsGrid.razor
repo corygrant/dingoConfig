@@ -1,0 +1,86 @@
+@using web.Services
+@using domain.Devices.Functions
+@using domain.Enums
+@inject NotificationService Notification
+@typeparam TDevice where TDevice : domain.Interfaces.IDeviceConfigurable
+@inherits FunctionComponentBase<TDevice>
+
+<MudDataGrid Items="@Conditions" Dense="true" Hover="true" Striped="false" EditMode="DataGridEditMode.Cell" ReadOnly="false"
+             SortMode="SortMode.None" ColumnResizeMode="ResizeMode.Container" Virtualize="true" 
+             FixedHeader="true" HorizontalScrollbar="true" Style="max-height: 400px;">
+    <Columns>
+        <PropertyColumn Property="x => x.Number" Title="#" StickyLeft="true" Editable="false" CellStyle="max-width: 100px"/>
+        <PropertyColumn Property="x => x.Enabled" CellStyle="max-width: 100px">
+            <EditTemplate>
+                <MudCheckBox @bind-Value="context.Item.Enabled" Dense="true" />
+            </EditTemplate>
+        </PropertyColumn>
+        <PropertyColumn Property="x => x.Name" CellStyle="max-width: 200px">
+            <EditTemplate>
+                <MudTextField @bind-Value="context.Item.Name" Variant="Variant.Outlined" Margin="Margin.Dense" />
+            </EditTemplate>
+        </PropertyColumn>
+        <PropertyColumn Property="x => x.Value" Title="Value" Editable="false" CellStyle="max-width: 100px">
+            <CellTemplate>
+                <MudChip T="string"
+                         Variant="Variant.Outlined"
+                         Color="@(context.Item.Value > 0 ? Color.Success : Color.Default)"
+                         Size="Size.Small" Style="min-width: 50px;">
+                    @context.Item.Value
+                </MudChip>
+            </CellTemplate>
+        </PropertyColumn>
+        <PropertyColumn Property="x => x.Input" Title="Variable" CellStyle="max-width: 250px;">
+            <EditTemplate>
+                <MudStack Row="true">
+                    <MudIconButton Icon="@Icons.Material.Filled.Search"
+                                   Color="Color.Primary"
+                                   Size="Size.Small"
+                                   Disabled="(!context.Item.Enabled)"
+                                   Style="max-width: 20px"
+                                   OnClick="@(() => OpenVariableSelectorAsync(["bool", "int", "float"], v => context.Item.Input = v))">
+                    </MudIconButton>
+                    <MudText>@GetSelectedVarText(context.Item.Input)</MudText>
+                </MudStack>
+            </EditTemplate>
+        </PropertyColumn>
+        <PropertyColumn Property="x => x.Operator" CellStyle="max-width: 200px">
+            <EditTemplate>
+                <MudSelect T="Operator" @bind-Value="context.Item.Operator" Variant="Variant.Outlined" Dense="true"
+                           Disabled="!context.Item.Enabled">
+                    @foreach (Operator op in Enum.GetValues(typeof(Operator)))
+                    {
+                        <MudSelectItem T="Operator" Value="@op">@op</MudSelectItem>
+                    }
+                </MudSelect>
+            </EditTemplate>
+        </PropertyColumn>
+        <TemplateColumn Title="Argument" Resizable="true" CellStyle="max-width: 100px">
+            <EditTemplate>
+                <MudNumericField @key="@($"arg-{context.Item.Number}-{_refreshCounter}")"
+                                 Value="@context.Item.Arg"
+                                 Disabled="!context.Item.Enabled"
+                                 ValueChanged="@((double val) => ArgChanged(context.Item, val))"/>
+            </EditTemplate>
+        </TemplateColumn>
+    </Columns>
+</MudDataGrid>
+
+@code {
+    [Parameter, EditorRequired]
+    public List<Condition> Conditions { get; set; } = null!;
+
+    private int _refreshCounter;
+    
+    private void ArgChanged(Condition item, double value)
+    {
+        const double min = double.MinValue;
+        const double max = double.MaxValue;
+        if (value < min || value > max)
+        {
+            Notification.NewWarning($"{item.Name}.Arg must be {min} to {max}");
+        }
+        item.Arg = Math.Clamp(value, min, max);
+        _refreshCounter++;
+    }
+}

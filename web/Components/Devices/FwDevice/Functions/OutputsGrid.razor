@@ -1,0 +1,201 @@
+@using web.Services
+@using domain.Devices.Functions
+@using domain.Enums
+@inject NotificationService Notification
+@typeparam TDevice where TDevice : domain.Interfaces.IDeviceConfigurable
+@inherits FunctionComponentBase<TDevice>
+
+<MudDataGrid Items="@Outputs" Dense="true" Hover="true" Striped="false" EditMode="DataGridEditMode.Cell" ReadOnly="false" 
+             SortMode="SortMode.None" ColumnResizeMode="ResizeMode.Container" Virtualize="true" 
+             FixedHeader="true" HorizontalScrollbar="true" Style="max-height: 400px;">
+    <Columns>
+        <PropertyColumn Property="x => x.Number" Title="#" StickyLeft="true" Editable="false" />
+        <PropertyColumn Property="x => x.Enabled" CellStyle="max-width: 100px">
+            <EditTemplate>
+                <MudCheckBox @bind-Value="context.Item.Enabled" Dense="true" />
+            </EditTemplate>
+        </PropertyColumn>
+        <PropertyColumn Property="x => x.Name" CellStyle="max-width: 200px">
+            <EditTemplate>
+                <MudTextField @bind-Value="context.Item.Name" Variant="Variant.Outlined" Margin="Margin.Dense" />
+            </EditTemplate>
+        </PropertyColumn>
+        <PropertyColumn Property="x => x.State" Editable="false" CellStyle="max-width: 100px">
+            <CellTemplate>
+                <MudChip T="string" Variant="Variant.Outlined"
+                         Color="@GetOutputColor(context.Item.State)"
+                         Size="Size.Small" Style="min-width: 50px;">
+                    @GetOutputStateText(context.Item.State)
+                </MudChip>
+            </CellTemplate>
+        </PropertyColumn>
+        <PropertyColumn Property="x => x.Input" Title="Variable" CellStyle="max-width: 250px;">
+            <EditTemplate>
+                <MudStack Row="true">
+                    <MudIconButton Icon="@Icons.Material.Filled.Search"
+                               Color="Color.Primary"
+                               Size="Size.Small"
+                               Disabled="(!context.Item.Enabled || context.Item.PrimaryOutput >= 0)"
+                               Style="max-width: 20px"
+                               OnClick="@(() => OpenVariableSelectorAsync(["bool"], v => context.Item.Input = v))">
+                    </MudIconButton>
+                    <MudText>@GetSelectedVarText(context.Item.Input)</MudText>
+                </MudStack>
+            </EditTemplate>
+        </PropertyColumn>
+        <TemplateColumn Title="Current Limit (A)" Resizable="true" CellStyle="max-width: 100px">
+            <EditTemplate>
+                <MudNumericField @key="@($"currentLimit-{context.Item.Number}-{_refreshCounter}")"
+                                 Value="@context.Item.CurrentLimit"
+                                 Disabled="!context.Item.Enabled || context.Item.PrimaryOutput >= 0"
+                                 ValueChanged="@((double val) => OnCurrentLimitChanged(context.Item, val))"/>
+            </EditTemplate>
+        </TemplateColumn>
+        <TemplateColumn Title="Inrush Limit (A)" Resizable="true" CellStyle="max-width: 100px">
+            <EditTemplate>
+                <MudNumericField @key="@($"inrushLimit-{context.Item.Number}-{_refreshCounter}")"
+                                 Value="@context.Item.InrushCurrentLimit"
+                                 Disabled="!context.Item.Enabled || context.Item.PrimaryOutput >= 0"
+                                 ValueChanged="@((double val) => OnInrushLimitChanged(context.Item, val))"/>
+            </EditTemplate>
+        </TemplateColumn>
+        <TemplateColumn Title="Inrush Time (ms)" Resizable="true" CellStyle="max-width: 100px">
+            <EditTemplate>
+                <MudNumericField @key="@($"inrushTime-{context.Item.Number}-{_refreshCounter}")"
+                                 Value="@context.Item.InrushTime"
+                                 Disabled="!context.Item.Enabled || context.Item.PrimaryOutput >= 0"
+                                 ValueChanged="@((int val) => OnInrushTimeChanged(context.Item, val))"/>
+            </EditTemplate>
+        </TemplateColumn>
+        <PropertyColumn Property="x => x.ResetMode" Title="Reset Mode" CellStyle="max-width: 150px">
+            <EditTemplate>
+                <MudSelect T="ResetMode" @bind-Value="context.Item.ResetMode" Variant="Variant.Outlined" Dense="true" 
+                           Disabled="!context.Item.Enabled || context.Item.PrimaryOutput >= 0">
+                    @foreach (ResetMode resetMode in Enum.GetValues(typeof(ResetMode)))
+                    {
+                        <MudSelectItem T="ResetMode" Value="@resetMode">@resetMode</MudSelectItem>
+                    }
+                </MudSelect>
+            </EditTemplate>
+        </PropertyColumn>
+        <TemplateColumn Title="Reset Count Limit" Resizable="true" CellStyle="max-width: 70px">
+            <EditTemplate>
+                <MudNumericField @key="@($"resetCount-{context.Item.Number}-{_refreshCounter}")"
+                                 Value="@context.Item.ResetCountLimit"
+                                 Disabled="!context.Item.Enabled || context.Item.PrimaryOutput >= 0"
+                                 ValueChanged="@((int val) => OnResetCountChanged(context.Item, val))"/>
+            </EditTemplate>
+        </TemplateColumn>
+        <TemplateColumn Title="Reset Time (ms)" Resizable="true" CellStyle="max-width: 70px">
+            <EditTemplate>
+                <MudNumericField @key="@($"resetTime-{context.Item.Number}-{_refreshCounter}")"
+                                 Value="@context.Item.ResetTime"
+                                 Disabled="!context.Item.Enabled || context.Item.PrimaryOutput >= 0"
+                                 ValueChanged="@((int val) => OnResetTimeChanged(context.Item, val))"/>
+            </EditTemplate>
+        </TemplateColumn>
+        <PropertyColumn Property="x => x.PrimaryOutput" Title="Primary Out" CellStyle="max-width: 150px">
+            <EditTemplate>
+                <MudSelect T="int" Value="context.Item.PrimaryOutput" Variant="Variant.Outlined" Dense="true"
+                           Disabled="@(!context.Item.Enabled)"
+                           ValueChanged="@((int val) => OnPrimaryOutChanged(context.Item, val))">
+                    <MudSelectItem T="int" Value="-1">None</MudSelectItem>
+                    @for (var i = 0; i < Outputs.Count; i++)
+                    {
+                        var outNum = i;
+                        <MudSelectItem T="int" Value="i">@(outNum+1)</MudSelectItem>
+                    }
+                </MudSelect>
+            </EditTemplate>
+        </PropertyColumn>
+    </Columns>
+</MudDataGrid>
+
+@code {
+    [Parameter, EditorRequired] public List<Output> Outputs { get; set; } = null!;
+
+    private int _refreshCounter;
+
+    private void OnCurrentLimitChanged(Output item, double value)
+    {
+        const double min = 0;
+        const double max = 100.0;
+        if (value < min || value > max)
+        {
+            Notification.NewWarning($"{item.Name}.CurrentLimit must be {min} to {max}");
+        }
+        item.CurrentLimit = Math.Clamp(value, min, max);
+        _refreshCounter++;
+    }
+
+    private void OnInrushLimitChanged(Output item, double value)
+    {
+        const double min = 0;
+        const double max = 100.0;
+        if (value < min || value > max)
+        {
+            Notification.NewWarning($"{item.Name}.InrushCurrentLimit must be {min} to {max}");
+        }
+        item.InrushCurrentLimit = Math.Clamp(value, min, max);
+        _refreshCounter++;
+    }
+
+    private void OnInrushTimeChanged(Output item, int value)
+    {
+        const int min = 0;
+        const int max = 10000;
+        if (value < min || value > max)
+        {
+            Notification.NewWarning($"{item.Name}.InrushTime must be {min} to {max}");
+        }
+        item.InrushTime = Math.Clamp(value, min, max);
+        _refreshCounter++;
+    }
+
+    private void OnResetCountChanged(Output item, int value)
+    {
+        const int min = 0;
+        const int max = 20;
+        if (value < min || value > max)
+        {
+            Notification.NewWarning($"{item.Name}.ResetCountLimit must be {min} to {max}");
+        }
+        item.ResetCountLimit = Math.Clamp(value, min, max);
+        _refreshCounter++;
+    }
+
+    private void OnResetTimeChanged(Output item, int value)
+    {
+        const int min = 0;
+        const int max = 60000;
+        if (value < min || value > max)
+        {
+            Notification.NewWarning($"{item.Name}.ResetTime must be {min} to {max}");
+        }
+        item.ResetTime = Math.Clamp(value, min, max);
+        _refreshCounter++;
+    }
+
+    private static Color GetOutputColor(OutState state) => state switch
+    {
+        OutState.On => Color.Success,
+        OutState.Overcurrent => Color.Warning,
+        OutState.Fault => Color.Error,
+        _ => Color.Default // Off
+    };
+
+    private static string GetOutputStateText(OutState state) => state switch
+    {
+        OutState.On => "ON",
+        OutState.Overcurrent => "OC",
+        OutState.Fault => "FAULT",
+        _ => "OFF"
+    };
+
+    private void OnPrimaryOutChanged(Output item, int value)
+    {
+        item.PrimaryOutput = value;
+        _refreshCounter++;
+    }
+    
+}

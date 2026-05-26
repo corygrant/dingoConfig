@@ -1,0 +1,130 @@
+@using domain.Devices.Functions
+@using domain.Enums
+@using web.Services
+@inject NotificationService Notification
+@typeparam TDevice where TDevice : domain.Interfaces.IDeviceConfigurable
+@inherits FunctionComponentBase<TDevice>
+
+<MudDataGrid Items="@VirtualInputs" Dense="true" Hover="true" Striped="false" EditMode="DataGridEditMode.Cell" ReadOnly="false"
+             SortMode="SortMode.None" ColumnResizeMode="ResizeMode.Container" Virtualize="true" 
+             FixedHeader="true" HorizontalScrollbar="true" Style="max-height: 400px;">
+    <Columns>
+        <PropertyColumn Property="x => x.Number" Title="#" StickyLeft="true" Editable="false" CellStyle="max-width: 100px"/>
+        <PropertyColumn Property="x => x.Enabled">
+            <EditTemplate>
+                <MudCheckBox @bind-Value="context.Item.Enabled" Dense="true" />
+            </EditTemplate>
+        </PropertyColumn>
+        <PropertyColumn Property="x => x.Name" CellStyle="max-width: 200px">
+            <EditTemplate>
+                <MudTextField @bind-Value="context.Item.Name" Variant="Variant.Outlined" Margin="Margin.Dense" />
+            </EditTemplate>
+        </PropertyColumn>
+        <PropertyColumn Property="x => x.Value" Title="Value" Editable="false" CellStyle="max-width: 100px">
+            <CellTemplate>
+                <MudChip T="string"
+                         Variant="Variant.Outlined"
+                         Color="@(context.Item.Value ? Color.Success : Color.Default)"
+                         Size="Size.Small" Style="min-width: 50px;">
+                    @(context.Item.Value ? "ON" : "OFF")
+                </MudChip>
+            </CellTemplate>
+        </PropertyColumn>
+        <PropertyColumn Property="x => x.Mode" CellStyle="max-width: 200px">
+            <EditTemplate>
+                <MudSelect T="domain.Enums.InputMode" @bind-Value="context.Item.Mode" Variant="Variant.Outlined" Dense="true"
+                           Disabled="!context.Item.Enabled">
+                    @foreach (domain.Enums.InputMode mode in Enum.GetValues(typeof(domain.Enums.InputMode)))
+                    {
+                        <MudSelectItem T="domain.Enums.InputMode" Value="@mode">@mode</MudSelectItem>
+                    }
+                </MudSelect>
+            </EditTemplate>
+        </PropertyColumn>
+        <PropertyColumn Property="x => x.Not0" Title="Not 0" CellStyle="max-width: 100px">
+            <EditTemplate>
+                <MudCheckBox @bind-Value="context.Item.Not0" Dense="true" Disabled="!context.Item.Enabled"/>
+            </EditTemplate>
+        </PropertyColumn>
+        <PropertyColumn Property="x => x.Var0" Title="Var0" CellStyle="max-width: 250px;">
+            <EditTemplate>
+                <MudStack Row="true">
+                    <MudIconButton Icon="@Icons.Material.Filled.Search"
+                                   Color="Color.Primary"
+                                   Size="Size.Small"
+                                   Disabled="(!context.Item.Enabled)"
+                                   Style="max-width: 20px"
+                                   OnClick="@(() => OpenVariableSelectorAsync(["bool"], v => context.Item.Var0 = v))">
+                    </MudIconButton>
+                    <MudText>@GetSelectedVarText(context.Item.Var0)</MudText>
+                </MudStack>
+            </EditTemplate>
+        </PropertyColumn>
+        <PropertyColumn Property="x => x.Cond0" Title="Cond 0" CellStyle="max-width: 200px">
+            <EditTemplate>
+                <MudSelect T="Conditional" @bind-Value="context.Item.Cond0" Variant="Variant.Outlined" Dense="true"
+                           Disabled="!context.Item.Enabled">
+                    @foreach (Conditional cond in Enum.GetValues(typeof(Conditional)))
+                    {
+                        <MudSelectItem T="Conditional" Value="@cond">@cond</MudSelectItem>
+                    }
+                </MudSelect>
+            </EditTemplate>
+        </PropertyColumn>
+        <PropertyColumn Property="x => x.Not1" Title="Not 1" CellStyle="max-width: 100px">
+            <EditTemplate>
+                <MudCheckBox @bind-Value="context.Item.Not1" Dense="true" Disabled="!context.Item.Enabled"/>
+            </EditTemplate>
+        </PropertyColumn>
+        <PropertyColumn Property="x => x.Var1" Title="Var 1" CellStyle="max-width: 250px;">
+            <EditTemplate>
+                <MudStack Row="true">
+                    <MudIconButton Icon="@Icons.Material.Filled.Search"
+                                   Color="Color.Primary"
+                                   Size="Size.Small"
+                                   Disabled="(!context.Item.Enabled)"
+                                   Style="max-width: 20px"
+                                   OnClick="@(() => OpenVariableSelectorAsync(["bool"], v => context.Item.Var1 = v))">
+                    </MudIconButton>
+                    <MudText>@GetSelectedVarText(context.Item.Var1)</MudText>
+                </MudStack>
+            </EditTemplate>
+        </PropertyColumn>
+        <PropertyColumn Property="x => x.Cond1" Title="Cond 1" CellStyle="max-width: 200px">
+            <EditTemplate>
+                <MudSelect T="Conditional" @bind-Value="context.Item.Cond1" Variant="Variant.Outlined" Dense="true"
+                           Disabled="!context.Item.Enabled">
+                    @foreach (Conditional cond in Enum.GetValues(typeof(Conditional)))
+                    {
+                        <MudSelectItem T="Conditional" Value="@cond">@cond</MudSelectItem>
+                    }
+                </MudSelect>
+            </EditTemplate>
+        </PropertyColumn>
+        <PropertyColumn Property="x => x.Not2" Title="Not 2" CellStyle="max-width: 100px">
+            <EditTemplate>
+                <MudCheckBox @bind-Value="context.Item.Not2" Dense="true" Disabled="!context.Item.Enabled"/>
+            </EditTemplate>
+        </PropertyColumn>
+        <PropertyColumn Property="x => x.Var2" Title="Var 2" CellStyle="max-width: 250px;">
+            <EditTemplate>
+                <MudStack Row="true">
+                    <MudIconButton Icon="@Icons.Material.Filled.Search"
+                                   Color="Color.Primary"
+                                   Size="Size.Small"
+                                   Disabled="(!context.Item.Enabled)"
+                                   Style="max-width: 20px"
+                                   OnClick="@(() => OpenVariableSelectorAsync(["bool"], v => context.Item.Var2 = v))">
+                    </MudIconButton>
+                    <MudText>@GetSelectedVarText(context.Item.Var2)</MudText>
+                </MudStack>
+            </EditTemplate>
+        </PropertyColumn>
+    </Columns>
+</MudDataGrid>
+
+@code {
+    [Parameter, EditorRequired]
+    public List<VirtualInput> VirtualInputs { get; set; } = null!;
+    
+}

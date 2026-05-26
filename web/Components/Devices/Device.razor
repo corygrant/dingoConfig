@@ -1,7 +1,6 @@
 @page "/device/{DeviceId:guid}"
 @using domain.Interfaces
-@using domain.Devices.dingoPdm
-@using domain.Devices.Canboard
+@using domain.Devices
 @using domain.Devices.Generic
 @using domain.Devices.Keypad.BlinkMarine
 @using domain.Devices.Keypad.Grayhill
@@ -18,15 +17,9 @@
         @* Render BaseDeviceView with appropriate device type *@
         @switch (_currentDevice)
         {
-            case PdmDevice pdmDevice:
-                <BaseDeviceView TDevice="PdmDevice"
-                               Device="pdmDevice"
-                               AdapterConnected="@AdapterManager.IsConnected" />
-                break;
-
-            case CanboardDevice canboardDevice:
-                <BaseDeviceView TDevice="CanboardDevice"
-                               Device="canboardDevice"
+            case domain.Devices.FwDevice fwDevice:
+                <BaseDeviceView TDevice="domain.Devices.FwDevice"
+                               Device="fwDevice"
                                AdapterConnected="@AdapterManager.IsConnected" />
                 break;
                 

@@ -9,7 +9,6 @@ public interface IDevice
     string Type { get; }
     string Name { get; set; }
     int BaseId {get; set; }
-    static int DefaultId { get; }
     bool Connected {get;}
     TimeSpan CyclicGap {get;}
     TimeSpan CyclicPause {get;}

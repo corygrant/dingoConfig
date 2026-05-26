@@ -1,0 +1,160 @@
+{
+  "messages": [
+    {
+      "idOffset": 2,
+      "signals": [
+        { "target": "Input.State",    "count": 2,                  "dbc": { "name": "Input{n}.State",   "length": 1 } },
+        { "target": "DeviceState",                                  "dbc": { "name": "DeviceState",      "startBit": 8,  "length": 4 } },
+        { "target": "PdmTypeCheck",                                 "dbc": { "name": "PdmType",          "startBit": 12, "length": 4 } },
+        { "target": "TotalCurrent",                                 "dbc": { "name": "TotalCurrent",     "startBit": 16, "length": 16, "factor": 1.0, "unit": "A" } },
+        { "target": "BatteryVoltage",                               "dbc": { "name": "BatteryVoltage",   "startBit": 32, "length": 16, "factor": 0.1, "unit": "V" } },
+        { "target": "BoardTempC",                                   "dbc": { "name": "BoardTemp",        "startBit": 48, "length": 16, "factor": 0.1, "unit": "degC" } }
+      ]
+    },
+    {
+      "idOffset": 3,
+      "signals": [
+        { "target": "Output.Current", "count": 4,                  "dbc": { "name": "Output{n}.Current", "length": 16, "factor": 1.0, "unit": "A" } }
+      ]
+    },
+    {
+      "idOffset": 4,
+      "signals": [
+        { "target": "Output.Current", "count": 4, "startIndex": 4, "dbc": { "name": "Output{n}.Current", "length": 16, "factor": 1.0, "unit": "A" } }
+      ]
+    },
+    {
+      "idOffset": 5,
+      "signals": [
+        { "target": "Output.State",   "count": 8,                  "dbc": { "name": "Output{n}.State",  "length": 4 } },
+        { "target": "Wiper.SlowState",                              "dbc": { "name": "WiperSlowState",   "startBit": 32, "length": 1 } },
+        { "target": "Wiper.FastState",                              "dbc": { "name": "WiperFastState",   "startBit": 33, "length": 1 } },
+        { "target": "Wiper.Speed",                                  "dbc": { "name": "WiperSpeed",       "startBit": 40, "length": 4 } },
+        { "target": "Wiper.State",                                  "dbc": { "name": "WiperState",       "startBit": 44, "length": 4 } },
+        { "target": "Flasher.Value",  "count": 4,                  "dbc": { "name": "Flasher{n}",       "startBit": 48, "length": 1 } }
+      ]
+    },
+    {
+      "idOffset": 6,
+      "signals": [
+        { "target": "Output.ResetCount", "count": 8,               "dbc": { "name": "Output{n}.ResetCount", "length": 8 } }
+      ]
+    },
+    {
+      "idOffset": 7,
+      "signals": [
+        { "target": "CanInput.Output",    "count": 32,             "dbc": { "name": "CanInput{n}",       "length": 1 } },
+        { "target": "VirtualInput.Value", "count": 32,             "dbc": { "name": "VirtualInput{n}",   "startBit": 32, "length": 1 } }
+      ]
+    },
+    {
+      "idOffset": 8,
+      "signals": [
+        { "target": "Counter.Value",   "count": 4,                 "dbc": { "name": "Counter{n}",   "length": 8 } },
+        { "target": "Condition.Value", "count": 32,                "dbc": { "name": "Condition{n}", "startBit": 32, "length": 1 } }
+      ]
+    },
+    {
+      "idOffset": 9,
+      "signals": [
+        { "target": "CanInput.Value", "count": 2,                  "dbc": { "name": "CanInput{n}.Value", "length": 32 } }
+      ]
+    },
+    {
+      "idOffset": 10,
+      "signals": [
+        { "target": "CanInput.Value", "count": 2, "startIndex": 2, "dbc": { "name": "CanInput{n}.Value", "length": 32 } }
+      ]
+    },
+    {
+      "idOffset": 11,
+      "signals": [
+        { "target": "CanInput.Value", "count": 2, "startIndex": 4, "dbc": { "name": "CanInput{n}.Value", "length": 32 } }
+      ]
+    },
+    {
+      "idOffset": 12,
+      "signals": [
+        { "target": "CanInput.Value", "count": 2, "startIndex": 6, "dbc": { "name": "CanInput{n}.Value", "length": 32 } }
+      ]
+    },
+    {
+      "idOffset": 13,
+      "signals": [
+        { "target": "CanInput.Value", "count": 2, "startIndex": 8, "dbc": { "name": "CanInput{n}.Value", "length": 32 } }
+      ]
+    },
+    {
+      "idOffset": 14,
+      "signals": [
+        { "target": "CanInput.Value", "count": 2, "startIndex": 10, "dbc": { "name": "CanInput{n}.Value", "length": 32 } }
+      ]
+    },
+    {
+      "idOffset": 15,
+      "signals": [
+        { "target": "CanInput.Value", "count": 2, "startIndex": 12, "dbc": { "name": "CanInput{n}.Value", "length": 32 } }
+      ]
+    },
+    {
+      "idOffset": 16,
+      "signals": [
+        { "target": "CanInput.Value", "count": 2, "startIndex": 14, "dbc": { "name": "CanInput{n}.Value", "length": 32 } }
+      ]
+    },
+    {
+      "idOffset": 17,
+      "signals": [
+        { "target": "CanInput.Value", "count": 2, "startIndex": 16, "dbc": { "name": "CanInput{n}.Value", "length": 32 } }
+      ]
+    },
+    {
+      "idOffset": 18,
+      "signals": [
+        { "target": "CanInput.Value", "count": 2, "startIndex": 18, "dbc": { "name": "CanInput{n}.Value", "length": 32 } }
+      ]
+    },
+    {
+      "idOffset": 19,
+      "signals": [
+        { "target": "CanInput.Value", "count": 2, "startIndex": 20, "dbc": { "name": "CanInput{n}.Value", "length": 32 } }
+      ]
+    },
+    {
+      "idOffset": 20,
+      "signals": [
+        { "target": "CanInput.Value", "count": 2, "startIndex": 22, "dbc": { "name": "CanInput{n}.Value", "length": 32 } }
+      ]
+    },
+    {
+      "idOffset": 21,
+      "signals": [
+        { "target": "CanInput.Value", "count": 2, "startIndex": 24, "dbc": { "name": "CanInput{n}.Value", "length": 32 } }
+      ]
+    },
+    {
+      "idOffset": 22,
+      "signals": [
+        { "target": "CanInput.Value", "count": 2, "startIndex": 26, "dbc": { "name": "CanInput{n}.Value", "length": 32 } }
+      ]
+    },
+    {
+      "idOffset": 23,
+      "signals": [
+        { "target": "CanInput.Value", "count": 2, "startIndex": 28, "dbc": { "name": "CanInput{n}.Value", "length": 32 } }
+      ]
+    },
+    {
+      "idOffset": 24,
+      "signals": [
+        { "target": "CanInput.Value", "count": 2, "startIndex": 30, "dbc": { "name": "CanInput{n}.Value", "length": 32 } }
+      ]
+    },
+    {
+      "idOffset": 25,
+      "signals": [
+        { "target": "Output.DutyCycle", "count": 8,                "dbc": { "name": "Output{n}.DutyCycle", "length": 8, "unit": "%" } }
+      ]
+    }
+  ]
+}

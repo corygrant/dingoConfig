@@ -1,19 +1,17 @@
 @page "/devices"
 @using web.Services
 @using domain.Interfaces
-@using domain.Devices.dingoPdm
 @using application.Services
-@using domain.Devices.Canboard
+@using domain.Devices
 @using domain.Devices.Keypad.BlinkMarine
 @using domain.Devices.Keypad.Grayhill
-@using domain.Models
 @inject DeviceManager DeviceManager
 @inject NotificationService Notification
 @inject IWebHostEnvironment Env
 @inject IDialogService DialogService
 @inject UserPreferencesManager UserPrefs
 @inject NavigationManager Navigation
-@inject DeviceDefinitionManager DeviceDefinitionManager
+@inject FwDeviceDefManager DevDefManager
 
 <PageTitle>Devices</PageTitle>
 
@@ -51,11 +49,10 @@
                                    Required="true"
                                    Variant="Variant.Outlined"
                                    T="string">
-                            @foreach (var def in DeviceDefinitionManager.GetAllPdms())
+                            @foreach (var def in DevDefManager.GetAllDevices())
                             {
-                                <MudSelectItem T="string" Value="@($"pdm:{def.PdmType}")">@def.TypeName</MudSelectItem>
+                                <MudSelectItem T="string" Value="@($"fwD:{def.DeviceType}")">@def.TypeName</MudSelectItem>
                             }
-                            <MudSelectItem T="string" Value="@("Canboard")">CANBoard</MudSelectItem>
                             <MudSelectItem T="string" Value="@("DbcDevice")">DBC Device</MudSelectItem>
                             <MudSelectItem T="string" Value="@("BlinkKeypad")">Blink Marine Keypad</MudSelectItem>
                             <MudSelectItem T="string" Value="@("GrayhillKeypad")">Grayhill Keypad</MudSelectItem>
@@ -377,27 +374,28 @@
     {
         _newDeviceType = deviceType;
 
-        //If a name hasn't been set, populate a default name
-        if (_newDeviceName.Length == 0)
+        FwDeviceDef? fwDevDef = null;
+        int defaultId;
+
+        if (deviceType.StartsWith("fwD:") && int.TryParse(deviceType[4..], out var tid))
         {
-            if (deviceType.StartsWith("pdm:") && int.TryParse(deviceType[4..], out var tid))
+            fwDevDef = DevDefManager.GetAllDevices().FirstOrDefault(d => d.DeviceType == tid);
+            defaultId = Convert.ToInt32(fwDevDef?.DefaultId, 16);
+        }
+        else
+        {
+            defaultId = _newDeviceType switch
             {
-                var def = DeviceDefinitionManager.GetAllPdms().FirstOrDefault(d => d.PdmType == tid);
-                _newDeviceName = def?.TypeName ?? deviceType;
-            }
-            else
-                _newDeviceName = _newDeviceType.Trim().Replace(" ", "");
+                "BlinkKeypad"    => BlinkMarineKeypadDevice.DefaultId,
+                "GrayhillKeypad" => GrayhillKeypadDevice.DefaultId,
+                _                => 0
+            };
         }
 
-        //Default IDs based on device type
-        var defaultId = _newDeviceType switch
-        {
-            var t when t.StartsWith("pdm")       => PdmDevice.DefaultId,
-            var t when t.StartsWith("Canboard")  => CanboardDevice.DefaultId,
-            "BlinkKeypad"                         => BlinkMarineKeypadDevice.DefaultId,
-            "GrayhillKeypad"                      => GrayhillKeypadDevice.DefaultId,
-            _                                     => 0
-        };
+        if (_newDeviceName.Length == 0)
+            _newDeviceName = fwDevDef?.TypeName ?? deviceType;
+        else
+            _newDeviceName = _newDeviceType.Trim().Replace(" ", "");
 
         _newDeviceBaseIdString = Utils.FormatId(defaultId, UserPrefs.Preferences.IdFormat);
     }
@@ -409,10 +407,9 @@
     
     private string GetDeviceIcon(IDevice device) => device switch
     {
-        PdmDevice pdm => Utils.GetIcon(pdm.Icon, Env.WebRootPath),
+        domain.Devices.FwDevice fwd => Utils.GetIcon(fwd.Def.Icon, Env.WebRootPath),
         _ => device.GetType().Name switch
         {
-            "CanboardDevice" => Icons.Material.Filled.DeveloperBoard,
             "DbcDevice" => Icons.Material.Filled.FactCheck,
             "BlinkMarineKeypadDevice" or "GrayhillKeypadDevice" => Icons.Material.Filled.CalendarViewMonth,
             _ => Icons.Material.Filled.DeviceUnknown
@@ -423,13 +420,4 @@
     {
         _refreshTimer?.Dispose();
     }
-
-    private bool IsDeviceTypeConfigurable(string type)
-    {
-        if (type.StartsWith("pdm")) return true;
-        if (type.StartsWith("Canboard")) return true;
-
-        return false;
-    }
-
 }

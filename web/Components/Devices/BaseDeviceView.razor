@@ -1,13 +1,10 @@
-@using web.Components.Devices.CANBoard
-@using web.Components.Devices.dingoPdm
 @using web.Components.Devices.Generic
 @using web.Components.Devices.Keypad
-@using domain.Devices.Canboard
-@using domain.Devices.dingoPdm
 @using domain.Devices.Generic
 @using domain.Devices.Keypad.BlinkMarine
 @using domain.Devices.Keypad.Grayhill
 @using domain.Interfaces
+@using web.Components.Devices.FwDevice
 @using web.Components.Devices.Shared
 @typeparam TDevice where TDevice : domain.Interfaces.IDevice
 
@@ -33,12 +30,8 @@
 
     @switch (Device)
     {
-        case PdmDevice pdmDevice:
-            <PdmDeviceTabs TDevice="PdmDevice" Device="pdmDevice" />
-            break;
-
-        case CanboardDevice canboardDevice:
-            <CanboardDeviceTabs TDevice="CanboardDevice" Device="canboardDevice" />
+        case domain.Devices.FwDevice fwDevice:
+            <FwDeviceTabs TDevice="domain.Devices.FwDevice" Device="fwDevice" />
             break;
 
         case DbcDevice statusDevice:

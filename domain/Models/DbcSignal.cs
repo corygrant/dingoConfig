@@ -17,6 +17,5 @@ public class DbcSignal
     [JsonPropertyName("unit")] public string Unit { get; set; } = "";
     [JsonPropertyName("min")] public double Min { get; set; }
     [JsonPropertyName("max")] public double Max { get; set; }
-    [JsonPropertyName("isFloat")] public bool IsFloat { get; set; }
     [JsonIgnore] [Plotable(displayName: "Value")] public double Value { get; set; }
 }
