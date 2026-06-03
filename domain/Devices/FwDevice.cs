@@ -156,7 +156,7 @@ public class FwDevice : IDeviceConfigurable
 
         foreach (var msgDef in config.Messages)
         {
-            CyclicSigs[msgDef.IdOffset] = [];
+            CyclicSigs[msgDef.IdOffset - CyclicRxOffset] = [];
 
             foreach (var sigDef in msgDef.Signals)
             {
@@ -165,7 +165,7 @@ public class FwDevice : IDeviceConfigurable
                     var globalIdx = sigDef.StartIndex + i;
                     var name = sigDef.Dbc.Name.Replace("{n}", $"{globalIdx + 1}");
 
-                    CyclicSigs[msgDef.IdOffse t ].Add((new DbcSignal
+                    CyclicSigs[msgDef.IdOffset - CyclicRxOffset].Add((new DbcSignal
                     {
                         Name      = name,
                         StartBit  = sigDef.Dbc.StartBit + i * sigDef.Dbc.Length,
@@ -178,8 +178,8 @@ public class FwDevice : IDeviceConfigurable
                 }
             }
 
-            if (msgDef.IdOffset > MaxCyclicId)
-                MaxCyclicId = msgDef.IdOffset;
+            if ((msgDef.IdOffset + BaseId ) > MaxCyclicId)
+                MaxCyclicId = msgDef.IdOffset + BaseId;
         }
     }
 
@@ -319,7 +319,9 @@ public class FwDevice : IDeviceConfigurable
             new DeviceParameter
             {
                 ParentName = Name, Name = "device.baseId", Index = BaseIndex, SubIndex = subIndex++,
-                GetValue = () => BaseId, SetValue = val => BaseId = (int)val,
+                GetValue = () => BaseId, SetValue = val => BaseId = val is string s
+                    ? int.Parse(s.StartsWith("0x", StringComparison.OrdinalIgnoreCase) ? s[2..] : s, System.Globalization.NumberStyles.HexNumber)
+                    : Convert.ToInt32(val),
                 ValueType = BaseId.GetType(),
                 DefaultValue = Def.DefaultId
             },
@@ -403,10 +405,7 @@ public class FwDevice : IDeviceConfigurable
         
         Logger.LogDebug("Device {Name} cleared", Name);
     }
-
-    /// <remarks>
-    /// Returns true only on Connected false to true transition
-    /// </remarks>
+    
     public bool UpdateIsConnected()
     {
         var lastConnected = Connected;
@@ -418,7 +417,7 @@ public class FwDevice : IDeviceConfigurable
     
     public bool InIdRange(int id)
     {
-        return (id >= BaseId) && (id <= MaxCyclicId + BaseId);
+        return (id >= BaseId) && (id <= MaxCyclicId);
     }
     
     public void Read(int id, byte[] data, 
@@ -428,7 +427,7 @@ public class FwDevice : IDeviceConfigurable
         var offset = id - BaseId;
 
         // Use dictionary lookup for status messages
-        if (CyclicSigs.TryGetValue(offset, out var signals))
+        if (CyclicSigs.TryGetValue(offset - CyclicRxOffset, out var signals))
         {
             foreach (var (signal, setValue) in signals)
             {
@@ -504,8 +503,6 @@ public class FwDevice : IDeviceConfigurable
 
     public List<DeviceCanFrame> GetReadMsgs(bool allParams)
     {
-        var id = BaseId;
-
         var cmd = allParams ? MessageCommand.ReadAll : MessageCommand.ReadAllModified;
         var name = allParams ? "ReadAll" : "ReadAllModified";
         

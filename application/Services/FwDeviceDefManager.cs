@@ -31,6 +31,8 @@ public class FwDeviceDefManager
         HasWipers: true,
         HasStarterDisable: true,
         HasBattVoltSense: true,
+        HasUsb: true,
+        HasExtTempSensor: true,
         CanSleep: true,
         CanBootloader: true,
         MinMajorVersion: 0,

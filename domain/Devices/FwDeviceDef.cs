@@ -20,6 +20,8 @@ public record FwDeviceDef(
     bool HasWipers,
     bool HasStarterDisable,
     bool HasBattVoltSense,
+    bool HasUsb,
+    bool HasExtTempSensor,
     bool CanSleep,
     bool CanBootloader,
     int MinMajorVersion,

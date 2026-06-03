@@ -38,7 +38,7 @@
       "idOffset": 7,
       "signals": [
         { "target": "CanInput.Output",    "count": 32,             "dbc": { "name": "CanInput{n}",       "length": 1 } },
-        { "target": "VirtualInput.Value", "count": 32,             "dbc": { "name": "VirtualInput{n}",   "startBit": 32, "length": 1 } }
+        { "target": "VirtualInput.Value", "count": 16,             "dbc": { "name": "VirtualInput{n}",   "startBit": 32, "length": 1 } }
       ]
     },
     {
