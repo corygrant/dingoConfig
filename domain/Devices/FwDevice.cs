@@ -264,27 +264,39 @@ public class FwDevice : IDeviceConfigurable
             VariableIndex = index++,
             SingleVariable = true
         });
-        
-        VarMap.Add(new DeviceVariable
+
+        if (Def.HasExtTempSensor)
         {
-            GetName = () => "Temperature",
-            PropertyName = "Value",
-            DataType = "float",
-            VariableIndex = index++,
-            SingleVariable = true
-        });
-        
-        VarMap.Add(new DeviceVariable
+            VarMap.Add(new DeviceVariable
+            {
+                GetName = () => "Temperature",
+                PropertyName = "Value",
+                DataType = "float",
+                VariableIndex = index++,
+                SingleVariable = true
+            });
+        }
+
+        if (Def.HasBattVoltSense)
         {
-            GetName =  () => "Battery Voltage",
-            PropertyName = "Value",
-            DataType = "float",
-            VariableIndex = index++,
-            SingleVariable = true
-        });
+            VarMap.Add(new DeviceVariable
+            {
+                GetName = () => "Battery Voltage",
+                PropertyName = "Value",
+                DataType = "float",
+                VariableIndex = index++,
+                SingleVariable = true
+            });
+        }
         
         for (var i = 0; i < Def.NumDigitalInputs; i++)
             VarMap.AddRange(DigitalInputs[i].GetVarMap(ref index));
+        
+        for (var i = 0; i < Def.NumDigitalOutputs; i++)
+            VarMap.AddRange(DigitalOutputs[i].GetVarMap(ref index));
+        
+        for (var i = 0; i < Def.NumAnalogInputs; i++)
+            VarMap.AddRange(AnalogInputs[i].GetVarMap(ref index));
         
         for (var i = 0; i < Def.NumCanInputs; i++)
             VarMap.AddRange(CanInputs[i].GetVarMap(ref index));
@@ -303,9 +315,12 @@ public class FwDevice : IDeviceConfigurable
         
         for (var i = 0; i < Def.NumCounters; i++)
             VarMap.AddRange(Counters[i].GetVarMap(ref index));
-        
-        VarMap.AddRange(Wipers.GetVarMap(ref index));
-        
+
+        if (Def.HasWipers)
+        {
+            VarMap.AddRange(Wipers.GetVarMap(ref index));
+        }
+
         for (var i = 0; i < Def.NumKeypads; i++)
             VarMap.AddRange(Keypads[i].GetVarMap(ref index));
     }
@@ -365,6 +380,8 @@ public class FwDevice : IDeviceConfigurable
         allParams.AddRange(StarterDisable.Params);
         allParams.AddRange(Wipers.Params);
         foreach (var canOutput in CanOutputs) allParams.AddRange(canOutput.Params);
+        foreach (var digOutput in DigitalOutputs) allParams.AddRange(digOutput.Params);
+        foreach (var analogInput in AnalogInputs) allParams.AddRange(analogInput.Params);
         foreach (var keypad in Keypads) allParams.AddRange(keypad.BaseParams);
         foreach (var keypad in Keypads) allParams.AddRange(keypad.ButtonParams);
         foreach (var keypad in Keypads) allParams.AddRange(keypad.DialParams);

@@ -69,4 +69,9 @@ public class Dial : IDeviceFunction
             }
         ]);
     }
+    
+    public List<DeviceVariable> GetVarMap(ref int index)
+    {
+        return [];
+    }
 }

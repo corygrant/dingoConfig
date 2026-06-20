@@ -63,4 +63,33 @@ public class AnalogInput : IDeviceFunction
         
         return allParams;
     }
+    
+    public List<DeviceVariable> GetVarMap(ref int index)
+    {
+        List<DeviceVariable> varMap =
+        [
+            new()
+            {
+                GetName = () => Name,
+                PropertyName = "Value",
+                DataType = "int",
+                VariableIndex = index++,
+                SingleVariable = false
+            },
+            new()
+            {
+                GetName = () => Name,
+                PropertyName = "Millivolts",
+                DataType = "float",
+                VariableIndex = index++,
+                SingleVariable = false
+            }
+
+        ];
+
+        varMap.AddRange(Rotary.GetVarMap(ref index));
+        varMap.AddRange(Switch.GetVarMap(ref index));
+
+        return varMap;
+    }
 }

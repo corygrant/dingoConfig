@@ -8,4 +8,5 @@ public interface IDeviceFunction
     public string Name { get; }
 
     public List<DeviceParameter> Params { get; }
+    public List<DeviceVariable> GetVarMap(ref int index);
 }

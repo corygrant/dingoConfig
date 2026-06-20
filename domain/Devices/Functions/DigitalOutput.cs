@@ -46,4 +46,21 @@ public class DigitalOutput : IDeviceFunction
             }
         ];
     }
+    
+    public List<DeviceVariable> GetVarMap(ref int index)
+    {
+        List<DeviceVariable> varMap =
+        [
+            new()
+            {
+                GetName = () => Name,
+                PropertyName = "State",
+                DataType = "bool",
+                VariableIndex = index++,
+                SingleVariable = false
+            }
+        ];
+
+        return varMap;
+    }
 }

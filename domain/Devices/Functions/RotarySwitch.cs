@@ -61,4 +61,22 @@ public class RotarySwitch(int number, string name) : IDeviceFunction
             }
         ];
     }
+    
+    public List<DeviceVariable> GetVarMap(ref int index)
+    {
+        List<DeviceVariable> varMap =
+        [
+            new()
+            {
+                GetName = () => Name,
+                PropertyName = "Pos",
+                DataType = "int",
+                VariableIndex = index++,
+                SingleVariable = false
+            }
+
+        ];
+
+        return varMap;
+    }
 }

@@ -3,7 +3,7 @@
     {
       "idOffset": 2,
       "signals": [
-        { "target": "DigitalInput.State",    "count": 2,                  "dbc": { "name": "Input{n}.State",   "length": 1 } },
+        { "target": "DigitalInput.State",    "count": 2,            "dbc": { "name": "DigitalInput{n}.State",   "length": 1 } },
         { "target": "DeviceState",                                  "dbc": { "name": "DeviceState",      "startBit": 8,  "length": 4 } },
         { "target": "PdmTypeCheck",                                 "dbc": { "name": "PdmType",          "startBit": 12, "length": 4 } },
         { "target": "TotalCurrent",                                 "dbc": { "name": "TotalCurrent",     "startBit": 16, "length": 16, "factor": 1.0, "unit": "A" } },

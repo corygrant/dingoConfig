@@ -58,4 +58,9 @@ public class StarterDisable : IDeviceFunction
 
         return parameters;
     }
+    
+    public List<DeviceVariable> GetVarMap(ref int index)
+    {
+        return [];
+    }
 }

@@ -222,4 +222,9 @@ public class Button : IDeviceFunction
             },
         ]);
     }
+    
+    public List<DeviceVariable> GetVarMap(ref int index)
+    {
+        return [];
+    }
 }

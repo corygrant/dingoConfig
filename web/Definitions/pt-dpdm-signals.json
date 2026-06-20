@@ -3,12 +3,12 @@
     {
       "idOffset": 2,
       "signals": [
-        { "target": "Input.State",    "count": 2, "dbc": { "name": "Input{n}.State",   "length": 1 } },
-        { "target": "DeviceState",                "dbc": { "name": "DeviceState",      "startBit": 8,  "length": 4 } },
-        { "target": "PdmTypeCheck",               "dbc": { "name": "PdmType",          "startBit": 12, "length": 4 } },
-        { "target": "TotalCurrent",               "dbc": { "name": "TotalCurrent",     "startBit": 16, "length": 16, "factor": 1.0, "unit": "A" } },
-        { "target": "BatteryVoltage",             "dbc": { "name": "BatteryVoltage",   "startBit": 32, "length": 16, "factor": 0.1, "unit": "V" } },
-        { "target": "BoardTempC",                 "dbc": { "name": "BoardTemp",        "startBit": 48, "length": 16, "factor": 0.1, "unit": "degC" } }
+        { "target": "DigitalInput.State", "count": 2, "dbc": { "name": "DigitalInput{n}.State",   "length": 1 } },
+        { "target": "DeviceState",                    "dbc": { "name": "DeviceState",      "startBit": 8,  "length": 4 } },
+        { "target": "PdmTypeCheck",                   "dbc": { "name": "PdmType",          "startBit": 12, "length": 4 } },
+        { "target": "TotalCurrent",                   "dbc": { "name": "TotalCurrent",     "startBit": 16, "length": 16, "factor": 1.0, "unit": "A" } },
+        { "target": "BatteryVoltage",                 "dbc": { "name": "BatteryVoltage",   "startBit": 32, "length": 16, "factor": 0.1, "unit": "V" } },
+        { "target": "BoardTempC",                     "dbc": { "name": "BoardTemp",        "startBit": 48, "length": 16, "factor": 0.1, "unit": "degC" } }
       ]
     },
     {

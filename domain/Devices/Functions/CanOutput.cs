@@ -127,4 +127,10 @@ public class CanOutput : IDeviceFunction
             },
         ];
     }
+    
+    public List<DeviceVariable> GetVarMap(ref int index)
+    {
+        return [];
+    }
+    
 }
