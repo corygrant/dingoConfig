@@ -90,6 +90,10 @@ public class ConfigFileManager(ILogger<ConfigFileManager> logger, FwDeviceDefMan
 
         try
         {
+            var directory = Path.GetDirectoryName(fullPath);
+            if (!string.IsNullOrEmpty(directory))
+                Directory.CreateDirectory(directory);
+
             var config = new ConfigFile()
             {
                 Devices = devices.OfType<FwDevice>().ToList(),
@@ -136,12 +140,12 @@ public class ConfigFileManager(ILogger<ConfigFileManager> logger, FwDeviceDefMan
             }
 
             CurrentFileName = Path.GetFileName(fileName);
-
-            // Apply definitions to devices (restores Type, DeviceType, counts, rebuilds CyclicSigs/VarMap/Params)
+            
             foreach (var device in config.Devices)
             {
-                var def = fwDeviceDefManager.GetByDeviceType(device.Def.DeviceType) ?? FwDeviceDefManager.DefaultFwDevice;
+                var def = fwDeviceDefManager.GetByDeviceType(device.DeviceTypeId) ?? FwDeviceDefManager.DefaultFwDevice;
                 var deviceSigsConfig = fwDeviceDefManager.GetDeviceCyclicSigsConfig(def.DeviceType);
+                device.ApplyDefinition(def, deviceSigsConfig);
             }
 
             var allDevices = new List<IDevice>();

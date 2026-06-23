@@ -16,11 +16,16 @@ public class StarterDisable : IDeviceFunction
     [JsonIgnore] public List<DeviceParameter> Params { get; }
 
     [JsonConstructor]
-    public StarterDisable(string name, int outputCount)
+    public StarterDisable(string name, List<bool> outputsDisabled)
     {
         Name = name;
-        OutputsDisabled = [..new bool[outputCount]];
+        OutputsDisabled = outputsDisabled ?? [];
         Params = InitParams();
+    }
+    
+    public StarterDisable(string name, int outputCount)
+        : this(name, [..new bool[outputCount]])
+    {
     }
 
     private List<DeviceParameter> InitParams()

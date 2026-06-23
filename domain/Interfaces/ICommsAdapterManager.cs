@@ -6,7 +6,7 @@ namespace domain.Interfaces;
 public interface ICommsAdapterManager
 {
     (string[] adapters, string[] ports) GetAvailable();
-    (bool isConnected, string? activeAdapter, string? activePort) GetStatus();
+    (bool isConnected, string? activeAdapter, string? activePort, CanBitRate activeBitRate) GetStatus();
     ICommsAdapter ToAdapter(string adapterName);
     ICommsAdapter? ActiveAdapter { get; }
     bool IsConnected { get; }

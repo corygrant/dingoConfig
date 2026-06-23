@@ -15,6 +15,7 @@ public class CommsAdapterManager(IServiceProvider serviceProvider, ILogger<Comms
     public ICommsAdapter?  ActiveAdapter => _activeAdapter;
 
     private string? _activePort;
+    private CanBitRate _activeBitRate;
 
     public bool IsConnected => _activeAdapter?.IsConnected ?? false;
 
@@ -54,12 +55,13 @@ public class CommsAdapterManager(IServiceProvider serviceProvider, ILogger<Comms
         );
     }        
 
-    public (bool isConnected, string? activeAdapter, string? activePort) GetStatus()
+    public (bool isConnected, string? activeAdapter, string? activePort, CanBitRate activeBitRate) GetStatus()
     {
         return (
             isConnected: IsConnected,
             activeAdapter: ActiveAdapter?.Name,
-            activePort: _activePort
+            activePort: _activePort,
+            activeBitRate: _activeBitRate
         );
     }
 
@@ -87,6 +89,7 @@ public class CommsAdapterManager(IServiceProvider serviceProvider, ILogger<Comms
         
         _activeAdapter = commsAdapter;
         _activePort = port;
+        _activeBitRate = bitRate;
 
         OnConnect(commsAdapter);
 
