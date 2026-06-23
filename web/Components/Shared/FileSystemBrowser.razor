@@ -103,6 +103,8 @@
     [Parameter] public string FileFilter { get; set; } = "*.json";
     [Parameter] public string? SelectedFile { get; set; }
     [Parameter] public EventCallback<string> SelectedFileChanged { get; set; }
+    [Parameter] public string? CurrentPath { get; set; }
+    [Parameter] public EventCallback<string> CurrentPathChanged { get; set; }
 
     private string _currentPath = "";
     private List<string> _directories = new();
@@ -126,6 +128,7 @@
             }
 
             _currentPath = Path.GetFullPath(path);
+            _ = CurrentPathChanged.InvokeAsync(_currentPath);
 
             // Load directories
             _directories = Directory.GetDirectories(_currentPath)
