@@ -33,7 +33,10 @@ public class ConfigFileManager(ILogger<ConfigFileManager> logger, FwDeviceDefMan
         }
     }
 
-    public string? CurrentFileName
+    /// <summary>
+    /// Full path of the currently open/saved file. Used as the target for re-saves.
+    /// </summary>
+    public string? CurrentFilePath
     {
         get;
         private set
@@ -45,6 +48,12 @@ public class ConfigFileManager(ILogger<ConfigFileManager> logger, FwDeviceDefMan
             }
         }
     }
+
+    /// <summary>
+    /// File name (no directory) of the current file, for display purposes.
+    /// </summary>
+    public string? CurrentFileName =>
+        string.IsNullOrEmpty(CurrentFilePath) ? null : Path.GetFileName(CurrentFilePath);
 
     private void EnsureWorkingDirectoryExists()
     {
@@ -70,7 +79,7 @@ public class ConfigFileManager(ILogger<ConfigFileManager> logger, FwDeviceDefMan
 
     public void NewFile()
     {
-        CurrentFileName = null;
+        CurrentFilePath = null;
         logger.LogInformation("New file started");
     }
 
@@ -79,7 +88,7 @@ public class ConfigFileManager(ILogger<ConfigFileManager> logger, FwDeviceDefMan
     /// </summary>
     public async Task SaveDevices(List<IDevice> devices, string? fileName = null)
     {
-        var targetFileName = fileName ?? CurrentFileName;
+        var targetFileName = fileName ?? CurrentFilePath;
 
         if (string.IsNullOrWhiteSpace(targetFileName))
         {
@@ -90,6 +99,10 @@ public class ConfigFileManager(ILogger<ConfigFileManager> logger, FwDeviceDefMan
 
         try
         {
+            var directory = Path.GetDirectoryName(fullPath);
+            if (!string.IsNullOrEmpty(directory))
+                Directory.CreateDirectory(directory);
+
             var config = new ConfigFile()
             {
                 Devices = devices.OfType<FwDevice>().ToList(),
@@ -101,7 +114,7 @@ public class ConfigFileManager(ILogger<ConfigFileManager> logger, FwDeviceDefMan
             var jsonString = JsonSerializer.Serialize(config, _options);
             await File.WriteAllTextAsync(fullPath, jsonString);
 
-            CurrentFileName = targetFileName;
+            CurrentFilePath = fullPath;
 
             logger.LogInformation($"Saved {devices.Count} devices to {targetFileName}");
         }
@@ -135,13 +148,13 @@ public class ConfigFileManager(ILogger<ConfigFileManager> logger, FwDeviceDefMan
                 return null;
             }
 
-            CurrentFileName = Path.GetFileName(fileName);
-
-            // Apply definitions to devices (restores Type, DeviceType, counts, rebuilds CyclicSigs/VarMap/Params)
+            CurrentFilePath = fullPath;
+            
             foreach (var device in config.Devices)
             {
-                var def = fwDeviceDefManager.GetByDeviceType(device.Def.DeviceType) ?? FwDeviceDefManager.DefaultFwDevice;
+                var def = fwDeviceDefManager.GetByDeviceType(device.DeviceTypeId) ?? FwDeviceDefManager.DefaultFwDevice;
                 var deviceSigsConfig = fwDeviceDefManager.GetDeviceCyclicSigsConfig(def.DeviceType);
+                device.ApplyDefinition(def, deviceSigsConfig);
             }
 
             var allDevices = new List<IDevice>();

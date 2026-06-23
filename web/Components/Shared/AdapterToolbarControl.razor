@@ -50,7 +50,8 @@
                 </MudAlert>
 
                 <MudText Typo="Typo.body2" Class="mb-1"><strong>Adapter:</strong> @_status.ActiveAdapter</MudText>
-                <MudText Typo="Typo.body2" Class="mb-3"><strong>Port:</strong> @_status.ActivePort</MudText>
+                <MudText Typo="Typo.body2" Class="mb-1"><strong>Port:</strong> @_status.ActivePort</MudText>
+                <MudText Typo="Typo.body2" Class="mb-1"><strong>Bitrate:</strong> @_status.ActiveBitRate.ToString().Remove(0,7)</MudText>
 
                 <MudButton Variant="Variant.Filled"
                            Color="Color.Error"
@@ -166,7 +167,7 @@
 
 @code {
     private bool _isOpen;
-    private (bool IsConnected, string? ActiveAdapter, string? ActivePort) _status;
+    private (bool IsConnected, string? ActiveAdapter, string? ActivePort, CanBitRate ActiveBitRate) _status;
     private (string[] Adapters, string[] Ports) _available;
     private bool _loading = true;
     private bool _connecting;

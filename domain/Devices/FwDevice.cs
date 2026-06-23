@@ -16,10 +16,11 @@ public class FwDevice : IDeviceConfigurable
 {
     [JsonIgnore] protected ILogger<FwDevice> Logger = null!;
     
-    [JsonIgnore] public FwDeviceDef Def { get; private set; }
+    [JsonIgnore] public FwDeviceDef Def { get; private set; } = null!; // set in ApplyDefinition()
 
     [JsonIgnore] public const int BaseIndex = 0x0000;
     [JsonPropertyName("type")] public string Type { get; set; }
+    [JsonPropertyName("deviceType")] public int DeviceTypeId { get; set; }
     [JsonIgnore] protected bool DeviceTypeOk;
     [JsonIgnore] public bool ConfigMismatch { get; set; } = true;
 
@@ -57,9 +58,9 @@ public class FwDevice : IDeviceConfigurable
     [JsonPropertyName("canInputs")] public List<CanInput> CanInputs { get; init; } = [];
     [JsonPropertyName("canOutputs")] public List<CanOutput> CanOutputs { get; init; } = [];
     [JsonPropertyName("virtualInputs")] public List<VirtualInput> VirtualInputs { get; init; } = [];
-    [JsonPropertyName("wipers")] public Wiper Wipers { get; protected set; } = null!;
+    [JsonPropertyName("wipers")] public Wiper Wipers { get; set; } = null!;
     [JsonPropertyName("flashers")] public List<Flasher> Flashers { get; init; } = [];
-    [JsonPropertyName("starterDisable")] public StarterDisable StarterDisable { get; protected set; } = null!;
+    [JsonPropertyName("starterDisable")] public StarterDisable StarterDisable { get; set; } = null!;
     [JsonPropertyName("counters")] public List<Counter> Counters { get; init; } = [];
     [JsonPropertyName("conditions")] public List<Condition> Conditions { get; init; } = [];
     [JsonPropertyName("keypads")] public List<KeypadMaster> Keypads { get; init; } = [];
@@ -93,10 +94,6 @@ public class FwDevice : IDeviceConfigurable
         Name = name;
         BaseId = baseId;
         Guid = Guid.NewGuid();
-
-        InitFunctions();
-        InitVarMap();
-        InitParams();
     }
 
     public FwDevice(string name, int id, FwDeviceDef def, CyclicSigsConfig? cyclicSigsConfig = null )
@@ -104,11 +101,20 @@ public class FwDevice : IDeviceConfigurable
         Name = name;
         BaseId = id;
         Guid = Guid.NewGuid();
+
+        ApplyDefinition(def, cyclicSigsConfig);
+    }
+
+    public void ApplyDefinition(FwDeviceDef def, CyclicSigsConfig? cyclicSigsConfig = null)
+    {
         Def = def;
-        InitFunctions();
+        DeviceTypeId = def.DeviceType;
         
+        InitFunctions();
+
         if (cyclicSigsConfig != null)
             BindCyclicSigs(cyclicSigsConfig);
+
         InitVarMap();
         InitParams();
     }
@@ -191,45 +197,56 @@ public class FwDevice : IDeviceConfigurable
             return scalar;
         throw new InvalidOperationException($"Unknown CyclicSig target: '{target}'");
     }
-
+    
     private void InitFunctions()
     {
-        for (var i = 0; i < Def.NumDigitalInputs; i++)
-            DigitalInputs.Add(new DigitalInput(i + 1, "digitalInput" + (i + 1)));
-        
-        for (var i = 0; i < Def.NumDigitalOutputs; i++)
-            DigitalOutputs.Add(new DigitalOutput(i + 1, "digitalOutput" + (i + 1)));
-        
-        for (var i = 0; i < Def.NumAnalogInputs; i++)
-            AnalogInputs.Add(new AnalogInput(i + 1, "analogInput" + (i + 1)));
-        
-        for (var i = 0; i < Def.NumOutputs; i++)
-            Outputs.Add(new Output(i + 1, "output" + (i + 1)));
+        if (DigitalInputs.Count == 0)
+            for (var i = 0; i < Def.NumDigitalInputs; i++)
+                DigitalInputs.Add(new DigitalInput(i + 1, "digitalInput" + (i + 1)));
 
-        for (var i = 0; i < Def.NumCanInputs; i++)
-            CanInputs.Add(new CanInput(i + 1, "canInput" + (i + 1)));
-        
-        for (var i = 0; i < Def.NumCanOutputs; i++)
-            CanOutputs.Add(new CanOutput(i + 1, "canOutput" + (i + 1)));
+        if (DigitalOutputs.Count == 0)
+            for (var i = 0; i < Def.NumDigitalOutputs; i++)
+                DigitalOutputs.Add(new DigitalOutput(i + 1, "digitalOutput" + (i + 1)));
 
-        for (var i = 0; i < Def.NumVirtualInputs; i++)
-            VirtualInputs.Add(new VirtualInput(i + 1, "virtualInput" + (i + 1)));
+        if (AnalogInputs.Count == 0)
+            for (var i = 0; i < Def.NumAnalogInputs; i++)
+                AnalogInputs.Add(new AnalogInput(i + 1, "analogInput" + (i + 1)));
 
-        for (var i = 0; i < Def.NumFlashers; i++)
-            Flashers.Add(new Flasher(i + 1,  "flasher" + (i + 1)));
+        if (Outputs.Count == 0)
+            for (var i = 0; i < Def.NumOutputs; i++)
+                Outputs.Add(new Output(i + 1, "output" + (i + 1)));
 
-        for (var i = 0; i < Def.NumCounters; i++)
-            Counters.Add(new Counter(i  + 1, "counter" + (i + 1)));
+        if (CanInputs.Count == 0)
+            for (var i = 0; i < Def.NumCanInputs; i++)
+                CanInputs.Add(new CanInput(i + 1, "canInput" + (i + 1)));
 
-        for (var i = 0; i < Def.NumConditions; i++)
-            Conditions.Add(new Condition(i + 1, "condition" + (i + 1)));
-        
-        StarterDisable = new StarterDisable("starterDisable", Def.NumOutputs);
+        if (CanOutputs.Count == 0)
+            for (var i = 0; i < Def.NumCanOutputs; i++)
+                CanOutputs.Add(new CanOutput(i + 1, "canOutput" + (i + 1)));
 
-        Wipers = new Wiper("wiper");
-        
-        for (var i = 0; i < Def.NumKeypads; i++)
-            Keypads.Add(new KeypadMaster(i + 1, "keypad" + (i + 1)));
+        if (VirtualInputs.Count == 0)
+            for (var i = 0; i < Def.NumVirtualInputs; i++)
+                VirtualInputs.Add(new VirtualInput(i + 1, "virtualInput" + (i + 1)));
+
+        if (Flashers.Count == 0)
+            for (var i = 0; i < Def.NumFlashers; i++)
+                Flashers.Add(new Flasher(i + 1,  "flasher" + (i + 1)));
+
+        if (Counters.Count == 0)
+            for (var i = 0; i < Def.NumCounters; i++)
+                Counters.Add(new Counter(i  + 1, "counter" + (i + 1)));
+
+        if (Conditions.Count == 0)
+            for (var i = 0; i < Def.NumConditions; i++)
+                Conditions.Add(new Condition(i + 1, "condition" + (i + 1)));
+
+        StarterDisable ??= new StarterDisable("starterDisable", Def.NumOutputs);
+
+        Wipers ??= new Wiper("wiper");
+
+        if (Keypads.Count == 0)
+            for (var i = 0; i < Def.NumKeypads; i++)
+                Keypads.Add(new KeypadMaster(i + 1, "keypad" + (i + 1)));
     }
 
     private void InitVarMap()

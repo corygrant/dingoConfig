@@ -40,7 +40,9 @@
                 <FileSystemBrowser InitialPath="@FileManager.WorkingDirectory"
                                    FileFilter="*.json"
                                    SelectedFile="@_selectedPath"
-                                   SelectedFileChanged="@OnBrowseFileSelected" />
+                                   SelectedFileChanged="@OnBrowseFileSelected"
+                                   CurrentPath="@_browseDirectory"
+                                   CurrentPathChanged="@OnBrowseDirectoryChanged" />
 
                 <MudDivider Class="my-3" />
 
@@ -107,6 +109,7 @@
 
     private string? fileName;
     private string? _selectedPath;
+    private string? _browseDirectory;
     private string? _customFileName;
     private string? _absolutePath;
     private bool _useBrowseMode;
@@ -125,6 +128,7 @@
                 : InitialFileName;
         }
 
+        _browseDirectory = FileManager.WorkingDirectory;
         _placeholderPath = Path.Combine(FileManager.WorkingDirectory, "example.json");
         CheckFileExists();
     }
@@ -133,6 +137,14 @@
     {
         _selectedPath = filePath;
         _customFileName = Path.GetFileNameWithoutExtension(filePath);
+        CheckBrowseFileExists();
+    }
+
+    private void OnBrowseDirectoryChanged(string path)
+    {
+        _browseDirectory = path;
+        // A file selected in a previous directory no longer applies
+        _selectedPath = null;
         CheckBrowseFileExists();
     }
 
@@ -152,9 +164,9 @@
     {
         if (!string.IsNullOrEmpty(_customFileName) || !string.IsNullOrEmpty(_selectedPath))
         {
+            var directory = _browseDirectory ?? FileManager.WorkingDirectory;
             var path = !string.IsNullOrEmpty(_customFileName)
-                ? Path.Combine(Path.GetDirectoryName(_selectedPath ?? FileManager.WorkingDirectory) ?? FileManager.WorkingDirectory,
-                               _customFileName + ".json")
+                ? Path.Combine(directory, _customFileName + ".json")
                 : _selectedPath;
 
             showOverwriteWarning = File.Exists(path);
@@ -263,7 +275,7 @@
         {
             if (!string.IsNullOrEmpty(_customFileName))
             {
-                var directory = Path.GetDirectoryName(_selectedPath ?? FileManager.WorkingDirectory) ?? FileManager.WorkingDirectory;
+                var directory = _browseDirectory ?? FileManager.WorkingDirectory;
                 result = Path.Combine(directory, _customFileName + ".json");
             }
             else if (!string.IsNullOrEmpty(_selectedPath))
