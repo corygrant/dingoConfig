@@ -394,8 +394,8 @@ public class FwDevice : IDeviceConfigurable
         foreach (var condition in Conditions) allParams.AddRange(condition.Params);
         foreach (var counter in Counters) allParams.AddRange(counter.Params);
         foreach (var flasher in Flashers) allParams.AddRange(flasher.Params);
-        allParams.AddRange(StarterDisable.Params);
-        allParams.AddRange(Wipers.Params);
+        if (Def.HasStarterDisable) allParams.AddRange(StarterDisable.Params);
+        if (Def.HasWipers) allParams.AddRange(Wipers.Params);
         foreach (var canOutput in CanOutputs) allParams.AddRange(canOutput.Params);
         foreach (var digOutput in DigitalOutputs) allParams.AddRange(digOutput.Params);
         foreach (var analogInput in AnalogInputs) allParams.AddRange(analogInput.Params);
