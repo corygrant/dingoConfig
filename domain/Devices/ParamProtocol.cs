@@ -254,7 +254,7 @@ internal class ParamProtocol(IDeviceConfigurable device, List<DeviceParameter> @
                     queue.TryRemove(key, out _);
                 }
 
-                //Write all modified values
+                //Write all values
                 outgoing.AddRange(BuildWriteAllMsgs(baseId, txId, allParams: true));
 
                 _logger.LogInformation("{Name} ID: {BaseId}, Write All Started {Count}", name, baseId, _writeAllCount);
@@ -279,7 +279,7 @@ internal class ParamProtocol(IDeviceConfigurable device, List<DeviceParameter> @
                 //Write all modified values
                 outgoing.AddRange(BuildWriteAllMsgs(baseId, txId, allParams: false));
 
-                _logger.LogInformation("{Name} ID: {BaseId}, Write All Started {Count}", name, baseId, _writeAllCount);
+                _logger.LogInformation("{Name} ID: {BaseId}, Write All Modified Started {Count}", name, baseId, _writeAllCount);
 
                 break;
 
