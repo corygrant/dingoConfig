@@ -76,19 +76,26 @@ public class CommsDataPipeline(
     {
         logger.LogInformation("RX Pipeline started");
 
-        await foreach (var frame in _rxChannel.Reader.ReadAllAsync(ct))
+        try
         {
-            try
+            await foreach (var frame in _rxChannel.Reader.ReadAllAsync(ct))
             {
-                msgLogger.Log(DataDirection.Rx, frame);
-                
-                // Route frame to DeviceManager, passes to all devices so they can update their state/config
-                deviceManager.OnCanDataReceived(frame);
+                try
+                {
+                    msgLogger.Log(DataDirection.Rx, frame);
+
+                    // Route frame to DeviceManager, passes to all devices so they can update their state/config
+                    deviceManager.OnCanDataReceived(frame);
+                }
+                catch (Exception ex)
+                {
+                    logger.LogError(ex, "Error processing RX frame: {CanId:X}", frame.Id);
+                }
             }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, "Error processing RX frame: {CanId:X}", frame.Id);
-            }
+        }
+        catch (OperationCanceledException)
+        {
+            // Expected during host shutdown/cancellation
         }
 
         logger.LogInformation("RX Pipeline stopped");
