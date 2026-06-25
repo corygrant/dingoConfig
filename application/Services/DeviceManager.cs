@@ -452,6 +452,12 @@ public class DeviceManager(ILogger<DeviceManager> logger, ILoggerFactory loggerF
         if (device is not IDeviceConfigurable configurable)
             return false;
 
+        if (!configurable.ConfigMismatch)
+        {
+            logger.LogInformation("Write skipped for {DeviceName} — config already matches device", device.Name);
+            return true;
+        }
+
         var downloadMsgs = configurable.GetWriteMsgs(allParams: false);
         foreach (var msg in downloadMsgs)
         {
