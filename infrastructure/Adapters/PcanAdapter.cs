@@ -11,6 +11,8 @@ public class PcanAdapter  : ICommsAdapter
 {
     public string Name => "PCAN";
 
+    private const int InterFrameDelayMs = 2;
+
     private Worker? _worker;
     private PcanChannel? _channel;
     private Timer? _statusMonitorTimer;
@@ -74,16 +76,19 @@ public class PcanAdapter  : ICommsAdapter
 
     public Task<bool> WriteBatchAsync(IReadOnlyList<CanFrame> frames, CancellationToken ct)
     {
-        foreach (var frame in frames)
+        for (var i = 0; i < frames.Count; i++)
         {
             if (ct.IsCancellationRequested)
                 return Task.FromResult(false);
 
-            var success = WriteAsync(frame, ct).Result;
+            var success = WriteAsync(frames[i], ct).Result;
             if (!success)
                 return Task.FromResult(false);
+
+            if (i < frames.Count - 1)
+                Thread.Sleep(InterFrameDelayMs);
         }
-        
+
         return Task.FromResult(true);
     }
 
