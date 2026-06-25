@@ -16,6 +16,7 @@ public enum MessageCommand
     WriteAllVal = 21,
     WriteAllComplete = 22,
     WriteAllModified = 23,
+    WriteAllWindowAck = 24,
     WriteAllParamNotFound = 25,
     WriteAllOutOfRange = 26,
     
