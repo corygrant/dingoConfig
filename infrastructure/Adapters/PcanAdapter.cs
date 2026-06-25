@@ -75,7 +75,15 @@ public class PcanAdapter  : ICommsAdapter
     public Task<bool> WriteBatchAsync(IReadOnlyList<CanFrame> frames, CancellationToken ct)
     {
         foreach (var frame in frames)
-            WriteAsync(frame, ct);
+        {
+            if (ct.IsCancellationRequested)
+                return Task.FromResult(false);
+
+            var success = WriteAsync(frame, ct).Result;
+            if (!success)
+                return Task.FromResult(false);
+        }
+
         return Task.FromResult(true);
     }
 
