@@ -277,8 +277,19 @@ internal class ParamProtocol(IDeviceConfigurable device, List<DeviceParameter> @
                 }
                 else
                 {
-                    outgoing.AddRange(_pendingWriteFrames.Take(WriteWindowSize));
-                    StartWriteOpTimer(baseId, name);
+                    var firstWindow = _pendingWriteFrames.Take(WriteWindowSize).ToList();
+                    outgoing.AddRange(firstWindow);
+
+                    if (firstWindow.Count < WriteWindowSize)
+                    {
+                        // Partial window — firmware won't ACK it (count % 32 != 0), so send WriteAllComplete now
+                        outgoing.Add(MakeWriteAllCompleteFrame(txId, baseId));
+                        _pendingWriteFrames = [];
+                    }
+                    else
+                    {
+                        StartWriteOpTimer(baseId, name);
+                    }
                 }
 
                 _logger.LogInformation("{Name} ID: {BaseId}, Write All Started {Count} params, window size {Window}",
@@ -295,11 +306,22 @@ internal class ParamProtocol(IDeviceConfigurable device, List<DeviceParameter> @
                 if (nextWindow.Count > 0)
                 {
                     outgoing.AddRange(nextWindow);
-                    StartWriteOpTimer(baseId, name); // reset per-window timeout
+
+                    if (nextWindow.Count < WriteWindowSize)
+                    {
+                        // Partial window — firmware won't ACK it (count % 32 != 0), so send WriteAllComplete now
+                        outgoing.Add(MakeWriteAllCompleteFrame(txId, baseId));
+                        _pendingWriteFrames = [];
+                        CancelWriteOpTimer();
+                    }
+                    else
+                    {
+                        StartWriteOpTimer(baseId, name); // reset per-window timeout
+                    }
                 }
                 else
                 {
-                    // All WriteAllVal frames sent — now send WriteAllComplete
+                    // Count was exactly divisible by WriteWindowSize — last window was full, ACK arrived, complete now
                     outgoing.Add(MakeWriteAllCompleteFrame(txId, baseId));
                     _pendingWriteFrames = [];
                     CancelWriteOpTimer();
