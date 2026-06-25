@@ -22,3 +22,27 @@ dingoConfig is fully cross platform:
 # [**Documentation**](https://corygrant.github.io/dingoPDM/software/introduction/)
 
 ![Screenshot](./screenshot.png)
+
+## VS Code local build (testing branch)
+
+This repository includes ready-to-use scripts and VS Code tasks for local development on Windows:
+
+- `sync-testing-branch.ps1` - clone/sync latest `origin/testing`
+- `build-local.ps1` - restore + build `dingoConfig.sln`
+- `run-local.ps1` - run `web/web.csproj`
+
+### Quick start in VS Code
+
+1. Open this repository folder in VS Code.
+2. Run `Terminal -> Run Task... -> build dingoConfig` (or `Ctrl+Shift+B`).
+   - This first syncs `testing`, then restores/builds.
+3. Press `F5` and choose `Run dingoConfig (web)`.
+
+### One-off PowerShell usage
+
+```powershell
+.\sync-testing-branch.ps1 -TargetPath "$HOME\dingoConfig"
+cd "$HOME\dingoConfig"
+.\build-local.ps1
+.\run-local.ps1
+```

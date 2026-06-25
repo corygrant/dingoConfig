@@ -22,7 +22,9 @@ public class FwDevice : IDeviceConfigurable
     [JsonPropertyName("type")] public string Type { get; set; }
     [JsonPropertyName("deviceType")] public int DeviceTypeId { get; set; }
     [JsonIgnore] protected bool DeviceTypeOk;
-    [JsonIgnore] public bool ConfigMismatch { get; set; } = true;
+    // Older firmware may not support CheckCrcRsp. Default to "no mismatch"
+    // until we receive an explicit CRC response.
+    [JsonIgnore] public bool ConfigMismatch { get; set; } = false;
 
     [JsonIgnore] public Guid Guid { get; }
     [JsonIgnore] public int ConfigVersion { get; set; }
@@ -72,6 +74,7 @@ public class FwDevice : IDeviceConfigurable
     [JsonIgnore] private Dictionary<string, Action<int, double>> _indexedSetters = new();
 
     [JsonIgnore] private ParamProtocol _paramProtocol = null!;
+    [JsonIgnore] private bool _legacyCanboardIdLayout;
 
     [JsonIgnore]
     public bool Connected
@@ -412,6 +415,10 @@ public class FwDevice : IDeviceConfigurable
 
     private void Clear()
     {
+        // Reset stale mismatch state when link drops; it will be re-evaluated
+        // when CRC responses are received after reconnect.
+        ConfigMismatch = false;
+
         foreach(var input in DigitalInputs)
             input.State = false;
 
@@ -460,8 +467,15 @@ public class FwDevice : IDeviceConfigurable
     {
         var offset = id - BaseId;
 
+        // Legacy CANBoard firmware/layout may publish cyclic frames starting at BaseId,
+        // while newer protocol expects cyclic frames at BaseId + 2.
+        if (Def.DeviceType == 3 && id == BaseId)
+            _legacyCanboardIdLayout = true;
+
+        var cyclicRxOffset = _legacyCanboardIdLayout ? 0 : CyclicRxOffset;
+
         // Use dictionary lookup for status messages
-        if (CyclicSigs.TryGetValue(offset - CyclicRxOffset, out var signals))
+        if (CyclicSigs.TryGetValue(offset - cyclicRxOffset, out var signals))
         {
             foreach (var (signal, setValue) in signals)
             {
@@ -658,8 +672,13 @@ public class FwDevice : IDeviceConfigurable
 
     public DeviceCanFrame GetVersionMsg()
     {
+        // Legacy CANBoard firmware may not respond to Version requests.
+        // Send as fire-and-forget to avoid retry/error noise in read-only mode.
+        var expectResponse = Def.DeviceType != 3;
+
         return new DeviceCanFrame
         {
+            SendOnly = !expectResponse,
             DeviceBaseId = BaseId,
             Frame = new CanFrame
             (

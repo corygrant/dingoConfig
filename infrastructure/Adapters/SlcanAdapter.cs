@@ -11,6 +11,11 @@ namespace infrastructure.Adapters;
 
 public class SlcanAdapter : ICommsAdapter
 {
+    // SLCAN runs over a relatively slow serial link (115200 by default).
+    // Short pacing helps prevent adapter/firmware buffer overruns during large bursts (e.g. WriteAll).
+    private const int MaxBufferedSerialBytes = 2048;
+    private const int InterFrameDelayMs = 2;
+
     public virtual string Name => "SLCAN";
 
     protected SerialPort? Serial;
@@ -189,11 +194,25 @@ public class SlcanAdapter : ICommsAdapter
         var frameBuffer = new byte[22];
         try
         {
-            foreach (var frame in frames)
+            for (var i = 0; i < frames.Count; i++)
             {
-                if (frame.Payload.Length != 8) continue;
+                if (ct.IsCancellationRequested) return Task.FromResult(false);
+
+                var frame = frames[i];
+                if (frame.Payload.Length != 8) return Task.FromResult(false);
+
+                while (Serial is { IsOpen: true } && Serial.BytesToWrite > MaxBufferedSerialBytes)
+                {
+                    if (ct.IsCancellationRequested) return Task.FromResult(false);
+                    Thread.Sleep(1);
+                }
+
                 var len = EncodeFrame(frame, frameBuffer, 0);
                 Serial!.Write(frameBuffer, 0, len);
+
+                // Keep bursts within what common SLCAN firmware can reliably drain.
+                if (i < frames.Count - 1)
+                    Thread.Sleep(InterFrameDelayMs);
             }
         }
         catch (InvalidOperationException)
