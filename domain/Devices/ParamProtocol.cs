@@ -241,7 +241,7 @@ internal class ParamProtocol(IDeviceConfigurable device, List<DeviceParameter> @
 
             case MessageCommand.WriteAll:
                 if (data.Length != 8) return;
-                
+
                 _writeCrc32.Reset();
 
                 index = data[2] << 8 | data[1];
@@ -260,12 +260,12 @@ internal class ParamProtocol(IDeviceConfigurable device, List<DeviceParameter> @
                 _logger.LogInformation("{Name} ID: {BaseId}, Write All Started {Count}", name, baseId, _writeAllCount);
 
                 break;
-            
+
             case MessageCommand.WriteAllModified:
                 if (data.Length != 8) return;
 
                 _writeCrc32.Reset();
-                
+
                 index = data[2] << 8 | data[1];
                 subIndex = data[3];
 
@@ -357,7 +357,7 @@ internal class ParamProtocol(IDeviceConfigurable device, List<DeviceParameter> @
     private List<DeviceCanFrame> BuildWriteAllMsgs(int baseId, int txId, bool allParams)
     {
         var writeParams = allParams ? @params : @params.Where(p => p.IsModified).ToList();
-        
+
         List<DeviceCanFrame> msgs = [];
         _writeAllCount = writeParams.Count;
 
@@ -370,7 +370,7 @@ internal class ParamProtocol(IDeviceConfigurable device, List<DeviceParameter> @
                 Frame = ParamCodec.ToFrame(MessageCommand.WriteAllVal, parameter, txId),
                 Name = parameter.Name
             });
-            
+
             _writeCrc32.Update(msgs.Last().Frame.Payload.Skip(4).Take(4).ToArray());
         }
 
