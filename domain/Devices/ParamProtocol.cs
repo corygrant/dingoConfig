@@ -20,15 +20,6 @@ internal class ParamProtocol(IDeviceConfigurable device, List<DeviceParameter> @
     private readonly CumulativeCrc32 _writeCrc32 =  new();
     private readonly CumulativeCrc32 _readCrc32 =  new();
 
-    // Windowed write state — host sends WriteAllVal frames in windows of WriteWindowSize,
-    // waiting for WriteAllWindowAck from the device before sending the next window.
-    private List<DeviceCanFrame> _pendingWriteFrames = [];
-    private int _writeWindowPosition;
-    private int _writeTxId;
-    private const int WriteWindowSize = 32;
-    private const int WriteOperationTimeoutMs = 15_000;
-    private Timer? _writeOpTimer;
-
     public void SetLogger(ILogger logger) => _logger = logger;
 
     public void HandleMessage(
@@ -249,12 +240,9 @@ internal class ParamProtocol(IDeviceConfigurable device, List<DeviceParameter> @
                 break;
 
             case MessageCommand.WriteAll:
-            case MessageCommand.WriteAllModified:
                 if (data.Length != 8) return;
 
                 _writeCrc32.Reset();
-                _writeWindowPosition = 0;
-                _writeTxId = txId;
 
                 index = data[2] << 8 | data[1];
                 subIndex = data[3];
@@ -266,66 +254,32 @@ internal class ParamProtocol(IDeviceConfigurable device, List<DeviceParameter> @
                     queue.TryRemove(key, out _);
                 }
 
-                var allParams = (MessageCommand)data[0] == MessageCommand.WriteAll;
-                _pendingWriteFrames = BuildWriteValFrames(baseId, txId, allParams);
-                _writeAllCount = _pendingWriteFrames.Count;
+                //Write all values
+                outgoing.AddRange(BuildWriteAllMsgs(baseId, txId, allParams: true));
 
-                if (_pendingWriteFrames.Count == 0)
-                {
-                    // Nothing to write — send WriteAllComplete immediately
-                    outgoing.Add(MakeWriteAllCompleteFrame(txId, baseId));
-                }
-                else
-                {
-                    var firstWindow = _pendingWriteFrames.Take(WriteWindowSize).ToList();
-                    outgoing.AddRange(firstWindow);
-
-                    if (firstWindow.Count < WriteWindowSize)
-                    {
-                        // Partial window — firmware won't ACK it (count % 32 != 0), so send WriteAllComplete now
-                        outgoing.Add(MakeWriteAllCompleteFrame(txId, baseId));
-                        _pendingWriteFrames = [];
-                    }
-                    else
-                    {
-                        StartWriteOpTimer(baseId, name);
-                    }
-                }
-
-                _logger.LogInformation("{Name} ID: {BaseId}, Write All Started {Count} params, window size {Window}",
-                    name, baseId, _writeAllCount, WriteWindowSize);
+                _logger.LogInformation("{Name} ID: {BaseId}, Write All Started {Count}", name, baseId, _writeAllCount);
 
                 break;
 
-            case MessageCommand.WriteAllWindowAck:
+            case MessageCommand.WriteAllModified:
                 if (data.Length != 8) return;
 
-                _writeWindowPosition += WriteWindowSize;
-                var nextWindow = _pendingWriteFrames.Skip(_writeWindowPosition).Take(WriteWindowSize).ToList();
+                _writeCrc32.Reset();
 
-                if (nextWindow.Count > 0)
-                {
-                    outgoing.AddRange(nextWindow);
+                index = data[2] << 8 | data[1];
+                subIndex = data[3];
 
-                    if (nextWindow.Count < WriteWindowSize)
-                    {
-                        // Partial window — firmware won't ACK it (count % 32 != 0), so send WriteAllComplete now
-                        outgoing.Add(MakeWriteAllCompleteFrame(txId, baseId));
-                        _pendingWriteFrames = [];
-                        CancelWriteOpTimer();
-                    }
-                    else
-                    {
-                        StartWriteOpTimer(baseId, name); // reset per-window timeout
-                    }
-                }
-                else
+                key = (baseId, index, subIndex);
+                if (queue.TryGetValue(key, out canFrame!))
                 {
-                    // Count was exactly divisible by WriteWindowSize — last window was full, ACK arrived, complete now
-                    outgoing.Add(MakeWriteAllCompleteFrame(txId, baseId));
-                    _pendingWriteFrames = [];
-                    CancelWriteOpTimer();
+                    canFrame.TimeSentTimer?.Dispose();
+                    queue.TryRemove(key, out _);
                 }
+
+                //Write all modified values
+                outgoing.AddRange(BuildWriteAllMsgs(baseId, txId, allParams: false));
+
+                _logger.LogInformation("{Name} ID: {BaseId}, Write All Modified Started {Count}", name, baseId, _writeAllCount);
 
                 break;
 
@@ -400,63 +354,42 @@ internal class ParamProtocol(IDeviceConfigurable device, List<DeviceParameter> @
         }
     }
 
-    // Builds all WriteAllVal frames and accumulates _writeCrc32 — does NOT include WriteAllComplete.
-    // WriteAllComplete is sent by MakeWriteAllCompleteFrame after the last window ACK arrives.
-    private List<DeviceCanFrame> BuildWriteValFrames(int baseId, int txId, bool allParams)
+    private List<DeviceCanFrame> BuildWriteAllMsgs(int baseId, int txId, bool allParams)
     {
         var writeParams = allParams ? @params : @params.Where(p => p.IsModified).ToList();
+
         List<DeviceCanFrame> msgs = [];
+        _writeAllCount = writeParams.Count;
 
         foreach (var parameter in writeParams)
         {
-            var frame = ParamCodec.ToFrame(MessageCommand.WriteAllVal, parameter, txId);
             msgs.Add(new DeviceCanFrame
             {
                 DeviceBaseId = baseId,
                 SendOnly = true,
-                Frame = frame,
+                Frame = ParamCodec.ToFrame(MessageCommand.WriteAllVal, parameter, txId),
                 Name = parameter.Name
             });
-            _writeCrc32.Update(frame.Payload.Skip(4).Take(4).ToArray());
+
+            _writeCrc32.Update(msgs.Last().Frame.Payload.Skip(4).Take(4).ToArray());
         }
 
-        return msgs;
-    }
-
-    private DeviceCanFrame MakeWriteAllCompleteFrame(int txId, int baseId)
-    {
-        return new DeviceCanFrame
+        //Write all complete, with num params
+        msgs.Add(new DeviceCanFrame
         {
             DeviceBaseId = baseId,
             SendOnly = true,
             Frame = new CanFrame(
                 Id: txId,
                 Len: 8,
-                Payload: [
-                    Convert.ToByte(MessageCommand.WriteAllComplete),
+                Payload: [  Convert.ToByte(MessageCommand.WriteAllComplete),
                     Convert.ToByte(_writeAllCount & 0xFF),
                     Convert.ToByte((_writeAllCount >> 8) & 0xFF),
-                    0, 0, 0, 0, 0
-                ]),
+                    0, 0, 0, 0, 0]),
             Name = "WriteAllComplete"
-        };
-    }
+        });
 
-    private void StartWriteOpTimer(int baseId, string name)
-    {
-        _writeOpTimer?.Dispose();
-        _writeOpTimer = new Timer(_ =>
-        {
-            _logger.LogError("{Name} ID: {BaseId}, Write operation timed out — aborting", name, baseId);
-            _pendingWriteFrames = [];
-            _writeOpTimer = null;
-        }, null, WriteOperationTimeoutMs, Timeout.Infinite);
-    }
-
-    private void CancelWriteOpTimer()
-    {
-        _writeOpTimer?.Dispose();
-        _writeOpTimer = null;
+        return msgs;
     }
 
     private uint CalcCrc()
