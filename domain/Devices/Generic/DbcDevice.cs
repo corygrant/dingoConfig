@@ -45,10 +45,10 @@ public class DbcDevice : IDevice
     [JsonPropertyName("dbcSignal")] public List<DbcSignal> DbcSignals { get; init; } = [];
 
     [JsonConstructor]
-    public DbcDevice(string name, int id)
+    public DbcDevice(string name, int baseId)
     {
         Name = name;
-        BaseId = id;
+        BaseId = baseId;
         Guid =  Guid.NewGuid();
     }
     
