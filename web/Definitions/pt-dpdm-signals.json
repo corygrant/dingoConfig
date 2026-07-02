@@ -149,6 +149,14 @@
       "signals": [
         { "target": "Output.DutyCycle", "count": 4, "dbc": { "name": "Output{n}.DutyCycle", "length": 8, "unit": "%" } }
       ]
+    },
+    {
+      "idOffset": 29,
+      "signals": [
+        { "target": "AnalogInput.Millivolts", "count": 2, "dbc": {"name": "AnalogInputs{n}.Millivolts", "length": 16, "unit": "mV"}},
+        { "target": "AnalogInput.RotaryPos", "count": 2, "dbc": {"name": "AnalogInputs{n}.Rotary.Pos", "startBit": 32, "length": 4}},
+        { "target": "AnalogInput.DigitalMode", "count": 2, "dbc": {"name": "AnalogInputs{n}.Switch.State", "startBit": 40, "length": 1}}
+      ]
     }
   ]
 }
