@@ -79,13 +79,13 @@
             </TemplateColumn>
             <PropertyColumn Property="x => x.Factor" Title="Factor" Resizable="true" CellStyle="max-width: 100px">
                 <EditTemplate>
-                    <MudNumericField Value="@context.Item.Factor"
+                    <MudNumericField @bind-Value="@context.Item.Factor"
                                      Disabled="!context.Item.Enabled"/>
                 </EditTemplate>
             </PropertyColumn>
             <PropertyColumn Property="x => x.Offset" Title="Offset" Resizable="true" CellStyle="max-width: 100px">
                 <EditTemplate>
-                    <MudNumericField Value="@context.Item.Offset"
+                    <MudNumericField @bind-Value="@context.Item.Offset"
                                      Disabled="!context.Item.Enabled"/>
                 </EditTemplate>
             </PropertyColumn>
