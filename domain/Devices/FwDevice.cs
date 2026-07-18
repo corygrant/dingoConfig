@@ -162,7 +162,7 @@ public class FwDevice : IDeviceConfigurable
 
         foreach (var msgDef in config.Messages)
         {
-            CyclicSigs[msgDef.IdOffset - CyclicRxOffset] = [];
+            CyclicSigs[msgDef.IdOffset] = [];
 
             foreach (var sigDef in msgDef.Signals)
             {
@@ -171,7 +171,7 @@ public class FwDevice : IDeviceConfigurable
                     var globalIdx = sigDef.StartIndex + i;
                     var name = sigDef.Dbc.Name.Replace("{n}", $"{globalIdx + 1}");
 
-                    CyclicSigs[msgDef.IdOffset - CyclicRxOffset].Add((new DbcSignal
+                    CyclicSigs[msgDef.IdOffset].Add((new DbcSignal
                     {
                         Name      = name,
                         StartBit  = sigDef.Dbc.StartBit + i * sigDef.Dbc.Length,
@@ -461,7 +461,7 @@ public class FwDevice : IDeviceConfigurable
         var offset = id - BaseId;
 
         // Use dictionary lookup for status messages
-        if (CyclicSigs.TryGetValue(offset - CyclicRxOffset, out var signals))
+        if (CyclicSigs.TryGetValue(offset, out var signals))
         {
             foreach (var (signal, setValue) in signals)
             {
