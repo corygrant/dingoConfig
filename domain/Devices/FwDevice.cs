@@ -597,30 +597,25 @@ public class FwDevice : IDeviceConfigurable
         };
     }
 
-    public List<DeviceCanFrame> GetModifyMsgs(int newId)
+    public DeviceCanFrame GetModifyMsg(int newId)
     {
-        List<DeviceParameter> modifyParams = [];
-        
-        //Copy params:
         //ID: 0x0000, Subindex: 0, Base ID
-        var baseIdParam = Params.First(p => p is { Index: 0x0000, SubIndex: 0});
-        baseIdParam.SetValue(newId);
-        modifyParams.Add(baseIdParam);
+        var baseIdParam = new DeviceParameter {
+            Index = 0x0000, 
+            SubIndex = 0,
+            GetValue = () => newId,
+            ValueType = typeof(int)
+        };
         
-        List<DeviceCanFrame> msgs = [];
-
-        foreach (var parameter in modifyParams)
+        var msg = new DeviceCanFrame
         {
-            msgs.Add(new DeviceCanFrame
-            {
-                SendOnly = true,
-                DeviceBaseId = newId,
-                Frame = ParamCodec.ToFrame(MessageCommand.Write, parameter, BaseId),
-                Name = $"Modify {parameter.Index}:{parameter.SubIndex}"
-            });
-        }
+            DeviceBaseId = BaseId + ConfigTxOffset,
+            SendOnly = true,
+            Frame = ParamCodec.ToFrame(MessageCommand.Write, baseIdParam, BaseId + ConfigTxOffset),
+            Name = $"Modify Id: {BaseId} to {newId}"
+        };
         
-        return msgs;
+        return msg;
     }
 
     public DeviceCanFrame GetBurnMsg()
