@@ -15,6 +15,11 @@ internal class ParamProtocol(IDeviceConfigurable device, List<DeviceParameter> @
     private readonly Dictionary<(int Index, int SubIndex), object> _tempParamValues = new();
     private int _readAllCount;
     private int _writeAllCount;
+    private int _readAllRetries;
+    private int _writeAllRetries;
+    private bool _lastReadAllModified;
+    private bool _lastWriteAllModified;
+    private const int MaxBulkRetries = 3;
     public Action<string>? NotifySuccess;
     
     private readonly CumulativeCrc32 _writeCrc32 =  new();
@@ -123,6 +128,8 @@ internal class ParamProtocol(IDeviceConfigurable device, List<DeviceParameter> @
                 index = data[2] << 8 | data[1];
                 subIndex = data[3];
 
+                _lastReadAllModified = (MessageCommand)data[0] == MessageCommand.ReadAllModified;
+
                 _readCrc32.Reset();
 
                 _tempParamValues.Clear();
@@ -200,7 +207,8 @@ internal class ParamProtocol(IDeviceConfigurable device, List<DeviceParameter> @
                     }
 
                     _tempParamValues.Clear();
-                    _logger.LogInformation("{Name} ID: {BaseId}, Read All Complete {pdmCrc} = {thisCrc}, {fromPdm}", 
+                    _readAllRetries = 0;
+                    _logger.LogInformation("{Name} ID: {BaseId}, Read All Complete {pdmCrc} = {thisCrc}, {fromPdm}",
                         name, baseId, readAllCrc, _readCrc32.Final, readAllCount);
                     NotifySuccess?.Invoke($"{name}: Read Successful");
                 }
@@ -209,6 +217,25 @@ internal class ParamProtocol(IDeviceConfigurable device, List<DeviceParameter> @
                     _tempParamValues.Clear();
                     _logger.LogError("{Name} ID: {BaseId}, Read All Incomplete {pdmCrc} != {thisCrc}, {fromPdm} vs {received}",
                                         name, baseId, readAllCrc, _readCrc32.Final, readAllCount, _readAllCount);
+
+                    if (_readAllRetries < MaxBulkRetries)
+                    {
+                        _readAllRetries++;
+                        _logger.LogWarning("{Name} ID: {BaseId}, Retrying Read All ({Attempt}/{Max})",
+                            name, baseId, _readAllRetries, MaxBulkRetries);
+
+                        outgoing.Add(new DeviceCanFrame
+                        {
+                            DeviceBaseId = baseId,
+                            SendOnly = true,
+                            Frame = new CanFrame(Id: txId, Len: 8, Payload: [Convert.ToByte(_lastReadAllModified ? MessageCommand.ReadAllModified : MessageCommand.ReadAll), 0, 0, 0, 0, 0, 0, 0]),
+                            Name = "ReadAll (retry)"
+                        });
+                        break;
+                    }
+
+                    _readAllRetries = 0;
+                    _logger.LogError("{Name} ID: {BaseId}, Read All failed after {Max} retries", name, baseId, MaxBulkRetries);
                 }
 
                 outgoing.Add(new DeviceCanFrame
@@ -218,7 +245,7 @@ internal class ParamProtocol(IDeviceConfigurable device, List<DeviceParameter> @
                     Frame = new CanFrame(Id: txId, Len: 8, Payload: [Convert.ToByte(MessageCommand.CheckCrc), 0, 0, 0, 0, 0, 0, 0]),
                     Name = "CheckCRC"
                 });
-                
+
                 break;
                 
             case MessageCommand.CheckCrcRsp:
@@ -242,6 +269,7 @@ internal class ParamProtocol(IDeviceConfigurable device, List<DeviceParameter> @
             case MessageCommand.WriteAll:
                 if (data.Length != 8) return;
 
+                _lastWriteAllModified = false;
                 _writeCrc32.Reset();
 
                 index = data[2] << 8 | data[1];
@@ -264,6 +292,7 @@ internal class ParamProtocol(IDeviceConfigurable device, List<DeviceParameter> @
             case MessageCommand.WriteAllModified:
                 if (data.Length != 8) return;
 
+                _lastWriteAllModified = true;
                 _writeCrc32.Reset();
 
                 index = data[2] << 8 | data[1];
@@ -287,11 +316,13 @@ internal class ParamProtocol(IDeviceConfigurable device, List<DeviceParameter> @
                 if (data.Length != 8) return;
                 
                 var writeAllCount = data[2] << 8 | data[1];
+                var writeAllApplied = data[3] == 1;
                 uint writeAllCrc = (uint)(data[7] << 24 | data[6] << 16 | data[5] << 8 | data[4]);
 
-                if (writeAllCrc == _writeCrc32.Final)
+                if (writeAllApplied)
                 {
-                    _logger.LogInformation("{Name} ID: {BaseId}, Write All Completed {pdmCrc} = {thisCrc}, {fromPdm}", 
+                    _writeAllRetries = 0;
+                    _logger.LogInformation("{Name} ID: {BaseId}, Write All Completed {pdmCrc} = {thisCrc}, {fromPdm}",
                         name, baseId, writeAllCrc, _writeCrc32.Final, writeAllCount);
                     NotifySuccess?.Invoke($"{name}: Write Successful");
                 }
@@ -299,8 +330,27 @@ internal class ParamProtocol(IDeviceConfigurable device, List<DeviceParameter> @
                 {
                     _logger.LogError("{Name} ID: {BaseId}, Write All Failed {pdmCrc} != {thisCrc}, {fromPdm} vs {received}",
                         name, baseId, writeAllCrc, _writeCrc32.Final, writeAllCount, _writeAllCount);
+
+                    if (_writeAllRetries < MaxBulkRetries)
+                    {
+                        _writeAllRetries++;
+                        _logger.LogWarning("{Name} ID: {BaseId}, Retrying Write All ({Attempt}/{Max})",
+                            name, baseId, _writeAllRetries, MaxBulkRetries);
+
+                        outgoing.Add(new DeviceCanFrame
+                        {
+                            DeviceBaseId = baseId,
+                            SendOnly = true,
+                            Frame = new CanFrame(Id: txId, Len: 8, Payload: [Convert.ToByte(_lastWriteAllModified ? MessageCommand.WriteAllModified : MessageCommand.WriteAll), 0, 0, 0, 0, 0, 0, 0]),
+                            Name = "WriteAll (retry)"
+                        });
+                        break;
+                    }
+
+                    _writeAllRetries = 0;
+                    _logger.LogError("{Name} ID: {BaseId}, Write All failed after {Max} retries", name, baseId, MaxBulkRetries);
                 }
-                
+
                 outgoing.Add(new DeviceCanFrame
                 {
                     DeviceBaseId = baseId,
@@ -374,7 +424,9 @@ internal class ParamProtocol(IDeviceConfigurable device, List<DeviceParameter> @
             _writeCrc32.Update(msgs.Last().Frame.Payload.Skip(4).Take(4).ToArray());
         }
 
-        //Write all complete, with num params
+        //Write all complete, with num params and the CRC we computed so the
+        //firmware can reject the batch if what it received doesn't match.
+        uint expectedWriteCrc = _writeCrc32.Final;
         msgs.Add(new DeviceCanFrame
         {
             DeviceBaseId = baseId,
@@ -385,7 +437,11 @@ internal class ParamProtocol(IDeviceConfigurable device, List<DeviceParameter> @
                 Payload: [  Convert.ToByte(MessageCommand.WriteAllComplete),
                     Convert.ToByte(_writeAllCount & 0xFF),
                     Convert.ToByte((_writeAllCount >> 8) & 0xFF),
-                    0, 0, 0, 0, 0]),
+                    0,
+                    Convert.ToByte(expectedWriteCrc & 0xFF),
+                    Convert.ToByte((expectedWriteCrc >> 8) & 0xFF),
+                    Convert.ToByte((expectedWriteCrc >> 16) & 0xFF),
+                    Convert.ToByte((expectedWriteCrc >> 24) & 0xFF)]),
             Name = "WriteAllComplete"
         });
 
