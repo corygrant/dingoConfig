@@ -162,7 +162,7 @@ public class FwDevice : IDeviceConfigurable
 
         foreach (var msgDef in config.Messages)
         {
-            CyclicSigs[msgDef.IdOffset - CyclicRxOffset] = [];
+            CyclicSigs[msgDef.IdOffset] = [];
 
             foreach (var sigDef in msgDef.Signals)
             {
@@ -171,7 +171,7 @@ public class FwDevice : IDeviceConfigurable
                     var globalIdx = sigDef.StartIndex + i;
                     var name = sigDef.Dbc.Name.Replace("{n}", $"{globalIdx + 1}");
 
-                    CyclicSigs[msgDef.IdOffset - CyclicRxOffset].Add((new DbcSignal
+                    CyclicSigs[msgDef.IdOffset].Add((new DbcSignal
                     {
                         Name      = name,
                         StartBit  = sigDef.Dbc.StartBit + i * sigDef.Dbc.Length,
@@ -461,7 +461,7 @@ public class FwDevice : IDeviceConfigurable
         var offset = id - BaseId;
 
         // Use dictionary lookup for status messages
-        if (CyclicSigs.TryGetValue(offset - CyclicRxOffset, out var signals))
+        if (CyclicSigs.TryGetValue(offset, out var signals))
         {
             foreach (var (signal, setValue) in signals)
             {
@@ -597,30 +597,25 @@ public class FwDevice : IDeviceConfigurable
         };
     }
 
-    public List<DeviceCanFrame> GetModifyMsgs(int newId)
+    public DeviceCanFrame GetModifyMsg(int newId)
     {
-        List<DeviceParameter> modifyParams = [];
-        
-        //Copy params:
         //ID: 0x0000, Subindex: 0, Base ID
-        var baseIdParam = Params.First(p => p is { Index: 0x0000, SubIndex: 0});
-        baseIdParam.SetValue(newId);
-        modifyParams.Add(baseIdParam);
+        var baseIdParam = new DeviceParameter {
+            Index = 0x0000, 
+            SubIndex = 0,
+            GetValue = () => newId,
+            ValueType = typeof(int)
+        };
         
-        List<DeviceCanFrame> msgs = [];
-
-        foreach (var parameter in modifyParams)
+        var msg = new DeviceCanFrame
         {
-            msgs.Add(new DeviceCanFrame
-            {
-                SendOnly = true,
-                DeviceBaseId = newId,
-                Frame = ParamCodec.ToFrame(MessageCommand.Write, parameter, BaseId),
-                Name = $"Modify {parameter.Index}:{parameter.SubIndex}"
-            });
-        }
+            DeviceBaseId = BaseId + ConfigTxOffset,
+            SendOnly = true,
+            Frame = ParamCodec.ToFrame(MessageCommand.Write, baseIdParam, BaseId + ConfigTxOffset),
+            Name = $"Modify Id: {BaseId} to {newId}"
+        };
         
-        return msgs;
+        return msg;
     }
 
     public DeviceCanFrame GetBurnMsg()

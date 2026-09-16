@@ -16,9 +16,11 @@ public enum MessageCommand
     WriteAllVal = 21,
     WriteAllComplete = 22,
     WriteAllModified = 23,
+    WriteAllMissing = 24,
     WriteAllParamNotFound = 25,
     WriteAllOutOfRange = 26,
-    
+    WriteAllMissingDone = 27,
+
     BurnParams = 30,
     Version = 31,
     Sleep = 32,

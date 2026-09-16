@@ -94,7 +94,7 @@ public class PcanAdapter  : ICommsAdapter
 
     public Task<bool> WriteAsync(CanFrame frame, CancellationToken ct)
     {
-        if (_worker == null || frame.Payload.Length != 8 || !(_worker.Active)) return Task.FromResult(false);
+        if (_worker == null || !(_worker.Active)) return Task.FromResult(false);
 
         try
         {

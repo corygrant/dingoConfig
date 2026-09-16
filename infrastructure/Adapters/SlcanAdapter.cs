@@ -152,7 +152,7 @@ public class SlcanAdapter : ICommsAdapter
 
     public Task<bool> WriteAsync(CanFrame frame, CancellationToken ct)
     {
-        if (Serial is { IsOpen: false } || frame.Payload.Length != 8)
+        if (Serial is { IsOpen: false })
             return Task.FromResult(false);
 
         try

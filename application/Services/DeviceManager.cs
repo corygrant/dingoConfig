@@ -491,7 +491,7 @@ public class DeviceManager(ILogger<DeviceManager> logger, ILoggerFactory loggerF
     /// Modify device, name and base ID
     /// Sends modify message to device
     /// </summary>
-    public void ModifyDeviceConfig(Guid deviceId, string newName, int baseId)
+    public void ModifyDeviceConfig(Guid deviceId, string newName, int newBaseId)
     {
         var device = GetDevice(deviceId);
         if (device is not IDeviceConfigurable configurable)
@@ -499,16 +499,11 @@ public class DeviceManager(ILogger<DeviceManager> logger, ILoggerFactory loggerF
             if (device == null) return;
             
             device.Name = newName;
-            device.BaseId = baseId;
+            device.BaseId = newBaseId;
             return;
         }
 
-        var modifyMsgs = configurable.GetModifyMsgs(baseId);
-        foreach (var msg in modifyMsgs)
-        {
-            QueueMessage(msg);
-            Thread.Sleep(1); //Slow down to give device time to respond
-        }
+        QueueMessage(configurable.GetModifyMsg(newBaseId));
 
         logger.LogInformation("Modify started for {DeviceName} (Guid: {Guid})", device.Name, deviceId);
 
@@ -516,7 +511,7 @@ public class DeviceManager(ILogger<DeviceManager> logger, ILoggerFactory loggerF
         Thread.Sleep(300);
 
         device.Name = newName;
-        device.BaseId = baseId;
+        device.BaseId = newBaseId;
     }
 
     /// <summary>

@@ -62,7 +62,7 @@
                                    Size="Size.Small"
                                    Disabled="(!context.Item.PwmEnabled) || context.Item.PrimaryOutput >= 0 || !context.Item.VariableDutyCycle"
                                    Style="max-width: 20px"
-                                   OnClick="@(() => OpenVariableSelectorAsync(["int"], v => context.Item.DutyCycleInput = v))">
+                                   OnClick="@(() => OpenVariableSelectorAsync(["int","float"], v => context.Item.DutyCycleInput = v))">
                     </MudIconButton>
                     <MudText>@GetSelectedVarText(context.Item.DutyCycleInput)</MudText>
                 </MudStack>
