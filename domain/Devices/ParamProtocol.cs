@@ -24,11 +24,7 @@ internal class ParamProtocol(IDeviceConfigurable device, List<DeviceParameter> @
 
     private readonly CumulativeCrc32 _writeCrc32 = new();
     private readonly CumulativeCrc32 _readCrc32 = new();
-
-    // Targeted WriteAll recovery: on a failed full-WriteAll WriteAllComplete, firmware reports
-    // exactly which params are missing instead of forcing a full resend. Only applies to full
-    // WriteAll (see HandleWriteAllComplete) — WriteAllModified keeps the old log-and-stop
-    // behavior since firmware can't tell "unmodified" from "dropped" for a host-chosen subset.
+    
     private const int MaxWritePatchRounds = 2;
     private static readonly TimeSpan WriteAllOverallDeadline = TimeSpan.FromSeconds(15);
     private static readonly TimeSpan WriteMissingListTimeout = TimeSpan.FromMilliseconds(500);
@@ -341,9 +337,7 @@ internal class ParamProtocol(IDeviceConfigurable device, List<DeviceParameter> @
 
         if (_lastWriteAllModified)
         {
-            // WriteAllModified sends a host-chosen subset — firmware can't tell
-            // "unmodified" from "dropped" for it, so there's no targeted recovery here,
-            // same as before this change.
+            // WriteAllModified cannot find missing, must retry manually
             _logger.LogError("{Name} ID: {BaseId}, Write All Failed {pdmCrc} != {thisCrc}, PDM Sent:{fromPdm} vs Received:{received}",
                 name, baseId, writeAllCrc, _writeCrc32.Final, writeAllCount, _writeAllCount);
 
@@ -351,12 +345,8 @@ internal class ParamProtocol(IDeviceConfigurable device, List<DeviceParameter> @
             return;
         }
 
-        // Full WriteAll: don't give up yet. Firmware follows a failed WriteAllComplete with a
-        // WriteAllMissing/WriteAllMissingDone report of exactly what's missing (see
-        // HandleWriteAllMissing/HandleWriteAllMissingDone for the bounded patch/fallback/give-up
-        // sequence). _writeMissingTimer is a backstop in case that report (or firmware's support
-        // for it) never shows up.
-        _logger.LogError("{Name} ID: {BaseId}, Write All Failed {pdmCrc} != {thisCrc}, PDM Sent:{fromPdm} vs Received:{received} — awaiting missing-param report",
+        // WriteAll failed, firmware to send missing parameter list
+        _logger.LogInformation("{Name} ID: {BaseId}, Write All Failed {pdmCrc} != {thisCrc}, PDM Sent:{fromPdm} vs Received:{received} — awaiting missing-param report",
             name, baseId, writeAllCrc, _writeCrc32.Final, writeAllCount, _writeAllCount);
 
         lock (_writeLock)
@@ -399,10 +389,7 @@ internal class ParamProtocol(IDeviceConfigurable device, List<DeviceParameter> @
             missingSnapshot = new HashSet<(int, int)>(_pendingWriteMissing);
             _pendingWriteMissing.Clear();
         }
-
-        // Belongs to an attempt we already abandoned (deadline/round fallback already fired, or
-        // a fresh WriteAll started) — a new WriteAll always resets this flag, so a late arrival
-        // here can't be misapplied to whatever is happening now.
+        
         if (wasStale) return;
 
         var needsFullResend = missingCount == 0xFFFF
@@ -416,9 +403,7 @@ internal class ParamProtocol(IDeviceConfigurable device, List<DeviceParameter> @
                 _writeAllFullResendDone = true;
                 _logger.LogWarning("{Name} ID: {BaseId}, Write All missing-param patch exhausted, falling back to one full resend",
                     name, baseId);
-                // BuildWriteAllMsgs accumulates onto _writeCrc32 rather than resetting it, so it
-                // must be reset here exactly like HandleWriteAllStart does — otherwise this
-                // recomputed CRC would include the abandoned first attempt's bytes too.
+                
                 _writeCrc32.Reset();
                 outgoing.AddRange(BuildWriteAllMsgs(baseId, txId, allParams: true));
             }
@@ -499,18 +484,12 @@ internal class ParamProtocol(IDeviceConfigurable device, List<DeviceParameter> @
 
             _writeCrc32.Update(msgs.Last().Frame.Payload.Skip(4).Take(4).ToArray());
         }
-
-        //Write all complete, with num params and the CRC we computed so the
-        //firmware can reject the batch if what it received doesn't match.
+        
         msgs.Add(BuildWriteAllCompleteFrame(baseId, txId));
 
         return msgs;
     }
-
-    // Rebuilds the WriteAllComplete frame from the count/CRC of the *original* full WriteAll
-    // (_writeAllCount / _writeCrc32 aren't touched again until the next WriteAll/WriteAllModified
-    // starts), so a missing-param patch round can resend it unchanged rather than recomputing
-    // anything — the set of values firmware is expected to end up with hasn't changed.
+    
     private DeviceCanFrame BuildWriteAllCompleteFrame(int baseId, int txId)
     {
         uint expectedWriteCrc = _writeCrc32.Final;
@@ -548,18 +527,7 @@ internal class ParamProtocol(IDeviceConfigurable device, List<DeviceParameter> @
         _writeAllFullResendDone = false;
         _writeAllDeadlineAt = DateTime.Now + WriteAllOverallDeadline;
     }
-
-    // Timer callback (runs on the ThreadPool, not the RX pipeline thread) — fires only if
-    // WriteAllMissingDone never arrives after a failed full-WriteAll WriteAllComplete (report
-    // itself lost, or firmware doesn't support it). Guards on the generation captured when the
-    // timer was created, not on _awaitingWriteMissingList directly: Timer.Dispose() doesn't stop
-    // an already-in-flight callback, so without this a stale callback from an abandoned attempt
-    // (or an earlier patch round within the same attempt) could otherwise clear the flag — and
-    // thus discard the real report — for a *later* wait that's already reusing it. Every place
-    // that starts, resolves, or resets a wait bumps the generation, so a stale callback can never
-    // match. Only logs: there's no outgoing frame list to append to from a background thread
-    // here, so this deliberately fails loud-and-fast rather than silently hanging — the user can
-    // retry, which cleanly resets this state.
+    
     private void OnWriteMissingListTimeout(string name, int baseId, int generation)
     {
         lock (_writeLock)
