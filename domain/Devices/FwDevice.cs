@@ -64,6 +64,7 @@ public class FwDevice : IDeviceConfigurable
     [JsonPropertyName("counters")] public List<Counter> Counters { get; init; } = [];
     [JsonPropertyName("conditions")] public List<Condition> Conditions { get; init; } = [];
     [JsonPropertyName("keypads")] public List<KeypadMaster> Keypads { get; init; } = [];
+    [JsonPropertyName("flowLayout")] public Dictionary<string, FlowNodePosition> FlowLayout { get; set; } = new();
     
     [JsonIgnore] private DateTime LastRxTime { get; set; }
 
@@ -307,39 +308,47 @@ public class FwDevice : IDeviceConfigurable
         }
         
         for (var i = 0; i < Def.NumDigitalInputs; i++)
-            VarMap.AddRange(DigitalInputs[i].GetVarMap(ref index));
+            AddVars(DigitalInputs[i], ref index);
         
         for (var i = 0; i < Def.NumDigitalOutputs; i++)
-            VarMap.AddRange(DigitalOutputs[i].GetVarMap(ref index));
+            AddVars(DigitalOutputs[i], ref index);
         
         for (var i = 0; i < Def.NumAnalogInputs; i++)
-            VarMap.AddRange(AnalogInputs[i].GetVarMap(ref index));
+            AddVars(AnalogInputs[i], ref index);
         
         for (var i = 0; i < Def.NumCanInputs; i++)
-            VarMap.AddRange(CanInputs[i].GetVarMap(ref index));
+            AddVars(CanInputs[i], ref index);
         
         for(var i=0; i< Def.NumVirtualInputs; i++)
-            VarMap.AddRange(VirtualInputs[i].GetVarMap(ref index));
+            AddVars(VirtualInputs[i], ref index);
         
         for (var i = 0; i < Def.NumOutputs; i++)
-            VarMap.AddRange(Outputs[i].GetVarMap(ref index));
+            AddVars(Outputs[i], ref index);
         
         for (var i = 0; i < Def.NumFlashers; i++)
-            VarMap.AddRange(Flashers[i].GetVarMap(ref index));
+            AddVars(Flashers[i], ref index);
         
         for (var i = 0; i < Def.NumConditions; i++)
-            VarMap.AddRange(Conditions[i].GetVarMap(ref index));
+            AddVars(Conditions[i], ref index);
         
         for (var i = 0; i < Def.NumCounters; i++)
-            VarMap.AddRange(Counters[i].GetVarMap(ref index));
+            AddVars(Counters[i], ref index);
 
         if (Def.HasWipers)
         {
-            VarMap.AddRange(Wipers.GetVarMap(ref index));
+            AddVars(Wipers, ref index);
         }
 
         for (var i = 0; i < Def.NumKeypads; i++)
-            VarMap.AddRange(Keypads[i].GetVarMap(ref index));
+            AddVars(Keypads[i], ref index);
+    }
+
+    private void AddVars(IDeviceFunction function, ref int index)
+    {
+        var vars = function.GetVarMap(ref index);
+        foreach (var variable in vars)
+            variable.Owner = function;
+        VarMap.AddRange(vars);
     }
 
     private void InitParams()

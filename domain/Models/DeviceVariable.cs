@@ -1,3 +1,5 @@
+using domain.Interfaces;
+
 namespace domain.Models;
 
 public class DeviceVariable
@@ -7,4 +9,5 @@ public class DeviceVariable
     public int VariableIndex { get; set; }
     public bool SingleVariable { get; set; }
     public string DataType { get; set; } = string.Empty;
+    public IDeviceFunction? Owner { get; set; } // null for device level variables
 }

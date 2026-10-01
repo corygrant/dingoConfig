@@ -1,0 +1,353 @@
+@using System.Text.Json
+@using domain.Models
+@using web.Components.Devices.FwDevice.Flow
+@using web.Services
+@typeparam TDevice where TDevice : domain.Devices.FwDevice
+@inject IJSRuntime JS
+@inject IDialogService DialogService
+@inject NotificationService Notification
+@implements IAsyncDisposable
+
+<div class="d-flex flex-column" style="height: calc(100vh - 250px);">
+    <MudToolBar Dense="true" Gutters="false" Class="px-2" Style="gap: 8px;">
+        <MudMenu Label="Add Function" StartIcon="@Icons.Material.Filled.Add" Variant="Variant.Outlined"
+                 Size="Size.Small" Dense="true" Disabled="!_ready">
+            @foreach (var (type, free) in new FlowGraph(Device).FreeSlots())
+            {
+                <MudMenu Label="@type.Label" Dense="true">
+                    @foreach (var slot in free)
+                    {
+                        <MudMenuItem OnClick="@(() => AddNodeAsync(slot.Id))">
+                            @slot.Label
+                            @if (IsRenamed(slot))
+                            {
+                                <MudText Typo="Typo.caption" Color="Color.Secondary" Inline="true"> (@slot.Function.Name)</MudText>
+                            }
+                        </MudMenuItem>
+                    }
+                </MudMenu>
+            }
+        </MudMenu>
+        <MudTooltip Text="Fit to view">
+            <MudIconButton Icon="@Icons.Material.Filled.FitScreen" Size="Size.Small" Disabled="!_ready" OnClick="FitViewAsync"/>
+        </MudTooltip>
+        <MudSpacer/>
+        <MudText Typo="Typo.caption" Color="Color.Secondary">
+            Drag from an output to an input to connect. Delete/Backspace removes the selection.
+        </MudText>
+    </MudToolBar>
+
+    @* React owns everything inside this element; Blazor must not render children into it *@
+    <div @ref="_host" style="flex: 1 1 auto; min-height: 200px; position: relative;"></div>
+
+    @if (_propertiesSlot is not null)
+    {
+        <MudPaper Elevation="4" Class="pa-2" Style="flex: 0 0 auto; max-height: 45%; overflow: auto;">
+            <MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-1">
+                <MudText Typo="Typo.subtitle1">@_propertiesSlot.Function.Name</MudText>
+                <MudText Typo="Typo.caption" Color="Color.Secondary">@_propertiesSlot.Label</MudText>
+                <MudSpacer/>
+                <MudButton Size="Size.Small" Color="Color.Error" Variant="Variant.Text"
+                           StartIcon="@Icons.Material.Filled.Delete" OnClick="RemoveSelectedAsync">
+                    Remove
+                </MudButton>
+                <MudIconButton Icon="@Icons.Material.Filled.Close" Size="Size.Small" OnClick="ClosePropertiesAsync"/>
+            </MudStack>
+            <FlowPropertiesPanel TDevice="TDevice" Device="Device" Slot="_propertiesSlot"/>
+        </MudPaper>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public TDevice Device { get; set; } = null!;
+
+    /// <summary>The editor is created on first activation (it can't size itself in a hidden tab) and only synced while active.</summary>
+    [Parameter] public bool IsActive { get; set; }
+
+    private const int SyncIntervalMs = 200;
+    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
+    private static readonly string ModulePath =
+        $"./js/flow/flow-editor.js?v={typeof(FlowGraph).Assembly.GetName().Version}";
+
+    private ElementReference _host;
+    private IJSObjectReference? _module;
+    private IJSObjectReference? _editor;
+    private DotNetObjectReference<FlowEditorTab<TDevice>>? _dotNetRef;
+    private bool _initializing;
+    private bool _ready;
+    private bool _syncing;
+    private bool _disposed;
+    private long _lastSync;
+    private string? _lastGraphJson;
+    private readonly Dictionary<string, object?> _lastValues = [];
+    private FlowGraph.Slot? _propertiesSlot;
+    private string? _shownPropertiesId; // properties node last reported to the editor (for the gear highlight)
+    private Guid _deviceGuid;
+
+    protected override void OnParametersSet()
+    {
+        if (_deviceGuid != Device.Guid)
+        {
+            _deviceGuid = Device.Guid;
+            _propertiesSlot = null;
+            _shownPropertiesId = null;
+            _lastGraphJson = null;
+            _lastValues.Clear();
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!IsActive || _disposed)
+            return;
+
+        if (_editor is null)
+        {
+            await InitAsync();
+            return;
+        }
+
+        // The device page re-renders at 20 Hz; push graph changes and live values at a lower rate
+        if (Environment.TickCount64 - _lastSync >= SyncIntervalMs)
+            await SyncAsync();
+    }
+
+    private async Task InitAsync()
+    {
+        if (_initializing)
+            return;
+
+        _initializing = true;
+        try
+        {
+            _module = await JS.InvokeAsync<IJSObjectReference>("import", ModulePath);
+            _dotNetRef = DotNetObjectReference.Create(this);
+
+            var flow = new FlowGraph(Device);
+            var graph = flow.Build();
+            _lastGraphJson = JsonSerializer.Serialize(graph, JsonOptions);
+            _editor = await _module.InvokeAsync<IJSObjectReference>("create", _host, _dotNetRef, graph);
+            _ready = true;
+
+            _lastValues.Clear();
+            await PushValuesAsync(flow);
+            StateHasChanged();
+        }
+        catch (JSDisconnectedException)
+        {
+        }
+        catch (Exception ex)
+        {
+            Notification.NewError("Failed to load the flow editor", ex);
+        }
+        finally
+        {
+            _initializing = false;
+        }
+    }
+
+    private async Task SyncAsync()
+    {
+        if (_editor is null || _syncing)
+            return;
+
+        _syncing = true;
+        _lastSync = Environment.TickCount64;
+        try
+        {
+            var flow = new FlowGraph(Device);
+            var graph = flow.Build();
+
+            // Picks up changes made outside the canvas too (Configuration tab, reading from the device)
+            var json = JsonSerializer.Serialize(graph, JsonOptions);
+            if (json != _lastGraphJson)
+            {
+                _lastGraphJson = json;
+                await _editor.InvokeVoidAsync("setGraph", graph);
+            }
+
+            if (_propertiesSlot is not null && graph.Nodes.All(n => n.Id != _propertiesSlot.Id))
+            {
+                _propertiesSlot = null;
+                StateHasChanged();
+            }
+
+            await PushPropertiesNodeAsync();
+            await PushValuesAsync(flow);
+        }
+        catch (JSDisconnectedException)
+        {
+        }
+        finally
+        {
+            _syncing = false;
+        }
+    }
+
+    private async Task PushPropertiesNodeAsync()
+    {
+        var id = _propertiesSlot?.Id;
+        if (_editor is null || id == _shownPropertiesId)
+            return;
+
+        _shownPropertiesId = id;
+        await _editor.InvokeVoidAsync("setPropertiesNode", id);
+    }
+
+    private async Task PushValuesAsync(FlowGraph flow)
+    {
+        var changed = new Dictionary<string, object?>();
+        foreach (var (key, value) in flow.Values())
+        {
+            if (_lastValues.TryGetValue(key, out var last) && Equals(last, value))
+                continue;
+
+            _lastValues[key] = value;
+            changed[key] = value;
+        }
+
+        if (changed.Count > 0)
+            await _editor!.InvokeVoidAsync("setValues", changed);
+    }
+
+    // Applies a graph edit, then pushes the result immediately rather than waiting for the next sync
+    private async Task AfterEditAsync()
+    {
+        _lastSync = 0;
+        await SyncAsync();
+        StateHasChanged();
+    }
+
+    // Default names are e.g. "flasher3" for "Flasher 3"; only show the name once the user has changed it
+    private static bool IsRenamed(FlowGraph.Slot slot) =>
+        !string.Equals(slot.Function.Name.Replace(" ", ""), slot.Label.Replace(" ", ""), StringComparison.OrdinalIgnoreCase);
+
+    private async Task<bool> ConfirmRemoveAsync(IReadOnlyList<FlowGraph.Slot> slots, FlowGraph flow)
+    {
+        var names = string.Join(", ", slots.Select(s => $"{s.Function.Name} ({s.Label})"));
+        var references = slots.Sum(flow.CountReferences);
+        var message = $"Disable {names}?" +
+                      (references > 0 ? $" {references} input(s) using it will be disconnected." : "");
+
+        var result = await DialogService.ShowMessageBox("Remove from flow", message, yesText: "Remove", cancelText: "Cancel");
+        return result == true;
+    }
+
+    private async Task AddNodeAsync(string nodeId)
+    {
+        if (_editor is null)
+            return;
+
+        var flow = new FlowGraph(Device);
+        if (flow.Find(nodeId) is not { } slot)
+            return;
+
+        var center = await _editor.InvokeAsync<FlowNodePosition>("getViewportCenter");
+        flow.Add(slot, new FlowNodePosition(center.X - 100, center.Y - 40));
+        _propertiesSlot = slot;
+
+        await AfterEditAsync();
+        await _editor.InvokeVoidAsync("selectNode", slot.Id);
+    }
+
+    private async Task RemoveSelectedAsync()
+    {
+        if (_propertiesSlot is null)
+            return;
+
+        var flow = new FlowGraph(Device);
+        if (flow.Find(_propertiesSlot.Id) is not { } slot || !await ConfirmRemoveAsync([slot], flow))
+            return;
+
+        flow.Remove(slot);
+        _propertiesSlot = null;
+        await AfterEditAsync();
+    }
+
+    private async Task ClosePropertiesAsync()
+    {
+        _propertiesSlot = null;
+        await PushPropertiesNodeAsync();
+    }
+
+    private async Task FitViewAsync()
+    {
+        if (_editor is not null)
+            await _editor.InvokeVoidAsync("fitView");
+    }
+
+    [JSInvokable]
+    public async Task OnConnect(string source, string sourceHandle, string target, string targetHandle)
+    {
+        var error = new FlowGraph(Device).Connect(sourceHandle, target, targetHandle);
+        if (error is not null)
+            Notification.NewWarning(error);
+
+        await AfterEditAsync();
+    }
+
+    [JSInvokable]
+    public async Task OnDeleted(string[] nodeIds, FlowEdgeRef[] edges)
+    {
+        var flow = new FlowGraph(Device);
+
+        foreach (var edge in edges)
+            flow.Disconnect(edge.Target, edge.TargetHandle);
+
+        foreach (var id in nodeIds)
+        {
+            if (flow.Find(id) is { } slot)
+                flow.Remove(slot);
+        }
+
+        if (_propertiesSlot is not null && nodeIds.Contains(_propertiesSlot.Id))
+            _propertiesSlot = null;
+
+        await AfterEditAsync();
+    }
+
+    [JSInvokable]
+    public async Task<bool> ConfirmRemoveNodes(string[] nodeIds)
+    {
+        var flow = new FlowGraph(Device);
+        var slots = nodeIds.Select(flow.Find).OfType<FlowGraph.Slot>().ToList();
+        return slots.Count > 0 && await ConfirmRemoveAsync(slots, flow);
+    }
+
+    [JSInvokable]
+    public void OnNodesMoved(FlowNodeMove[] moves)
+    {
+        var flow = new FlowGraph(Device);
+        foreach (var move in moves)
+            flow.Move(move);
+    }
+
+    [JSInvokable]
+    public async Task OnOpenProperties(string nodeId)
+    {
+        _propertiesSlot = new FlowGraph(Device).Find(nodeId);
+        await PushPropertiesNodeAsync();
+        StateHasChanged();
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        _disposed = true;
+        try
+        {
+            if (_editor is not null)
+            {
+                await _editor.InvokeVoidAsync("dispose");
+                await _editor.DisposeAsync();
+            }
+
+            if (_module is not null)
+                await _module.DisposeAsync();
+        }
+        catch (JSDisconnectedException)
+        {
+        }
+
+        _dotNetRef?.Dispose();
+    }
+}

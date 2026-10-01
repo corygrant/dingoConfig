@@ -1,7 +1,8 @@
 @using web.Components.Devices.FwDevice.Tabs
 @typeparam TDevice where TDevice : domain.Devices.FwDevice
 
-<MudTabs Elevation="2" Rounded="true" ApplyEffectsToContainer="true" KeepPanelsAlive="true">
+<MudTabs @ref="_tabs" @bind-ActivePanelIndex="_activePanelIndex"
+         Elevation="2" Rounded="true" ApplyEffectsToContainer="true" KeepPanelsAlive="true">
     <MudTabPanel Text="Dashboard" Icon="@Icons.Material.Filled.Dashboard">
         <DashboardTab TDevice="TDevice" Device="Device" />
     </MudTabPanel>
@@ -27,13 +28,15 @@
         <PlotTab TDevice="TDevice" Device="Device" />
     </MudTabPanel>
     *@
-    @*
-    <MudTabPanel Text="Flow" Icon="@Icons.Material.Filled.DataExploration">
-        <FlowTab />
+    <MudTabPanel @ref="_flowPanel" Text="Flow" Icon="@Icons.Material.Filled.DataExploration">
+        <FlowEditorTab TDevice="TDevice" Device="Device" IsActive="@(_tabs?.ActivePanel == _flowPanel && _flowPanel is not null)" />
     </MudTabPanel>
-    *@
 </MudTabs>
 
 @code {
     [Parameter, EditorRequired] public TDevice Device { get; set; } = null!;
+
+    private MudTabs? _tabs;
+    private MudTabPanel? _flowPanel;
+    private int _activePanelIndex;
 }

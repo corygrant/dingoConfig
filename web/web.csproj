@@ -75,7 +75,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <BlazorDisableThrowNavigationException>true</BlazorDisableThrowNavigationException>
     <OutputType>Exe</OutputType>
-    <Version>0.2.18</Version>
+    <Version>0.3.0</Version>
     <ApplicationIcon>icon.ico</ApplicationIcon>
     <PackageIcon>wwwroot\icon.png</PackageIcon>
     <!-- Console window is hidden programmatically in Program.cs for Windows -->
@@ -91,5 +91,10 @@
 
   <PropertyGroup>
     <NoWarn>NU1903</NoWarn>
+  </PropertyGroup>
+
+  <!-- Flow editor JS source; its build output is committed to wwwroot/js/flow (see ClientApp/package.json) -->
+  <PropertyGroup>
+    <DefaultItemExcludes>$(DefaultItemExcludes);ClientApp\**</DefaultItemExcludes>
   </PropertyGroup>
 </Project>

@@ -1,0 +1,77 @@
+@using domain.Devices.Functions
+@using domain.Devices.Functions.Keypad
+@using domain.Interfaces
+@using web.Components.Devices.FwDevice.Functions
+@using web.Components.Devices.FwDevice.Tabs
+@typeparam TDevice where TDevice : domain.Devices.FwDevice
+
+@* Reuses the Configuration tab editors, scoped to the selected function, so validation stays in one place *@
+@switch (Slot.Function)
+{
+    case DigitalInput:
+        <DigitalInputsGrid Inputs="Items<DigitalInput>()"/>
+        break;
+    case AnalogInput:
+        <MudStack Spacing="2">
+            <AnalogInputsGrid Inputs="Items<AnalogInput>()"/>
+            <RotarySwitchGrid Inputs="Items<AnalogInput>()"/>
+        </MudStack>
+        break;
+    case CanInput:
+        <CanInputsGrid CanInputs="Items<CanInput>()" Device="Device"/>
+        break;
+    case KeypadMaster keypad:
+        <KeypadConfigTab TDevice="TDevice" Device="Device" Keypad="keypad"/>
+        break;
+    case VirtualInput:
+        <VirtualInputsGrid VirtualInputs="Items<VirtualInput>()" Device="Device"/>
+        break;
+    case Condition:
+        <ConditionsGrid Conditions="Items<Condition>()" Device="Device"/>
+        break;
+    case Counter:
+        <CountersGrid Counters="Items<Counter>()" Device="Device"/>
+        break;
+    case Flasher:
+        <FlashersGrid Flashers="Items<Flasher>()" Device="Device"/>
+        break;
+    case Output:
+        <MudStack Spacing="2">
+            <OutputsGrid Outputs="Items<Output>()" Device="Device"/>
+            <OutputsPwmGrid Outputs="Items<Output>()" Device="Device"/>
+        </MudStack>
+        break;
+    case DigitalOutput:
+        <DigitalOutputsGrid Outputs="Items<DigitalOutput>()" Device="Device"/>
+        break;
+    case CanOutput:
+        <CanOutputsGrid CanOutputs="Items<CanOutput>()" Device="Device"/>
+        break;
+    case Wiper wiper:
+        <WiperConfig Wiper="wiper" Device="Device"/>
+        break;
+    case StarterDisable starterDisable:
+        <StarterDisableConfig StarterDisable="starterDisable" Device="Device"/>
+        break;
+}
+
+@code {
+    [Parameter, EditorRequired] public TDevice Device { get; set; } = null!;
+    [Parameter, EditorRequired] public Flow.FlowGraph.Slot Slot { get; set; } = null!;
+
+    private IDeviceFunction? _itemsFor;
+    private object? _items;
+
+    // The grids take a list; keep the same single item list instance between renders so
+    // the data grid doesn't reset its edit state on every refresh
+    private List<T> Items<T>() where T : IDeviceFunction
+    {
+        if (!ReferenceEquals(_itemsFor, Slot.Function))
+        {
+            _itemsFor = Slot.Function;
+            _items = new List<T> { (T)Slot.Function };
+        }
+
+        return (List<T>)_items!;
+    }
+}

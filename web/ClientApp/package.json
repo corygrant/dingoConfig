@@ -1,0 +1,20 @@
+{
+  "name": "dingoconfig-flow-editor",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "xyflow based function flow editor, bundled into web/wwwroot/js/flow",
+  "scripts": {
+    "build": "vite build",
+    "watch": "vite build --watch --mode development"
+  },
+  "dependencies": {
+    "@xyflow/react": "^12.12.0",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^6.1.1",
+    "vite": "^8.3.1"
+  }
+}
