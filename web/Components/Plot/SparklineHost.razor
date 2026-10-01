@@ -1,0 +1,119 @@
+@using application.Services
+@inject IJSRuntime JS
+@inject PlotService PlotService
+@implements IAsyncDisposable
+
+@*
+    Drives every Sparkline inside it from one timer and one JS interop call per tick,
+    rather than one call per sparkline.
+*@
+<CascadingValue Value="this" IsFixed="true">
+    @ChildContent
+</CascadingValue>
+
+@code {
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    private const int UpdateIntervalMs = 200;
+
+    private readonly List<Sparkline> _sparklines = [];
+    private IJSObjectReference? _module;
+    private IJSObjectReference? _group;
+    private Timer? _timer;
+    private bool _chartsChanged;
+    private bool _updating;
+    private bool _disposed;
+    private int _generation = -1;
+    private long _seq;
+
+    internal void Register(Sparkline sparkline)
+    {
+        if (_sparklines.Contains(sparkline)) return;
+        _sparklines.Add(sparkline);
+        _chartsChanged = true;
+    }
+
+    internal void Unregister(Sparkline sparkline)
+    {
+        if (_sparklines.Remove(sparkline))
+            _chartsChanged = true;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+
+        try
+        {
+            _module = await JS.InvokeAsync<IJSObjectReference>("import", PlotInterop.ModulePath);
+            _group = await _module.InvokeAsync<IJSObjectReference>("createSparklineGroup",
+                PlotService.Live.Capacity, PlotService.LiveSeconds);
+        }
+        catch (JSDisconnectedException)
+        {
+            return;
+        }
+
+        if (_disposed) return;
+        _timer = new Timer(_ => InvokeAsync(UpdateAsync), null, 0, UpdateIntervalMs);
+    }
+
+    private async Task UpdateAsync()
+    {
+        if (_group is null || _updating || _disposed || (_sparklines.Count == 0 && !_chartsChanged)) return;
+        _updating = true;
+
+        try
+        {
+            object? charts = null;
+            if (_chartsChanged)
+            {
+                _chartsChanged = false;
+                _generation = -1; // new chart set: resend the full history
+                charts = _sparklines.Select(s => new
+                {
+                    id = s.Id,
+                    el = s.Element,
+                    key = s.Signal!.Key,
+                    discrete = s.Signal.IsDiscrete,
+                    width = s.Width,
+                    height = s.Height
+                }).ToList();
+            }
+
+            var keys = _sparklines.Select(s => s.Signal!.Key).Distinct().ToList();
+            var chunk = PlotService.Live.Read(keys, _generation, _seq);
+            _generation = chunk.Generation;
+            _seq = chunk.Seq;
+
+            if (charts is null && chunk.Times.Length == 0) return;
+            await _group.InvokeVoidAsync("update", charts, keys, chunk);
+        }
+        catch (JSDisconnectedException)
+        {
+        }
+        finally
+        {
+            _updating = false;
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        _disposed = true;
+        if (_timer is not null) await _timer.DisposeAsync();
+
+        try
+        {
+            if (_group is not null)
+            {
+                await _group.InvokeVoidAsync("dispose");
+                await _group.DisposeAsync();
+            }
+            if (_module is not null) await _module.DisposeAsync();
+        }
+        catch (JSDisconnectedException)
+        {
+        }
+    }
+}

@@ -458,6 +458,19 @@ if (success)
 }
 ```
 
+### 10. PlotService (uPlot plotting)
+
+**Location**: `application/Services/PlotService.cs`, UI in `web/Components/Plot/` and `web/Components/Pages/PlotPage.razor`
+
+Samples every `[Plotable]` property of every device at 20 Hz (discovered by `PlotReferenceFactory`).
+- **Live store**: all signals, last 30 s - feeds dashboard sparklines
+- **Recording store**: signals picked on the `/plot` page (max 8), last 10 min, Record/Pause/Stop
+- `SampleStore` keeps aligned ring buffers (one shared time axis, NaN = gap, e.g. while a device is disconnected); readers fetch incremental chunks by `(Generation, Seq)`
+
+**Rendering**: uPlot 1.6.32 is vendored in `wwwroot/lib/uplot` (app must work offline); interop module is `wwwroot/js/plot/plot.js`.
+- `<Sparkline Source="output" Property="@nameof(Output.Current)"/>` inside a `<SparklineHost>`; the host batches all sparklines into one interop call per 200 ms
+- `/plot` stacks one pane per unit (synced cursor and x-zoom); drag to zoom, double-click to follow live data
+
 ## Dependency Injection Setup
 
 **Location**: `web/Program.cs`

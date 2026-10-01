@@ -1,0 +1,158 @@
+@using application.Services
+@inject PlotService PlotService
+
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Filled.StackedLineChart" Class="mr-2"/>
+            Select Signals
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudText Typo="Typo.caption" Class="mb-3">
+            Select up to @PlotService.MaxTraces signals to plot (@_selected.Count selected)
+        </MudText>
+
+        @* Search Box *@
+        <MudTextField @bind-Value="_searchText"
+                      Label="Search signals"
+                      Variant="Variant.Outlined"
+                      Immediate="true"
+                      Adornment="Adornment.Start"
+                      AdornmentIcon="@Icons.Material.Filled.Search"
+                      Clearable="true"
+                      Margin="Margin.Dense"
+                      Class="mb-3"/>
+
+        @if (!PlotService.GetSignals().Any())
+        {
+            <MudAlert Severity="Severity.Info" Dense="true">
+                No signals found. Add a device first.
+            </MudAlert>
+        }
+        else
+        {
+            <MudPaper Elevation="0" MaxHeight="500px" Style="overflow-y: auto;">
+                @foreach (var device in GetFilteredSignals().GroupBy(s => s.Device))
+                {
+                    <MudList T="string" Dense="true">
+                        @* Device Level *@
+                        <MudListItem T="string"
+                                     Icon="@Icons.Material.Filled.Memory"
+                                     IconColor="Color.Primary"
+                                     Expanded="true">
+                            <ChildContent>
+                                <MudText Typo="Typo.body1">
+                                    <b>@device.Key.Name</b>
+                                </MudText>
+                            </ChildContent>
+                            <NestedList>
+                                @foreach (var function in device.GroupBy(GroupName))
+                                {
+                                    @* Function Level *@
+                                    <MudListItem T="string"
+                                                 Icon="@Icons.Material.Filled.DeviceHub"
+                                                 IconColor="Color.Primary"
+                                                 Expanded="@(Searching || _initiallyOpen.Contains((device.Key.Guid, function.Key)))">
+                                        <ChildContent>
+                                            <MudText Typo="Typo.body1">
+                                                <b>@function.Key</b>
+                                            </MudText>
+                                        </ChildContent>
+                                        <NestedList>
+                                            @foreach (var signal in function)
+                                            {
+                                                var selected = IsSelected(signal);
+                                                <MudListItem T="string"
+                                                             Icon="@(selected ? Icons.Material.Filled.CheckBox : Icons.Material.Filled.CheckBoxOutlineBlank)"
+                                                             IconColor="@(selected ? Color.Primary : Color.Default)"
+                                                             Disabled="@(!selected && _selected.Count >= PlotService.MaxTraces)"
+                                                             OnClick="@(() => OnSignalSelected(signal))"
+                                                             Style="@(selected ? "background-color: var(--mud-palette-action-default-hover);" : "")">
+                                                    <MudText Typo="Typo.body2" Inline="true">
+                                                        @signal.Reference.Property
+                                                    </MudText>
+                                                    @if (signal.Unit.Length > 0)
+                                                    {
+                                                        <MudText Typo="Typo.caption" Class="mud-text-secondary" Inline="true">
+                                                            (@signal.Unit)
+                                                        </MudText>
+                                                    }
+                                                </MudListItem>
+                                            }
+                                        </NestedList>
+                                    </MudListItem>
+                                }
+                            </NestedList>
+                        </MudListItem>
+                    </MudList>
+                }
+            </MudPaper>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton Variant="Variant.Outlined" OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary"
+                   Variant="Variant.Outlined"
+                   OnClick="Submit">
+            Select
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = null!;
+
+    /// <summary>Keys of the signals currently plotted</summary>
+    [Parameter] public IReadOnlyList<string> Selected { get; set; } = [];
+
+    private List<string> _selected = [];
+    private HashSet<(Guid Device, string Group)> _initiallyOpen = [];
+    private string _searchText = "";
+
+    private bool Searching => !string.IsNullOrWhiteSpace(_searchText);
+
+    protected override void OnInitialized()
+    {
+        _selected = Selected.ToList();
+
+        // Open the groups holding plotted signals; fixed so unticking doesn't collapse a group under the cursor
+        _initiallyOpen = PlotService.GetSignals().Where(IsSelected).Select(s => (s.Device.Guid, GroupName(s))).ToHashSet();
+    }
+
+    private IEnumerable<PlotSignal> GetFilteredSignals()
+    {
+        var signals = PlotService.GetSignals();
+        if (!Searching) return signals;
+
+        // Every word must match somewhere in the device, function or signal name
+        var words = _searchText.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        return signals.Where(s =>
+        {
+            var text = $"{s.Device.Name} {GroupName(s)} {s.Reference.Property}";
+            return words.All(w => text.Contains(w, StringComparison.OrdinalIgnoreCase));
+        });
+    }
+
+    // Function name, or the owning collection for device-level values and DBC signals
+    private static string GroupName(PlotSignal signal) =>
+        signal.Reference.Owner is { Length: > 0 } owner ? owner : signal.Reference.Group;
+
+    private bool IsSelected(PlotSignal signal) => _selected.Contains(signal.Key);
+
+    private void OnSignalSelected(PlotSignal signal)
+    {
+        if (!_selected.Remove(signal.Key) && _selected.Count < PlotService.MaxTraces)
+            _selected.Add(signal.Key);
+    }
+
+    private void Submit()
+    {
+        MudDialog.Close(DialogResult.Ok(_selected));
+    }
+
+    private void Cancel()
+    {
+        MudDialog.Cancel();
+    }
+}

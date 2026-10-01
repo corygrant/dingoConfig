@@ -1,6 +1,7 @@
 @using domain.Devices.Generic
 @typeparam TDevice where TDevice : DbcDevice
 
+<SparklineHost>
 <div style="overflow-y: auto; height: calc(100vh - 250px); padding: 24px; scrollbar-width: auto; scrollbar-color: #888 transparent;">
     @if (Device.DbcSignals.Any())
     {
@@ -19,6 +20,7 @@
                                          Size="Size.Small" Style="min-width: 100px;">
                                     @signal.Value.ToString("F2") @signal.Unit
                                 </MudChip>
+                                <Sparkline Source="signal" Property="@nameof(signal.Value)"/>
                             </MudStack>
                         </MudCardContent>
                     </MudCard>
@@ -36,6 +38,7 @@
         </MudAlert>
     }
 </div>
+</SparklineHost>
 
 @code {
     [Parameter, EditorRequired] public TDevice Device { get; set; } = null!;

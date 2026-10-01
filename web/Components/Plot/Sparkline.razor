@@ -1,0 +1,62 @@
+@using application.Services
+@inject PlotService PlotService
+@implements IDisposable
+
+@*
+    Tiny trend of one [Plotable] value, e.g. <Sparkline Source="output" Property="@nameof(Output.Current)" />.
+    Must be inside a SparklineHost, which draws it. uPlot owns the div's children.
+*@
+@if (Signal is not null)
+{
+    <div @ref="Element" class="sparkline" style="width: @(Width)px; height: @(Height)px;"></div>
+}
+
+@code {
+    [CascadingParameter] public SparklineHost? Host { get; set; }
+
+    /// <summary>Object declaring the [Plotable] property: the device or one of its functions/signals</summary>
+    [Parameter, EditorRequired] public object Source { get; set; } = null!;
+
+    [Parameter, EditorRequired] public string Property { get; set; } = "";
+
+    [Parameter] public int Width { get; set; } = 120;
+    [Parameter] public int Height { get; set; } = 28;
+
+    internal string Id { get; } = Guid.NewGuid().ToString("N");
+    internal ElementReference Element;
+    internal PlotSignal? Signal { get; private set; }
+
+    private object? _source;
+    private string? _property;
+    private int _signalsVersion = -1;
+    private bool _rendered;
+
+    protected override void OnParametersSet()
+    {
+        // The dashboard re-renders at 20 Hz; only look the signal up again when something changed
+        if (ReferenceEquals(_source, Source) && _property == Property &&
+            (Signal is not null || _signalsVersion == PlotService.SignalsVersion))
+            return;
+
+        _source = Source;
+        _property = Property;
+        _signalsVersion = PlotService.SignalsVersion;
+
+        var signal = PlotService.FindSignal(Source, Property);
+        if (signal?.Key == Signal?.Key) return;
+
+        Host?.Unregister(this);
+        Signal = signal;
+        _rendered = false;
+    }
+
+    protected override void OnAfterRender(bool firstRender)
+    {
+        // Register once the div exists (it isn't rendered until the signal is found)
+        if (_rendered || Signal is null) return;
+        _rendered = true;
+        Host?.Register(this);
+    }
+
+    public void Dispose() => Host?.Unregister(this);
+}

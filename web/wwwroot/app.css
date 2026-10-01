@@ -81,3 +81,27 @@ h1:focus {
 .flash-button {
     animation: flash-frames 1.5s ease-in-out infinite;
 }
+
+/* Dashboard sparklines (uPlot) */
+.sparkline {
+    margin-top: 4px;
+}
+
+/* Application plot (uPlot) */
+.app-plot .u-legend {
+    color: var(--mud-palette-text-primary);
+    font-size: 12px;
+    text-align: left;
+}
+
+.app-plot .u-select {
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.plot-swatch {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    margin-right: 6px;
+    border-radius: 2px;
+}

@@ -70,6 +70,7 @@ builder.Services.AddSingleton<CanMsgLogger>();
 builder.Services.AddSingleton<SystemLogger>();
 builder.Services.AddSingleton<SimPlayback>();
 builder.Services.AddSingleton<DevicePlotService>();
+builder.Services.AddSingleton<PlotService>();
 builder.Services.AddSingleton<DeviceSignalService>();
 builder.Services.AddSingleton<UserPreferencesManager>();
 
@@ -83,6 +84,8 @@ builder.Logging.Services.AddSingleton<ILoggerProvider>(sp =>
 var app = builder.Build();
 
 _ = app.Services.GetRequiredService<DevicePlotService>();
+// Start sampling immediately so dashboard sparklines have history when first opened
+_ = app.Services.GetRequiredService<PlotService>();
 
 // Initialize user preferences
 var userPrefsManager = app.Services.GetRequiredService<UserPreferencesManager>();
