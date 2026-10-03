@@ -46,6 +46,8 @@ public class FwDevice : IDeviceConfigurable
     
     [JsonPropertyName("sleepEnabled")] public bool SleepEnabled { get; set; }
     [JsonPropertyName("filtersEnabled")] public bool CanFiltersEnabled { get; set; }
+    [JsonPropertyName("disableDigInWake")] public bool DisableDigInWake { get; set; }
+    [JsonPropertyName("disableCanWake")] public bool DisableCanWake { get; set; }
     [JsonPropertyName("connectUsbToCan")] public bool ConnectUsbToCan { get; set; } = true;
     [JsonPropertyName("bitrate")] public CanBitRate BitRate { get; set; } = CanBitRate.BitRate500K;
     [JsonIgnore] public TimeSpan CyclicGap { get; } =  TimeSpan.FromSeconds(0);

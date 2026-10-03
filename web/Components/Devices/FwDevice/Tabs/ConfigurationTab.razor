@@ -11,52 +11,86 @@
     <MudExpansionPanels MultiExpansion="true">
 
         <MudExpansionPanel Text="Device">
-            <MudStack>
-                <MudTextField    Value="@_baseId"
-                                 ValueChanged="@((string val) => @Device.BaseId = Utils.ParseId(val, UserPrefs.Preferences.IdFormat, Notification))"
-                                 Label="Base ID"
-                                 Variant="Variant.Outlined"
-                                 Style="max-width: 20%"
-                                 T="string" />
-                <MudSelect @bind-Value="@Device.BitRate"
-                           Label="Bitrate"
-                           Variant="Variant.Outlined"
-                           Dense="true"
-                           Class="mb-3"
-                           T="CanBitRate"
-                           Style="max-width: 20%">
-                    <MudSelectItem T="CanBitRate" Value="@(CanBitRate.BitRate1000K)">1000K</MudSelectItem>
-                    <MudSelectItem T="CanBitRate" Value="@(CanBitRate.BitRate500K)">500K</MudSelectItem>
-                    <MudSelectItem T="CanBitRate" Value="@(CanBitRate.BitRate250K)">250K</MudSelectItem>
-                    <MudSelectItem T="CanBitRate" Value="@(CanBitRate.BitRate125K)">125K</MudSelectItem>
-                    <MudSelectItem T="CanBitRate" Value="@(CanBitRate.BitRate100K)">100K</MudSelectItem>
-                </MudSelect>
+            <MudGrid Spacing="4">
+                <MudItem>
+                    <MudCard Elevation="4" Style="height: 100%">
+                        <MudCardContent>
+                            <MudText Typo="Typo.body1">CAN</MudText>
+                            <MudTextField Value="@_baseId"
+                                          ValueChanged="@((string val) => @Device.BaseId = Utils.ParseId(val, UserPrefs.Preferences.IdFormat, Notification))"
+                                          Label="Base ID"
+                                          Variant="Variant.Outlined"
+                                          Style="max-width: 200px"
+                                          T="string"/>
+                            <MudSelect @bind-Value="@Device.BitRate"
+                                       Label="Bitrate"
+                                       Variant="Variant.Outlined"
+                                       Dense="true"
+                                       Class="mb-3"
+                                       T="CanBitRate"
+                                       Style="max-width: 200px">
+                                <MudSelectItem T="CanBitRate" Value="@(CanBitRate.BitRate1000K)">1000K</MudSelectItem>
+                                <MudSelectItem T="CanBitRate" Value="@(CanBitRate.BitRate500K)">500K</MudSelectItem>
+                                <MudSelectItem T="CanBitRate" Value="@(CanBitRate.BitRate250K)">250K</MudSelectItem>
+                                <MudSelectItem T="CanBitRate" Value="@(CanBitRate.BitRate125K)">125K</MudSelectItem>
+                                <MudSelectItem T="CanBitRate" Value="@(CanBitRate.BitRate100K)">100K</MudSelectItem>
+                            </MudSelect>
+                        </MudCardContent>
+                    </MudCard>
+                </MudItem>
+                <MudItem>
+                    <MudCard Elevation="4" Style="height: 100%">
+                        <MudCardContent>
+                            <MudText Typo="Typo.body1">CAN</MudText>
+                            <MudSwitch @bind-Value="@Device.CanFiltersEnabled"
+                                       Color="Color.Success"
+                                       Label="CAN Filters Enabled"/>
+                            @if (Device.Def.HasUsb)
+                            {
+                                <MudSwitch @bind-Value="@Device.ConnectUsbToCan"
+                                           Color="Color.Success"
+                                           Label="Connect USB to CAN"/>
+                            }
+                        </MudCardContent>
+                    </MudCard>
+                </MudItem>
                 @if (Device.Def.CanSleep)
                 {
-                    <MudSwitch @bind-Value="@Device.SleepEnabled"
-                               Color="Color.Success"
-                               Label="Sleep Enabled"/>
-                }
-                <MudSwitch @bind-Value="@Device.CanFiltersEnabled"
-                           Color="Color.Success"
-                           Label="CAN Filters Enabled"/>
-                @if (Device.Def.HasUsb)
-                {
-                    <MudSwitch @bind-Value="@Device.ConnectUsbToCan"
-                               Color="Color.Success"
-                               Label="Connect USB to CAN"/>
+                    <MudItem>
+                        <MudCard Elevation="4" Style="height: 100%">
+                            <MudCardContent>
+                                <MudText Typo="Typo.body1">Sleep</MudText>
+                                <MudSwitch @bind-Value="@Device.SleepEnabled"
+                                           Color="Color.Success"
+                                           Label="Sleep Enabled"/>
+                                <MudSwitch @bind-Value="@Device.DisableDigInWake"
+                                           Color="Color.Success"
+                                           Label="Disable Digital Input Wake"/>
+                                <MudSwitch @bind-Value="@Device.DisableCanWake"
+                                           Color="Color.Success"
+                                           Label="Disable CAN Wake"/>
+                            </MudCardContent>
+                        </MudCard>
+                    </MudItem>
                 }
                 @if (Device.Keypads.Count > 0)
                 {
-                    @foreach (var kp in Device.Keypads)
-                    {
-                        var label = $"Keypad {kp.Number} Enabled";
-                        <MudSwitch @bind-Value="kp.Enabled"
-                                   Color="Color.Success"
-                                   Label=@label/>
-                    }
+                    <MudItem>
+                        <MudCard Elevation="4" Style="height: 100%">
+                            <MudCardContent>
+                                <MudText Typo="Typo.body1">Keypad</MudText>
+                                @foreach (var kp in Device.Keypads)
+                                {
+                                    var label = $"Keypad {kp.Number} Enabled";
+                                    <MudSwitch @bind-Value="kp.Enabled"
+                                               Color="Color.Success"
+                                               Label=@label/>
+                                }
+                            </MudCardContent>
+                        </MudCard>
+                    </MudItem>
                 }
-            </MudStack>
+            </MudGrid>
         </MudExpansionPanel>
 
         @* Outputs *@
