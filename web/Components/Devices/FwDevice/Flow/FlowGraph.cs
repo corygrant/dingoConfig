@@ -105,9 +105,9 @@ public sealed class FlowGraph
         var visible = _slots.Where(s => s.Enabled).ToList();
         var visibleIds = visible.Select(s => s.Id).ToHashSet();
 
-        foreach (var slot in visible.ToList())
+        foreach (var (_, inputs) in AllInputs(visible.ToList()))
         {
-            foreach (var input in slot.Type.Inputs(slot.Function))
+            foreach (var input in inputs)
             {
                 if (SourceSlot(input.Get()) is { } source && visibleIds.Add(source.Id))
                     visible.Add(source);
@@ -121,9 +121,9 @@ public sealed class FlowGraph
         var connectedOutputs = new HashSet<int>();
         var connectedInputs = new HashSet<string>();
 
-        foreach (var slot in visible)
+        foreach (var (id, inputs) in AllInputs(visible))
         {
-            foreach (var input in slot.Type.Inputs(slot.Function))
+            foreach (var input in inputs)
             {
                 var index = input.Get();
                 if (index == 0 || !_vars.TryGetValue(index, out var variable))
@@ -134,17 +134,21 @@ public sealed class FlowGraph
                     continue;
 
                 var targetHandle = InputPrefix + input.Key;
-                edges.Add(new FlowEdgeDto($"{slot.Id}:{input.Key}", sourceId, OutputPrefix + index,
-                    slot.Id, targetHandle, index.ToString()));
+                edges.Add(new FlowEdgeDto($"{id}:{input.Key}", sourceId, OutputPrefix + index,
+                    id, targetHandle, index.ToString()));
                 connectedOutputs.Add(index);
-                connectedInputs.Add($"{slot.Id}:{targetHandle}");
+                connectedInputs.Add($"{id}:{targetHandle}");
             }
         }
 
         var nodes = new List<FlowNodeDto>
         {
             new(DeviceNodeId, nameof(FlowCategory.Device), _device.Name, _device.Def.TypeName, 0, 0,
-                Enabled: true, Deletable: false, Inputs: [],
+                Enabled: true, Deletable: false,
+                Inputs: DeviceInputs()
+                    .Select(i => new FlowHandleDto(InputPrefix + i.Key, i.Label, i.DataTypes, null,
+                        connectedInputs.Contains($"{DeviceNodeId}:{InputPrefix}{i.Key}")))
+                    .ToList(),
                 Outputs: _deviceVars.Select(v => OutputHandle(v, v.GetName(), connectedOutputs)).ToList())
         };
 
@@ -212,7 +216,7 @@ public sealed class FlowGraph
     public int CountReferences(Slot slot)
     {
         var indices = VarIndices(slot);
-        return _slots.Sum(s => s.Type.Inputs(s.Function).Count(i => indices.Contains(i.Get())));
+        return AllInputs(_slots).Sum(n => n.Inputs.Count(i => indices.Contains(i.Get())));
     }
 
     public void Add(Slot slot, FlowNodePosition position)
@@ -227,9 +231,9 @@ public sealed class FlowGraph
         slot.Type.SetEnabled(slot.Function, false);
 
         var indices = VarIndices(slot);
-        foreach (var s in _slots)
+        foreach (var (_, inputs) in AllInputs(_slots))
         {
-            foreach (var input in s.Type.Inputs(s.Function))
+            foreach (var input in inputs)
             {
                 if (indices.Contains(input.Get()))
                     input.Set(0);
@@ -247,10 +251,30 @@ public sealed class FlowGraph
             ? _slotsByFunction.GetValueOrDefault(variable.Owner)
             : null;
 
-    private FlowInputDef? FindInput(string nodeId, string handle) =>
-        Find(nodeId) is { } slot && handle.StartsWith(InputPrefix)
-            ? slot.Type.Inputs(slot.Function).FirstOrDefault(i => i.Key == handle[InputPrefix.Length..])
-            : null;
+    private FlowInputDef? FindInput(string nodeId, string handle)
+    {
+        if (!handle.StartsWith(InputPrefix))
+            return null;
+
+        var inputs = nodeId == DeviceNodeId ? DeviceInputs()
+            : Find(nodeId) is { } slot ? slot.Type.Inputs(slot.Function) : null;
+        return inputs?.FirstOrDefault(i => i.Key == handle[InputPrefix.Length..]);
+    }
+
+    private IReadOnlyList<FlowInputDef> DeviceInputs()
+    {
+        List<FlowInputDef> inputs =
+            [new("muteCanTx", "Mute CAN TX", ["bool"], () => _device.MuteCanTxInput, v => _device.MuteCanTxInput = v)];
+
+        if (_device.Def.CanSleep)
+            inputs.Add(new("forceSleep", "Force Sleep", ["bool"], () => _device.ForceSleepInput, v => _device.ForceSleepInput = v));
+
+        return inputs;
+    }
+
+    // Every node with inputs: function slots plus the device node
+    private IEnumerable<(string Id, IReadOnlyList<FlowInputDef> Inputs)> AllInputs(IEnumerable<Slot> slots) =>
+        slots.Select(s => (s.Id, s.Type.Inputs(s.Function))).Append((DeviceNodeId, DeviceInputs()));
 
     private HashSet<int> VarIndices(Slot slot) =>
         _varsByOwner.GetValueOrDefault(slot.Function, []).Select(v => v.VariableIndex).ToHashSet();

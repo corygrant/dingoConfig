@@ -50,6 +50,8 @@ public class FwDevice : IDeviceConfigurable
     [JsonPropertyName("disableCanWake")] public bool DisableCanWake { get; set; }
     [JsonPropertyName("connectUsbToCan")] public bool ConnectUsbToCan { get; set; } = true;
     [JsonPropertyName("bitrate")] public CanBitRate BitRate { get; set; } = CanBitRate.BitRate500K;
+    [JsonPropertyName("muteCanTxInput")] public int MuteCanTxInput { get; set; }
+    [JsonPropertyName("forceSleepInput")] public int ForceSleepInput { get; set; }
     [JsonIgnore] public TimeSpan CyclicGap { get; } =  TimeSpan.FromSeconds(0);
     [JsonIgnore] public TimeSpan CyclicPause { get; } = TimeSpan.FromMilliseconds(0);
     
@@ -308,7 +310,7 @@ public class FwDevice : IDeviceConfigurable
                 SingleVariable = true
             });
         }
-        
+
         for (var i = 0; i < Def.NumDigitalInputs; i++)
             AddVars(DigitalInputs[i], ref index);
         
@@ -391,10 +393,38 @@ public class FwDevice : IDeviceConfigurable
             },
             new DeviceParameter
             {
+                ParentName = Name, Name = "device.disableDigInWake", Index = BaseIndex, SubIndex = subIndex++,
+                GetValue = () => DisableDigInWake, SetValue = val => DisableDigInWake = (bool)val,
+                ValueType = DisableDigInWake.GetType(),
+                DefaultValue = false
+            },
+            new DeviceParameter
+            {
+                ParentName = Name, Name = "device.disableCanWake", Index = BaseIndex, SubIndex = subIndex++,
+                GetValue = () => DisableCanWake, SetValue = val => DisableCanWake = (bool)val,
+                ValueType = DisableCanWake.GetType(),
+                DefaultValue = false
+            },
+            new DeviceParameter
+            {
                 ParentName = Name, Name = "device.connectUsbToCan", Index = BaseIndex, SubIndex = subIndex++,
                 GetValue = () => ConnectUsbToCan, SetValue = val => ConnectUsbToCan = (bool)val,
                 ValueType = ConnectUsbToCan.GetType(),
                 DefaultValue = true
+            },
+            new DeviceParameter
+            {
+                ParentName = Name, Name = "device.muteCanTxInput", Index = BaseIndex, SubIndex = subIndex++,
+                GetValue = () => MuteCanTxInput, SetValue = val => MuteCanTxInput = (int)val,
+                ValueType = MuteCanTxInput.GetType(),
+                DefaultValue = 0
+            },
+            new DeviceParameter
+            {
+                ParentName = Name, Name = "device.forceSleepInput", Index = BaseIndex, SubIndex = subIndex++,
+                GetValue = () => ForceSleepInput, SetValue = val => ForceSleepInput = (int)val,
+                ValueType = ForceSleepInput.GetType(),
+                DefaultValue = 0
             }
         ]);
         

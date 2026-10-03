@@ -5,6 +5,7 @@
 @inject UserPreferencesManager UserPrefs
 @inject NotificationService Notification
 @typeparam TDevice where TDevice : domain.Devices.FwDevice
+@inherits FunctionComponentBase<TDevice>
 
 <div
     style="overflow-y: auto; height: calc(100vh - 250px); padding: 24px; scrollbar-width: auto; scrollbar-color: #888 transparent;">
@@ -51,6 +52,18 @@
                                            Color="Color.Success"
                                            Label="Connect USB to CAN"/>
                             }
+                            <MudPaper>
+                                <MudText Typo="Typo.body1">Mute CAN TX Input</MudText>
+                                <MudStack Row="true">
+                                    <MudIconButton Icon="@Icons.Material.Filled.Search"
+                                                   Color="Color.Primary"
+                                                   Size="Size.Small"
+                                                   Style="max-width: 20px"
+                                                   OnClick="@(() => OpenVariableSelectorAsync(["bool"], v => Device.MuteCanTxInput = v))">
+                                    </MudIconButton>
+                                    <MudText>@GetSelectedVarText(Device.MuteCanTxInput)</MudText>
+                                </MudStack>
+                            </MudPaper>
                         </MudCardContent>
                     </MudCard>
                 </MudItem>
@@ -69,6 +82,18 @@
                                 <MudSwitch @bind-Value="@Device.DisableCanWake"
                                            Color="Color.Success"
                                            Label="Disable CAN Wake"/>
+                                <MudPaper>
+                                    <MudText Typo="Typo.body1">Force Sleep Input</MudText>
+                                    <MudStack Row="true">
+                                        <MudIconButton Icon="@Icons.Material.Filled.Search"
+                                                       Color="Color.Primary"
+                                                       Size="Size.Small"
+                                                       Style="max-width: 20px"
+                                                       OnClick="@(() => OpenVariableSelectorAsync(["bool"], v => Device.ForceSleepInput = v))">
+                                        </MudIconButton>
+                                        <MudText>@GetSelectedVarText(Device.ForceSleepInput)</MudText>
+                                    </MudStack>
+                                </MudPaper>
                             </MudCardContent>
                         </MudCard>
                     </MudItem>
@@ -258,8 +283,6 @@
 </div>
 
 @code {
-    [Parameter, EditorRequired] public TDevice Device { get; set; } = null!;
-
     // Expansion panel state tracking for lazy loading
     private bool _digitalInputsExpanded;
     private bool _analogInputsExpanded;
