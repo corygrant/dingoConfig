@@ -629,6 +629,32 @@ public class DeviceManager(ILogger<DeviceManager> logger, ILoggerFactory loggerF
         logger.LogInformation("Enter bootloader on {DeviceName} (Guid: {Guid})", device.Name, deviceId);
         return true;
     }
+    
+    /// <summary>
+    /// Reset device
+    /// </summary>
+    /// <returns>
+    /// Send reset device success
+    /// </returns>
+    public bool ResetDevice(Guid deviceId)
+    {
+        var device = GetDevice(deviceId);
+        if (device is not IDeviceConfigurable configurable)
+            return false;
+
+        var resetDeviceMsg = configurable.GetResetDeviceMsg();
+
+        if (resetDeviceMsg == null)
+        {
+            logger.LogInformation("No reset device msg for {DeviceName} (Guid: {Guid})", device.Name, deviceId);
+            return false;    
+        }
+        
+        QueueMessage(resetDeviceMsg);
+
+        logger.LogInformation("Reset device {DeviceName} (Guid: {Guid})", device.Name, deviceId);
+        return true;
+    }
 
     private void OnDeviceAdded(DeviceEventArgs e)
     {

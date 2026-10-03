@@ -742,6 +742,25 @@ public class FwDevice : IDeviceConfigurable
         };
     }
     
+    public DeviceCanFrame GetResetDeviceMsg()
+    {
+        return new DeviceCanFrame
+        {
+            SendOnly = true,
+            DeviceBaseId = BaseId,
+            Frame = new CanFrame
+            (
+                Id: BaseId + ConfigTxOffset,
+                Len: 8,
+                Payload: [
+                    Convert.ToByte(MessageCommand.Restart), (byte)'R', (byte)'E', (byte)'S', (byte)'E', (byte)'T', 0,
+                    0
+                ]
+            ),
+            Name = "Reset"
+        };
+    }
+    
     public List<CanFrame> GetCyclicMsgs()
     {
         return [];

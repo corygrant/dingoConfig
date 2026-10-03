@@ -73,6 +73,14 @@
                        OnClick="@OnWriteAllDeviceAsync">
                 Write All
             </MudButton>
+            <MudButton Variant="Variant.Outlined"
+                       Color="Color.Default"
+                       Size="Size.Small"
+                       StartIcon="@Icons.Material.Filled.RestartAlt"
+                       Disabled="@(!Device.Connected || !AdapterConnected)"
+                       OnClick="@OnResetAsync">
+                Reset
+            </MudButton>
             @if (Device.ConfigMismatch)
             {
                 <MudChip T="string" Variant="Variant.Outlined"
@@ -204,6 +212,21 @@
         catch (Exception ex)
         {
             Notification.NewError($"Error sending bootloader: {DeviceName}", ex);
+        }
+    }
+    
+    private void OnResetAsync()
+    {
+        try
+        {
+            if (DeviceManager.ResetDevice(Device.Guid))
+                Notification.NewSuccess($"Reset device sent: {DeviceName}");
+            else
+                Notification.NewError($"Failed to send reset: {DeviceName}");
+        }
+        catch (Exception ex)
+        {
+            Notification.NewError($"Error sending reset: {DeviceName}", ex);
         }
     }
 }
