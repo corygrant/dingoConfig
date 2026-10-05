@@ -71,6 +71,7 @@ public class FwDevice : IDeviceConfigurable
     [JsonPropertyName("flowLayout")] public Dictionary<string, FlowNodePosition> FlowLayout { get; set; } = new();
     [JsonPropertyName("timers")] public List<DeviceTimer> Timers { get; init; } = [];
     [JsonPropertyName("ignition")] public Ignition Ignition { get; set; } = null!;
+    [JsonPropertyName("canMessages")] public List<CanMessage> CanMessages { get; init; } = [];
     
     [JsonIgnore] private DateTime LastRxTime { get; set; }
 
@@ -164,6 +165,7 @@ public class FwDevice : IDeviceConfigurable
         _indexedSetters["Counter.Value"]      = (i, val) => Counters[i].Value = (int)val;
         _indexedSetters["Condition.Value"]    = (i, val) => Conditions[i].Value = (int)val;
         _indexedSetters["Timer.Value"]        = (i, val) => Timers[i].Value = (int)val;
+        _indexedSetters["CanMessage.Value"]   = (i, val) => CanMessages[i].Value = (int)val;
     }
 
     public void BindCyclicSigs(CyclicSigsConfig config)
@@ -256,6 +258,10 @@ public class FwDevice : IDeviceConfigurable
                 Timers.Add(new DeviceTimer(i + 1, "timer" + (i + 1)));
 
         Ignition ??= new Ignition("ignition");
+
+        if (CanMessages.Count == 0)
+            for (var i = 0; i < Def.NumCanMessages; i++)
+                CanMessages.Add(new CanMessage(i + 1, "canMessage" + (i + 1)));
 
         StarterDisable ??= new StarterDisable("starterDisable", Def.NumOutputs);
 
@@ -366,6 +372,9 @@ public class FwDevice : IDeviceConfigurable
         {
             AddVars(Ignition, ref index);
         }
+
+        for (var i = 0; i < Def.NumCanMessages; i++)
+            VarMap.AddRange(CanMessages[i].GetVarMap(ref index));
     }
 
     private void AddVars(IDeviceFunction function, ref int index)
@@ -460,6 +469,7 @@ public class FwDevice : IDeviceConfigurable
         if (Def.HasWipers) allParams.AddRange(Wipers.Params);
         foreach (var timer in Timers) allParams.AddRange(timer.Params);
         if (Def.HasIgnition) allParams.AddRange(Ignition.Params);
+        foreach (var canMessage in CanMessages) allParams.AddRange(canMessage.Params);
         foreach (var canOutput in CanOutputs) allParams.AddRange(canOutput.Params);
         foreach (var digOutput in DigitalOutputs) allParams.AddRange(digOutput.Params);
         foreach (var analogInput in AnalogInputs) allParams.AddRange(analogInput.Params);
@@ -853,5 +863,6 @@ public class FwDevice : IDeviceConfigurable
     public StarterDisable GetStarterDisable() => StarterDisable;
     public IReadOnlyList<DeviceTimer> GetTimers() => Timers.AsReadOnly();
     public Ignition GetIgnition() => Ignition;
+    public IReadOnlyList<CanMessage> GetCanMessages() => CanMessages.AsReadOnly();
     public IReadOnlyList<KeypadMaster> GetKeypads() => Keypads.AsReadOnly();
 }

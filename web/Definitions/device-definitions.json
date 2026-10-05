@@ -27,7 +27,8 @@
     "minMinorVersion": 5,
     "minBuildVersion": 1,
     "numTimers": 8,
-    "hasIgnition": true
+    "hasIgnition": true,
+    "numCanMessages": 4
   },
   {
     "deviceType": 1,
@@ -57,7 +58,8 @@
     "minMinorVersion": 5,
     "minBuildVersion": 1,
     "numTimers": 8,
-    "hasIgnition": true
+    "hasIgnition": true,
+    "numCanMessages": 4
   },
   {
     "deviceType": 2,
@@ -87,7 +89,8 @@
     "minMinorVersion": 5,
     "minBuildVersion": 1,
     "numTimers": 8,
-    "hasIgnition": true
+    "hasIgnition": true,
+    "numCanMessages": 4
   },
   {
     "deviceType": 3,
@@ -117,6 +120,7 @@
     "minMinorVersion": 5,
     "minBuildVersion": 1,
     "numTimers": 0,
-    "hasIgnition": false
+    "hasIgnition": false,
+    "numCanMessages": 0
   }
 ]

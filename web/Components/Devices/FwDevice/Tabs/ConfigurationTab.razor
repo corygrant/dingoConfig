@@ -292,6 +292,18 @@
             </MudExpansionPanel>
         }
 
+        @* CAN Messages *@
+        @if (Device.CanMessages.Count > 0)
+        {
+            <MudExpansionPanel Text="@($"CAN Messages ({Device.CanMessages.Count})")"
+                               ExpandedChanged="@((bool expanded) => _canMessagesExpanded = expanded)">
+                @if (_canMessagesExpanded)
+                {
+                    <CanMessagesGrid CanMessages="Device.CanMessages" Device="Device"/>
+                }
+            </MudExpansionPanel>
+        }
+
         @* Ignition *@
         @if (Device.Def.HasIgnition)
         {
@@ -324,6 +336,7 @@
     private bool _starterDisableExpanded;
     private bool _timersExpanded;
     private bool _ignitionExpanded;
+    private bool _canMessagesExpanded;
 
     private string _baseId = string.Empty;
     

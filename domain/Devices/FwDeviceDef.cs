@@ -28,5 +28,6 @@ public record FwDeviceDef(
     int MinMinorVersion,
     int MinBuildVersion,
     int NumTimers = 0,
-    bool HasIgnition = false
+    bool HasIgnition = false,
+    int NumCanMessages = 0
     );
