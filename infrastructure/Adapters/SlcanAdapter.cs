@@ -48,8 +48,12 @@ public class SlcanAdapter : ICommsAdapter
 
             RxStopwatch = Stopwatch.StartNew();
         }
-        catch
+        catch (Exception e)
         {
+            // The manager only logs that init failed; say why, usually "access denied"
+            // because another program - or a connection that was never closed - holds the port
+            Console.WriteLine($"{Name}: cannot open {port}: {e.Message}");
+
             Serial?.ErrorReceived -= _serial_ErrorReceived;
             Serial?.Close();
 
@@ -102,24 +106,38 @@ public class SlcanAdapter : ICommsAdapter
         StopReadLoop();
         StopConnectionMonitor();
 
-        if (Serial is { IsOpen: false }) return Task.FromResult(false);
+        RxStopwatch?.Stop();
 
-        const string sData = "C\r";
+        //Set time delta to a high value to set IsConnected to false
+        RxTimeDelta = new TimeSpan(1, 0, 0);
+
         if (Serial == null) return Task.FromResult(true);
 
+        const string sData = "C\r";
         try
         {
-            Serial.Write(Encoding.ASCII.GetBytes(sData), 0, Encoding.ASCII.GetByteCount(sData));
+            if (Serial.IsOpen)
+                Serial.Write(Encoding.ASCII.GetBytes(sData), 0, Encoding.ASCII.GetByteCount(sData));
         }
         catch
         {
             // Ignore errors during shutdown
         }
 
-        RxStopwatch?.Stop();
-
-        //Set time delta to a high value to set IsConnected to false
-        RxTimeDelta = new TimeSpan(1, 0, 0);
+        // Release the port. Left open, the handle is only freed whenever the GC
+        // finalizes this adapter, and until then connecting to the same port again -
+        // including switching between USB and SLCAN on it - fails with access denied.
+        Serial.ErrorReceived -= _serial_ErrorReceived;
+        try
+        {
+            Serial.Close();
+        }
+        catch
+        {
+            // Port already gone, e.g. the device was unplugged
+        }
+        Serial.Dispose();
+        Serial = null;
 
         return Task.FromResult(true);
     }
