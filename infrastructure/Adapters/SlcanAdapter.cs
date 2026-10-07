@@ -196,7 +196,7 @@ public class SlcanAdapter : ICommsAdapter
             {
                 var frame = frames[i];
                 
-                if (ct.IsCancellationRequested || frame.Payload.Length != 8) return Task.FromResult(false);
+                if (ct.IsCancellationRequested || frame.Payload.Length < frame.Len) return Task.FromResult(false);
 
                 //Wait while serial bytes to write is full
                 while (Serial is { IsOpen: true, BytesToWrite: > MaxBufferedSerialBytes })
