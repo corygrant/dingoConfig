@@ -1,3 +1,4 @@
+@using domain.Devices.VehicleFunctions
 @using application.Services
 @using domain.Enums
 @using web.Components.Devices.FwDevice.Functions
@@ -118,6 +119,18 @@
             </MudGrid>
         </MudExpansionPanel>
 
+        @* Vehicle functions *@
+        @if (Device.Outputs.Count > 0)
+        {
+            <MudExpansionPanel Text="@($"Vehicle functions ({Device.VehicleFunctions.Count})")"
+                               ExpandedChanged="@((bool expanded) => _vehicleFunctionsExpanded = expanded)">
+                @if (_vehicleFunctionsExpanded)
+                {
+                    <VehicleFunctionsPanel TDevice="TDevice" Device="Device"/>
+                }
+            </MudExpansionPanel>
+        }
+
         @* Outputs *@
         @if (Device.Outputs.Count > 0)
         {
@@ -125,7 +138,7 @@
                                ExpandedChanged="@((bool expanded) => _outputsExpanded = expanded)">
                 @if (_outputsExpanded)
                 {
-                    <OutputsGrid Outputs="Device.Outputs" Device="Device"/>
+                    <OutputsGrid Outputs="Device.Outputs" Device="Device" ManagedBy="Device.ManagedBy"/>
                 }
             </MudExpansionPanel>
 
@@ -167,7 +180,7 @@
                                ExpandedChanged="@((bool expanded) => _digitalInputsExpanded = expanded)">
                 @if (_digitalInputsExpanded)
                 {
-                    <DigitalInputsGrid Inputs="Device.DigitalInputs"/>
+                    <DigitalInputsGrid Inputs="Device.DigitalInputs" Uses="Device.UsesOf"/>
                 }
             </MudExpansionPanel>
         }
@@ -191,7 +204,7 @@
                                ExpandedChanged="@((bool expanded) => _canInputsExpanded = expanded)">
                 @if (_canInputsExpanded)
                 {
-                    <CanInputsGrid CanInputs="Device.CanInputs" Device="Device"/>
+                    <CanInputsGrid CanInputs="Device.CanInputs" Device="Device" Uses="Device.UsesOf"/>
                 }
             </MudExpansionPanel>
         }
@@ -215,7 +228,7 @@
                                ExpandedChanged="@((bool expanded) => _virtualInputsExpanded = expanded)">
                 @if (_virtualInputsExpanded)
                 {
-                    <VirtualInputsGrid VirtualInputs="Device.VirtualInputs" Device="Device"/>
+                    <VirtualInputsGrid VirtualInputs="Device.VirtualInputs" Device="Device" Uses="Device.UsesOf" ManagedBy="Device.ManagedBy"/>
                 }
             </MudExpansionPanel>
         }
@@ -227,7 +240,7 @@
                                ExpandedChanged="@((bool expanded) => _conditionsExpanded = expanded)">
                 @if (_conditionsExpanded)
                 {
-                    <ConditionsGrid Conditions="Device.Conditions" Device="Device"/>
+                    <ConditionsGrid Conditions="Device.Conditions" Device="Device" Uses="Device.UsesOf" ManagedBy="Device.ManagedBy"/>
                 }
             </MudExpansionPanel>
         }
@@ -251,7 +264,7 @@
                                ExpandedChanged="@((bool expanded) => _flashersExpanded = expanded)">
                 @if (_flashersExpanded)
                 {
-                    <FlashersGrid Flashers="Device.Flashers" Device="Device"/>
+                    <FlashersGrid Flashers="Device.Flashers" Device="Device" ManagedBy="Device.ManagedBy"/>
                 }
             </MudExpansionPanel>
         }
@@ -287,7 +300,7 @@
                                ExpandedChanged="@((bool expanded) => _timersExpanded = expanded)">
                 @if (_timersExpanded)
                 {
-                    <TimersGrid Timers="Device.Timers" Device="Device"/>
+                    <TimersGrid Timers="Device.Timers" Device="Device" ManagedBy="Device.ManagedBy"/>
                 }
             </MudExpansionPanel>
         }
@@ -320,6 +333,7 @@
 
 @code {
     // Expansion panel state tracking for lazy loading
+    private bool _vehicleFunctionsExpanded;
     private bool _digitalInputsExpanded;
     private bool _analogInputsExpanded;
     private bool _rotarySwitchExpanded;

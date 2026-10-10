@@ -3,6 +3,7 @@ using System.Text.Json.Serialization;
 using domain.Common;
 using domain.Devices.Functions;
 using domain.Devices.Functions.Keypad;
+using domain.Devices.VehicleFunctions;
 using domain.Enums;
 using domain.Interfaces;
 using domain.Models;
@@ -72,6 +73,8 @@ public class FwDevice : IDeviceConfigurable
     [JsonPropertyName("timers")] public List<DeviceTimer> Timers { get; init; } = [];
     [JsonPropertyName("ignition")] public Ignition Ignition { get; set; } = null!;
     [JsonPropertyName("canMessages")] public List<CanMessage> CanMessages { get; init; } = [];
+    // Ready-made functions built from the blocks above, see VehicleFunctionService
+    [JsonPropertyName("vehicleFunctions")] public List<VehicleFunction> VehicleFunctions { get; init; } = [];
     
     [JsonIgnore] private DateTime LastRxTime { get; set; }
 
@@ -125,6 +128,9 @@ public class FwDevice : IDeviceConfigurable
 
         InitVarMap();
         InitParams();
+
+        // Vehicle functions in step with the current recipes after a load
+        VehicleFunctionService.AfterLoad(this);
     }
     
     public void SetLogger(ILogger<FwDevice> logger)
@@ -383,6 +389,36 @@ public class FwDevice : IDeviceConfigurable
         foreach (var variable in vars)
             variable.Owner = function;
         VarMap.AddRange(vars);
+    }
+
+    /// <summary>
+    /// What switches a block when something other than its own settings does,
+    /// such as a vehicle function. The general settings show it greyed out. Null
+    /// when the block is the user's own.
+    /// </summary>
+    public string? ManagedBy(IDeviceFunction block)
+    {
+        var fn = VehicleFunctionService.OwnerOf(this, block);
+        if (fn == null)
+            return null;
+        return block is Output o ? $"{fn.Title} · {fn.SlotOf(o.Number)?.Label}" : fn.Title;
+    }
+
+    /// <summary>
+    /// What reads this block as an input, such as a vehicle function. The general
+    /// settings mark it so it is not repurposed by accident.
+    /// </summary>
+    public IReadOnlyList<string> UsesOf(IDeviceFunction function)
+    {
+        var uses = new List<string>();
+        var indexes = VarMap.Where(v => v.Owner == function).Select(v => v.VariableIndex).ToHashSet();
+
+        foreach (var fn in VehicleFunctions)
+            foreach (var slot in fn.InputSlots)
+                if (fn.Inputs.TryGetValue(slot.Key, out var input) && input.Var != 0 && indexes.Contains(input.Var))
+                    uses.Add($"{fn.Title}: {slot.Label}");
+
+        return uses;
     }
 
     private void InitParams()

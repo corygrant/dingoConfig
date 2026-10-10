@@ -743,6 +743,19 @@ All functions implement `IDeviceFunction` interface:
 - **Wiper**: Wiper control (mode, speed, intervals)
 - **StarterDisable**: Starter lockout configuration
 
+### Vehicle Functions
+
+**Location**: `domain/Devices/VehicleFunctions/`, UI in `web/Components/Devices/FwDevice/Functions/VehicleFunction*.razor`
+
+Ready-made car functions (headlights, taillights, turn signals, interior light, horn) that live only in dingoConfig. Each one is a recipe over
+the PDM's existing blocks; the firmware needs nothing new:
+- `VehicleFunction`: input slots, output slots and `Build(FunctionBuilder)`. Saved in the project
+  JSON under the device as `vehicleFunctions` (polymorphic on `kind`).
+- `FunctionBuilder`: claims free virtual inputs, flashers and timers, reuses the ones the function
+  already owns and releases the rest after a build.
+- `VehicleFunctionService`: add, rebuild, remove, outputs, ownership (`OwnerOf`, used by
+  `FwDevice.ManagedBy` to lock claimed blocks in the general grids).
+
 ### Device Enums
 
 **Location**: `domain/Devices/dingoPdm/Enums/`

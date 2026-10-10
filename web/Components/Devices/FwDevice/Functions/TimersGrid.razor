@@ -5,11 +5,15 @@
 @typeparam TDevice where TDevice : domain.Interfaces.IDeviceConfigurable
 @inherits FunctionComponentBase<TDevice>
 
-<MudDataGrid Items="@Timers" Dense="true" Hover="true" Striped="false" EditMode="DataGridEditMode.Cell" ReadOnly="false"
+<MudDataGrid Items="@Timers" RowClassFunc="@ManagedRowClass" Dense="true" Hover="true" Striped="false" EditMode="DataGridEditMode.Cell" ReadOnly="false"
              SortMode="SortMode.None" ColumnResizeMode="ResizeMode.Container" Virtualize="true"
              FixedHeader="true" HorizontalScrollbar="true" Style="max-height: 400px;">
     <Columns>
-        <PropertyColumn Property="x => x.Number" Title="#" StickyLeft="true" Editable="false" CellStyle="max-width: 100px"/>
+        <TemplateColumn Title="#" StickyLeft="true" Editable="false" CellStyle="max-width: 100px">
+            <CellTemplate>
+                @context.Item.Number<ManagedBadge By="@ManagedBy?.Invoke(context.Item)"/>
+            </CellTemplate>
+        </TemplateColumn>
         <PropertyColumn Property="x => x.Enabled" CellStyle="max-width: 100px">
             <EditTemplate>
                 <MudCheckBox @bind-Value="context.Item.Enabled" Dense="true" />
@@ -81,6 +85,11 @@
 </MudDataGrid>
 
 @code {
+    // A vehicle function building this block, see FwDevice.ManagedBy
+    [Parameter] public Func<domain.Interfaces.IDeviceFunction, string?>? ManagedBy { get; set; }
+
+    private string ManagedRowClass(DeviceTimer item, int _) => ManagedBy?.Invoke(item) != null ? "managed-row" : "";
+
     [Parameter, EditorRequired]
     public List<DeviceTimer> Timers { get; set; } = null!;
 
