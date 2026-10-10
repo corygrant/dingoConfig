@@ -125,7 +125,7 @@
                                ExpandedChanged="@((bool expanded) => _outputsExpanded = expanded)">
                 @if (_outputsExpanded)
                 {
-                    <OutputsGrid Outputs="Device.Outputs" Device="Device"/>
+                    <OutputsGrid Outputs="Device.Outputs" Device="Device" ManagedBy="Device.ManagedBy"/>
                 }
             </MudExpansionPanel>
 
@@ -303,18 +303,6 @@
                 }
             </MudExpansionPanel>
         }
-
-        @* Ignition *@
-        @if (Device.Def.HasIgnition)
-        {
-            <MudExpansionPanel Text="Ignition"
-                               ExpandedChanged="@((bool expanded) => _ignitionExpanded = expanded)">
-                @if (_ignitionExpanded)
-                {
-                    <IgnitionConfig Ignition="Device.Ignition" Device="Device"/>
-                }
-            </MudExpansionPanel>
-        }
     </MudExpansionPanels>
 </div>
 
@@ -335,7 +323,6 @@
     private bool _wiperExpanded;
     private bool _starterDisableExpanded;
     private bool _timersExpanded;
-    private bool _ignitionExpanded;
     private bool _canMessagesExpanded;
 
     private string _baseId = string.Empty;

@@ -6,9 +6,14 @@ using domain.Models;
 
 namespace domain.Devices.Functions;
 
+/// <summary>
+/// Ignition and starter. Outputs are given a role instead of an input.
+/// </summary>
 public class Ignition : IDeviceFunction
 {
     [JsonIgnore] public const int BaseIndex = 0x1B00;
+    [JsonIgnore] public const int OutputRoleSubIndex = 0x30;
+
     [JsonPropertyName("name")] public string Name {get; set;}
     [JsonIgnore] public int Number => 1;
     [JsonPropertyName("enabled")] public bool Enabled {get; set;}
@@ -22,74 +27,85 @@ public class Ignition : IDeviceFunction
     [JsonPropertyName("stopInput")] public int StopInput {get; set;}
     [JsonPropertyName("maxCrankTime")] public int MaxCrankTime {get; set;} = 10000;
 
+    [JsonPropertyName("outputRoles")] public List<IgnitionOutputRole> OutputRoles {get; set;}
+
     [JsonIgnore][Plotable(displayName:"Ignition")] public int IgnitionOut {get; set;}
     [JsonIgnore][Plotable(displayName:"Starter")] public int StarterOut {get; set;}
+    [JsonIgnore][Plotable(displayName:"Accessory")] public int AccessoryOut {get; set;}
+    [JsonIgnore][Plotable(displayName:"Dash")] public int DashOut {get; set;}
     [JsonIgnore][Plotable(displayName:"State")] public int State {get; set;}
 
-    [JsonIgnore] public List<DeviceParameter> Params { get; }
+    [JsonIgnore] public List<DeviceParameter> Params { get; private set; }
 
     [JsonConstructor]
-    public Ignition(string name)
+    public Ignition(string name, List<IgnitionOutputRole>? outputRoles)
     {
         Name = name;
+        OutputRoles = outputRoles ?? [];
         Params = InitParams();
+    }
+
+    public Ignition(string name, int outputCount)
+        : this(name, [..new IgnitionOutputRole[outputCount]])
+    {
+    }
+
+    /// <summary>
+    /// Project files saved before output roles existed, or for another device
+    /// type, carry a different number of roles than the device has outputs.
+    /// </summary>
+    public void SetOutputCount(int outputCount)
+    {
+        if (OutputRoles.Count == outputCount)
+            return;
+
+        while (OutputRoles.Count < outputCount) OutputRoles.Add(IgnitionOutputRole.None);
+        if (OutputRoles.Count > outputCount) OutputRoles.RemoveRange(outputCount, OutputRoles.Count - outputCount);
+        Params = InitParams();
+    }
+
+    /// <summary>The role of a 1-based output, None while the ignition is disabled.</summary>
+    public IgnitionOutputRole RoleOf(int outputNumber)
+    {
+        if (!Enabled || outputNumber < 1 || outputNumber > OutputRoles.Count)
+            return IgnitionOutputRole.None;
+
+        return OutputRoles[outputNumber - 1];
     }
 
     private List<DeviceParameter> InitParams()
     {
         var subIndex = 0;
-        return
-        [
-            new DeviceParameter
+        var parameters = new List<DeviceParameter>();
+
+        void Add(string name, Func<object> get, Action<object> set, Type type, object defaultValue, int? sub = null)
+        {
+            parameters.Add(new DeviceParameter
             {
-                ParentName = Name, Name = "ignition.enabled", Index = BaseIndex + (Number - 1), SubIndex = subIndex++,
-                GetValue = () => Enabled, SetValue = val => Enabled = (bool)val,
-                ValueType = Enabled.GetType(),
-                DefaultValue = false
-            },
-            new DeviceParameter
-            {
-                ParentName = Name, Name = "ignition.mode", Index = BaseIndex + (Number - 1), SubIndex = subIndex++,
-                GetValue = () => Mode, SetValue = val => Mode = (IgnitionMode)val,
-                ValueType = Mode.GetType(),
-                DefaultValue = IgnitionMode.KeySwitch
-            },
-            new DeviceParameter
-            {
-                ParentName = Name, Name = "ignition.ignInput", Index = BaseIndex + (Number - 1), SubIndex = subIndex++,
-                GetValue = () => IgnInput, SetValue = val => IgnInput = (int)val,
-                ValueType = IgnInput.GetType(),
-                DefaultValue = 0
-            },
-            new DeviceParameter
-            {
-                ParentName = Name, Name = "ignition.startInput", Index = BaseIndex + (Number - 1), SubIndex = subIndex++,
-                GetValue = () => StartInput, SetValue = val => StartInput = (int)val,
-                ValueType = StartInput.GetType(),
-                DefaultValue = 0
-            },
-            new DeviceParameter
-            {
-                ParentName = Name, Name = "ignition.engineRunInput", Index = BaseIndex + (Number - 1), SubIndex = subIndex++,
-                GetValue = () => EngineRunInput, SetValue = val => EngineRunInput = (int)val,
-                ValueType = EngineRunInput.GetType(),
-                DefaultValue = 0
-            },
-            new DeviceParameter
-            {
-                ParentName = Name, Name = "ignition.stopInput", Index = BaseIndex + (Number - 1), SubIndex = subIndex++,
-                GetValue = () => StopInput, SetValue = val => StopInput = (int)val,
-                ValueType = StopInput.GetType(),
-                DefaultValue = 0
-            },
-            new DeviceParameter
-            {
-                ParentName = Name, Name = "ignition.maxCrankTime", Index = BaseIndex + (Number - 1), SubIndex = subIndex++,
-                GetValue = () => MaxCrankTime, SetValue = val => MaxCrankTime = (int)val,
-                ValueType = MaxCrankTime.GetType(),
-                DefaultValue = 10000
-            }
-        ];
+                ParentName = Name, Name = $"ignition.{name}", Index = BaseIndex + (Number - 1), SubIndex = sub ?? subIndex++,
+                GetValue = get, SetValue = set,
+                ValueType = type,
+                DefaultValue = defaultValue
+            });
+        }
+
+        Add("enabled", () => Enabled, v => Enabled = (bool)v, typeof(bool), false);
+        Add("mode", () => Mode, v => Mode = (IgnitionMode)v, typeof(IgnitionMode), IgnitionMode.KeySwitch);
+        Add("ignInput", () => IgnInput, v => IgnInput = (int)v, typeof(int), 0);
+        Add("startInput", () => StartInput, v => StartInput = (int)v, typeof(int), 0);
+        Add("engineRunInput", () => EngineRunInput, v => EngineRunInput = (int)v, typeof(int), 0);
+        Add("stopInput", () => StopInput, v => StopInput = (int)v, typeof(int), 0);
+        Add("maxCrankTime", () => MaxCrankTime, v => MaxCrankTime = (int)v, typeof(int), 10000);
+
+        // The rest have fixed subindexes, numbered as in the firmware
+        for (var i = 0; i < OutputRoles.Count; i++)
+        {
+            var idx = i;
+            Add($"outputRoles[{i}]", () => OutputRoles[idx], v => OutputRoles[idx] = (IgnitionOutputRole)v,
+                typeof(IgnitionOutputRole), IgnitionOutputRole.None, OutputRoleSubIndex + i);
+        }
+
+        return parameters;
     }
 
     public List<DeviceVariable> GetVarMap(ref int index)
@@ -117,6 +133,34 @@ public class Ignition : IDeviceFunction
                 GetName = () => Name,
                 PropertyName = "State",
                 DataType = "int",
+                VariableIndex = index++,
+                SingleVariable = true
+            }
+        ];
+
+        return varMap;
+    }
+
+    /// <summary>
+    /// The firmware adds these after the CAN messages, so existing indexes stay put.
+    /// </summary>
+    public List<DeviceVariable> GetAppendedVarMap(ref int index)
+    {
+        List<DeviceVariable> varMap =
+        [
+            new()
+            {
+                GetName = () => Name,
+                PropertyName = "Accessory",
+                DataType = "bool",
+                VariableIndex = index++,
+                SingleVariable = true
+            },
+            new()
+            {
+                GetName = () => Name,
+                PropertyName = "Dash",
+                DataType = "bool",
                 VariableIndex = index++,
                 SingleVariable = true
             }

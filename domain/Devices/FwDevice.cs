@@ -257,7 +257,8 @@ public class FwDevice : IDeviceConfigurable
             for (var i = 0; i < Def.NumTimers; i++)
                 Timers.Add(new DeviceTimer(i + 1, "timer" + (i + 1)));
 
-        Ignition ??= new Ignition("ignition");
+        Ignition ??= new Ignition("ignition", Def.NumOutputs);
+        Ignition.SetOutputCount(Def.NumOutputs);
 
         if (CanMessages.Count == 0)
             for (var i = 0; i < Def.NumCanMessages; i++)
@@ -375,6 +376,14 @@ public class FwDevice : IDeviceConfigurable
 
         for (var i = 0; i < Def.NumCanMessages; i++)
             VarMap.AddRange(CanMessages[i].GetVarMap(ref index));
+
+        if (Def.HasIgnition)
+        {
+            var vars = Ignition.GetAppendedVarMap(ref index);
+            foreach (var variable in vars)
+                variable.Owner = Ignition;
+            VarMap.AddRange(vars);
+        }
     }
 
     private void AddVars(IDeviceFunction function, ref int index)
@@ -383,6 +392,23 @@ public class FwDevice : IDeviceConfigurable
         foreach (var variable in vars)
             variable.Owner = function;
         VarMap.AddRange(vars);
+    }
+
+    /// <summary>
+    /// What switches a block when something other than its own settings does,
+    /// such as an ignition role. The general settings show it greyed out. Null
+    /// when the block is the user's own.
+    /// </summary>
+    public string? ManagedBy(IDeviceFunction block)
+    {
+        if (block is Output output && Def.HasIgnition)
+        {
+            var role = Ignition.RoleOf(output.Number);
+            if (role != IgnitionOutputRole.None)
+                return $"Ignition · {role}";
+        }
+
+        return null;
     }
 
     private void InitParams()

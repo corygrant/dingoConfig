@@ -5,14 +5,22 @@
 @typeparam TDevice where TDevice : domain.Interfaces.IDeviceConfigurable
 @inherits FunctionComponentBase<TDevice>
 
-<MudDataGrid Items="@Outputs" Dense="true" Hover="true" Striped="false" EditMode="DataGridEditMode.Cell" ReadOnly="false" 
+<style>
+    /* Outputs switched from elsewhere (an ignition role, a vehicle function): dimmed,
+       back to full strength on hover so the protection settings, which still apply,
+       stay easy to edit */
+    .claimed-row td { opacity: 0.5; transition: opacity 120ms ease; }
+    .claimed-row:hover td { opacity: 1; }
+</style>
+
+<MudDataGrid Items="@Outputs" RowClassFunc="@RowClass" Dense="true" Hover="true" Striped="false" EditMode="DataGridEditMode.Cell" ReadOnly="false" 
              SortMode="SortMode.None" ColumnResizeMode="ResizeMode.Container" Virtualize="true" 
              FixedHeader="true" HorizontalScrollbar="true" Style="max-height: 400px;">
     <Columns>
         <PropertyColumn Property="x => x.Number" Title="#" StickyLeft="true" Editable="false" />
         <PropertyColumn Property="x => x.Enabled" CellStyle="max-width: 100px">
             <EditTemplate>
-                <MudCheckBox @bind-Value="context.Item.Enabled" Dense="true" />
+                <MudCheckBox @bind-Value="context.Item.Enabled" Dense="true" Disabled="@IsClaimed(context.Item)" />
             </EditTemplate>
         </PropertyColumn>
         <PropertyColumn Property="x => x.Name" CellStyle="max-width: 200px">
@@ -31,16 +39,28 @@
         </PropertyColumn>
         <PropertyColumn Property="x => x.Input" Title="Variable" CellStyle="max-width: 250px;">
             <EditTemplate>
-                <MudStack Row="true">
-                    <MudIconButton Icon="@Icons.Material.Filled.Search"
-                               Color="Color.Primary"
-                               Size="Size.Small"
-                               Disabled="(!context.Item.Enabled || context.Item.PrimaryOutput >= 0)"
-                               Style="max-width: 20px"
-                               OnClick="@(() => OpenVariableSelectorAsync(["bool"], v => context.Item.Input = v))">
-                    </MudIconButton>
-                    <MudText>@GetSelectedVarText(context.Item.Input)</MudText>
-                </MudStack>
+                @if (IsClaimed(context.Item))
+                {
+                    <MudTooltip Text="Switched from there, its current limits still apply here">
+                        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Primary"
+                                 Icon="@Icons.Material.Outlined.Lock">
+                            @ManagedBy!(context.Item)
+                        </MudChip>
+                    </MudTooltip>
+                }
+                else
+                {
+                    <MudStack Row="true">
+                        <MudIconButton Icon="@Icons.Material.Filled.Search"
+                                   Color="Color.Primary"
+                                   Size="Size.Small"
+                                   Disabled="(!context.Item.Enabled || context.Item.PrimaryOutput >= 0)"
+                                   Style="max-width: 20px"
+                                   OnClick="@(() => OpenVariableSelectorAsync(["bool"], v => context.Item.Input = v))">
+                        </MudIconButton>
+                        <MudText>@GetSelectedVarText(context.Item.Input)</MudText>
+                    </MudStack>
+                }
             </EditTemplate>
         </PropertyColumn>
         <TemplateColumn Title="Current Limit (A)" Resizable="true" CellStyle="max-width: 100px">
@@ -113,6 +133,12 @@
 
 @code {
     [Parameter, EditorRequired] public List<Output> Outputs { get; set; } = null!;
+    // An ignition role or a vehicle function switching the output, see FwDevice.ManagedBy
+    [Parameter] public Func<domain.Interfaces.IDeviceFunction, string?>? ManagedBy { get; set; }
+
+    private bool IsClaimed(Output output) => ManagedBy?.Invoke(output) != null;
+
+    private string RowClass(Output output, int _) => IsClaimed(output) ? "claimed-row" : "";
 
     private int _refreshCounter;
 
