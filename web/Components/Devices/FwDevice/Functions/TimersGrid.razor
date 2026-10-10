@@ -5,13 +5,13 @@
 @typeparam TDevice where TDevice : domain.Interfaces.IDeviceConfigurable
 @inherits FunctionComponentBase<TDevice>
 
-<MudDataGrid Items="@Conditions" RowStyleFunc="@UsesRowStyle" RowClassFunc="@ManagedRowClass" Dense="true" Hover="true" Striped="false" EditMode="DataGridEditMode.Cell" ReadOnly="false"
-             SortMode="SortMode.None" ColumnResizeMode="ResizeMode.Container" Virtualize="true" 
+<MudDataGrid Items="@Timers" RowClassFunc="@ManagedRowClass" Dense="true" Hover="true" Striped="false" EditMode="DataGridEditMode.Cell" ReadOnly="false"
+             SortMode="SortMode.None" ColumnResizeMode="ResizeMode.Container" Virtualize="true"
              FixedHeader="true" HorizontalScrollbar="true" Style="max-height: 400px;">
     <Columns>
         <TemplateColumn Title="#" StickyLeft="true" Editable="false" CellStyle="max-width: 100px">
             <CellTemplate>
-                @context.Item.Number<ManagedBadge By="@ManagedBy?.Invoke(context.Item)"/><UsesBadge Uses="@Uses?.Invoke(context.Item)"/>
+                @context.Item.Number<ManagedBadge By="@ManagedBy?.Invoke(context.Item)"/>
             </CellTemplate>
         </TemplateColumn>
         <PropertyColumn Property="x => x.Enabled" CellStyle="max-width: 100px">
@@ -34,7 +34,7 @@
                 </MudChip>
             </CellTemplate>
         </PropertyColumn>
-        <PropertyColumn Property="x => x.Input" Title="Variable" CellStyle="max-width: 250px;">
+        <PropertyColumn Property="x => x.Input" Title="Input" CellStyle="max-width: 250px;">
             <EditTemplate>
                 <MudStack Row="true">
                     <MudIconButton Icon="@Icons.Material.Filled.Search"
@@ -48,54 +48,72 @@
                 </MudStack>
             </EditTemplate>
         </PropertyColumn>
-        <PropertyColumn Property="x => x.Operator" CellStyle="max-width: 200px">
+        <PropertyColumn Property="x => x.ResetInput" Title="Reset" CellStyle="max-width: 250px;">
             <EditTemplate>
-                <MudSelect T="Operator" @bind-Value="context.Item.Operator" Variant="Variant.Outlined" Dense="true"
+                <MudStack Row="true">
+                    <MudIconButton Icon="@Icons.Material.Filled.Search"
+                                   Color="Color.Primary"
+                                   Size="Size.Small"
+                                   Disabled="(!context.Item.Enabled)"
+                                   Style="max-width: 20px"
+                                   OnClick="@(() => OpenVariableSelectorAsync(["bool", "int", "float"], v => context.Item.ResetInput = v))">
+                    </MudIconButton>
+                    <MudText>@GetSelectedVarText(context.Item.ResetInput)</MudText>
+                </MudStack>
+            </EditTemplate>
+        </PropertyColumn>
+        <PropertyColumn Property="x => x.Mode" CellStyle="max-width: 200px">
+            <EditTemplate>
+                <MudSelect T="TimerMode" @bind-Value="context.Item.Mode" Variant="Variant.Outlined" Dense="true"
                            Disabled="!context.Item.Enabled">
-                    @foreach (Operator op in Enum.GetValues(typeof(Operator)))
+                    @foreach (TimerMode mode in Enum.GetValues(typeof(TimerMode)))
                     {
-                        <MudSelectItem T="Operator" Value="@op">@op</MudSelectItem>
+                        <MudSelectItem T="TimerMode" Value="@mode">@ModeText(mode)</MudSelectItem>
                     }
                 </MudSelect>
             </EditTemplate>
         </PropertyColumn>
-        <TemplateColumn Title="Argument" Resizable="true" CellStyle="max-width: 100px">
+        <TemplateColumn Title="Time (ms)" Resizable="true" CellStyle="max-width: 120px">
             <EditTemplate>
-                <MudNumericField @key="@($"arg-{context.Item.Number}-{_refreshCounter}")"
-                                 Value="@context.Item.Arg"
+                <MudNumericField @key="@($"time-{context.Item.Number}-{_refreshCounter}")"
+                                 Value="@context.Item.Time"
                                  Disabled="!context.Item.Enabled"
-                                 ValueChanged="@((double val) => ArgChanged(context.Item, val))"/>
+                                 ValueChanged="@((int val) => TimeChanged(context.Item, val))"/>
             </EditTemplate>
         </TemplateColumn>
     </Columns>
 </MudDataGrid>
 
 @code {
-    // What else reads each item, see FwDevice.UsesOf
-    [Parameter] public Func<domain.Interfaces.IDeviceFunction, IReadOnlyList<string>>? Uses { get; set; }
-
     // A vehicle function building this block, see FwDevice.ManagedBy
     [Parameter] public Func<domain.Interfaces.IDeviceFunction, string?>? ManagedBy { get; set; }
 
-    private string ManagedRowClass(Condition item, int _) => ManagedBy?.Invoke(item) != null ? "managed-row" : "";
-
-    private string UsesRowStyle(Condition item, int _) =>
-        Uses?.Invoke(item) is { Count: > 0 } ? "background-color: rgba(var(--mud-palette-primary-rgb), 0.06);" : "";
+    private string ManagedRowClass(DeviceTimer item, int _) => ManagedBy?.Invoke(item) != null ? "managed-row" : "";
 
     [Parameter, EditorRequired]
-    public List<Condition> Conditions { get; set; } = null!;
+    public List<DeviceTimer> Timers { get; set; } = null!;
 
     private int _refreshCounter;
-    
-    private void ArgChanged(Condition item, double value)
+
+    private const int MinTime = 0;
+    private const int MaxTime = 600000;
+
+    private static string ModeText(TimerMode mode) => mode switch
     {
-        const double min = double.MinValue;
-        const double max = double.MaxValue;
-        if (value < min || value > max)
+        TimerMode.OnDelay => "On delay",
+        TimerMode.OffDelay => "Off delay",
+        TimerMode.PulseRetrig => "Pulse (retriggerable)",
+        TimerMode.PulseOneShot => "Pulse (one shot)",
+        _ => mode.ToString()
+    };
+
+    private void TimeChanged(DeviceTimer item, int value)
+    {
+        if (value < MinTime || value > MaxTime)
         {
-            Notification.NewWarning($"{item.Name}.Arg must be {min} to {max}");
+            Notification.NewWarning($"{item.Name}.Time must be {MinTime} to {MaxTime} ms");
         }
-        item.Arg = Math.Clamp(value, min, max);
+        item.Time = Math.Clamp(value, MinTime, MaxTime);
         _refreshCounter++;
     }
 }

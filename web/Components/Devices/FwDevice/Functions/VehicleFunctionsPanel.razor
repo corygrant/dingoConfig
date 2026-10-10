@@ -1,0 +1,111 @@
+@using domain.Devices.VehicleFunctions
+@typeparam TDevice where TDevice : domain.Devices.FwDevice
+@inherits FunctionComponentBase<TDevice>
+
+<style>
+    .vf-toolbar { display: flex; align-items: center; gap: 8px 12px; margin-bottom: 10px; flex-wrap: wrap; }
+    .vf-toolbar .vf-intro { flex: 1 1 260px; min-width: 0; }
+    .vf-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(560px, 1fr)); gap: 10px; align-items: start; }
+    .vf-card { overflow: hidden; }
+    .vf-head { display: flex; align-items: center; gap: 8px; padding: 4px 4px 4px 12px; cursor: pointer; min-height: 38px; }
+    .vf-head:hover { background: var(--mud-palette-action-default-hover); }
+    .vf-title { font-weight: 500; white-space: nowrap; }
+    .vf-summary { font-size: 0.78rem; color: var(--mud-palette-text-secondary); overflow: hidden;
+                  text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+    .vf-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--mud-palette-lines-default); flex: 0 0 auto; }
+    .vf-dot.on { background: var(--mud-palette-success); }
+    .vf-body { padding: 2px 12px 8px; border-top: 1px solid var(--mud-palette-lines-default); }
+    .vf-line { display: grid; grid-template-columns: 96px minmax(0, 1.6fr) minmax(0, 1fr); gap: 8px; align-items: center;
+               min-height: 34px; }
+    .vf-name { font-size: 0.8rem; color: var(--mud-palette-text-secondary); white-space: nowrap; overflow: hidden;
+               text-overflow: ellipsis; }
+    .vf-in { display: flex; align-items: center; gap: 0; min-width: 0; }
+    .vf-in .mud-tooltip-root { flex: 0 0 auto; }
+    .vf-in .vf-pick-wrap.mud-tooltip-root { min-width: 0; flex: 1 1 auto; display: flex; }
+    .vf-pick { flex: 1 1 auto; min-width: 0; justify-content: flex-start; text-transform: none; height: 26px;
+               padding: 0 8px; font-size: 0.78rem; }
+    .vf-pick .mud-button-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block; }
+    .vf-in .mud-icon-button { padding: 3px; }
+    .vf-slot { flex: 0 0 26px; width: 26px; display: flex; justify-content: center; }
+    .vf-type { flex: 0 0 112px; width: 112px; display: flex; }
+    .vf-type .mud-tooltip-root { flex: 0 0 auto; }
+    .vf-type-chip.mud-chip { margin: 0; height: 24px; font-size: 0.74rem; width: 108px; justify-content: flex-start; }
+    .vf-outs { display: flex; align-items: center; flex-wrap: wrap; gap: 0; min-width: 0; }
+    .vf-outs .mud-icon-button { padding: 3px; }
+    .vf-chip.mud-chip { margin: 2px; height: 22px; }
+    .vf-hint { font-size: 0.75rem; color: var(--mud-palette-text-secondary); }
+    /* Column titles and empty-field hints: faint, they only say what goes where */
+    .vf-cols { min-height: 18px; font-size: 0.66rem; letter-spacing: 0.06em; text-transform: uppercase;
+               color: var(--mud-palette-text-disabled); }
+    .vf-placeholder { color: var(--mud-palette-text-disabled); font-weight: 400; font-size: 0.75rem; }
+    .vf-add-empty.mud-button-root { color: var(--mud-palette-text-disabled); text-transform: none; font-weight: 400;
+                                    font-size: 0.75rem; height: 24px; padding: 0 6px; }
+    .vf-add-empty.mud-button-root:hover { color: var(--mud-palette-primary); }
+    .vf-problem { font-size: 0.78rem; color: var(--mud-palette-warning); margin: 4px 0; }
+    .vf-foot { display: flex; justify-content: flex-end; margin-top: 2px; }
+    .vf-foot .mud-button-root { padding: 0 6px; min-width: 0; font-size: 0.72rem; }
+    .vf-advanced { border-top: 1px dashed var(--mud-palette-lines-default); padding-top: 6px; }
+    .vf-settings { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; min-height: 34px; }
+    .vf-settings .vf-name { width: 104px; }
+    .vf-num { max-width: 100px; }
+    .vf-num .mud-input-control { margin: 0; }
+    .vf-table-wrap { overflow-x: auto; margin-top: 6px; }
+    .vf-table { border-collapse: collapse; width: 100%; font-size: 0.78rem; }
+    .vf-table th { text-align: left; font-weight: 500; font-size: 0.7rem; color: var(--mud-palette-text-secondary);
+                   padding: 2px 4px; white-space: nowrap; }
+    .vf-table td { padding: 0 4px; border-top: 1px solid var(--mud-palette-lines-default); min-width: 48px; }
+    .vf-table td .mud-input-control { margin: 0; }
+    .vf-table td.vf-out-name { white-space: nowrap; min-width: 96px; }
+    @@media (max-width: 600px) {
+        .vf-grid { grid-template-columns: 1fr; }
+        .vf-line { grid-template-columns: 84px minmax(0, 1fr); }
+        .vf-line .vf-outs { grid-column: 2; }
+    }
+</style>
+
+<div class="vf-toolbar">
+    <MudText Typo="Typo.caption" Class="vf-intro muted-text">
+        Car basics built from the PDM's own blocks: pick the switch and the outputs on each row, the rest is preset.
+        Click a function to open or close it.
+    </MudText>
+    @if (Available.Count > 0)
+    {
+        <MudMenu Label="Add function" StartIcon="@Icons.Material.Filled.Add" Variant="Variant.Outlined"
+                 Color="Color.Primary" Size="Size.Small" Dense="true">
+            @foreach (var candidate in Available)
+            {
+                var fn = candidate;
+                <MudMenuItem OnClick="@(() => Add(fn))" Icon="@VehicleFunctionIcons.Of(fn)">
+                    <div>@fn.Title</div>
+                    <div class="mud-typography-caption muted-text">@fn.Summary</div>
+                </MudMenuItem>
+            }
+        </MudMenu>
+    }
+</div>
+
+@if (Device.VehicleFunctions.Count == 0)
+{
+    <MudText Typo="Typo.body2" Class="muted-text pa-2">
+        Nothing added yet. Headlights, turn signals, brake lights and more are ready once you choose their switches and outputs.
+    </MudText>
+}
+else
+{
+    <div class="vf-grid">
+        @foreach (var fn in Device.VehicleFunctions)
+        {
+            <VehicleFunctionCard @key="fn" TDevice="TDevice" Device="Device" Function="fn" OnRemoved="StateHasChanged"/>
+        }
+    </div>
+}
+
+@code {
+    // One of each: a second set of turn signals has nothing to drive
+    private List<VehicleFunction> Available => VehicleFunctionService.Catalog
+        .Select(create => create())
+        .Where(fn => Device.VehicleFunctions.All(existing => existing.GetType() != fn.GetType()))
+        .ToList();
+
+    private void Add(VehicleFunction fn) => VehicleFunctionService.Add(Device, fn);
+}
