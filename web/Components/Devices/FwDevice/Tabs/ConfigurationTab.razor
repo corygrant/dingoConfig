@@ -279,6 +279,18 @@
                 }
             </MudExpansionPanel>
         }
+
+        @* Timers *@
+        @if (Device.Timers.Count > 0)
+        {
+            <MudExpansionPanel Text="@($"Timers ({Device.Timers.Count})")"
+                               ExpandedChanged="@((bool expanded) => _timersExpanded = expanded)">
+                @if (_timersExpanded)
+                {
+                    <TimersGrid Timers="Device.Timers" Device="Device"/>
+                }
+            </MudExpansionPanel>
+        }
     </MudExpansionPanels>
 </div>
 
@@ -298,6 +310,7 @@
     private bool _flashersExpanded;
     private bool _wiperExpanded;
     private bool _starterDisableExpanded;
+    private bool _timersExpanded;
 
     private string _baseId = string.Empty;
     
