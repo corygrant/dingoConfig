@@ -743,6 +743,26 @@ All functions implement `IDeviceFunction` interface:
 - **Wiper**: Wiper control (mode, speed, intervals)
 - **StarterDisable**: Starter lockout configuration
 
+### Vehicle Functions
+
+**Location**: `domain/Devices/VehicleFunctions/`, UI in `web/Components/Devices/FwDevice/Functions/VehicleFunction*.razor`
+
+Ready-made car functions (headlights, taillights, turn signals, interior light, horn, wipers,
+blower, ECU, fuel pump, coolant fan) that live only in dingoConfig. Each one is a recipe over
+the PDM's existing blocks; the firmware needs nothing new:
+- `VehicleFunction`: input slots, output slots and `Build(FunctionBuilder)`. Saved in the project
+  JSON under the device as `vehicleFunctions` (polymorphic on `kind`).
+- `FunctionBuilder`: claims free virtual inputs, flashers, timers, conditions, the wiper block and
+  CAN inputs, reuses the ones the function already owns and releases the rest after a build.
+- `VehicleFunctionService`: add, rebuild, remove, outputs, ownership (`OwnerOf`, used by
+  `FwDevice.ManagedBy` to lock claimed blocks in the general grids).
+- Empty slots can fall back to an Ignition block signal (`InputSlot.Default`).
+- A function lives on one PDM (its home) and may drive outputs of other PDMs in the project
+  (`VehicleFunction.Remote`, by base ID). It is then built once per PDM: each PDM gets its own
+  blocks and reads the switches off the bus (`RemoteSignals`): a CAN input is copied, anything else
+  is read from the home PDM's status messages (positions from `Definitions/*-signals.json`).
+  Push button toggles run on the home PDM only so every PDM agrees on their state.
+
 ### Device Enums
 
 **Location**: `domain/Devices/dingoPdm/Enums/`
