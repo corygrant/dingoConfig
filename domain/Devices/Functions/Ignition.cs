@@ -7,12 +7,14 @@ using domain.Models;
 namespace domain.Devices.Functions;
 
 /// <summary>
-/// Ignition and starter. Outputs are given a role instead of an input.
+/// Ignition and starter. Outputs are given a role instead of an input,
+/// and the firmware runs the dash shutdown on its own.
 /// </summary>
 public class Ignition : IDeviceFunction
 {
     [JsonIgnore] public const int BaseIndex = 0x1B00;
     [JsonIgnore] public const int OutputRoleSubIndex = 0x30;
+    [JsonIgnore] public const int ShutdownDataLength = 8;
 
     [JsonPropertyName("name")] public string Name {get; set;}
     [JsonIgnore] public int Number => 1;
@@ -44,6 +46,26 @@ public class Ignition : IDeviceFunction
     // Without a frame for this long the button reads released, 0 = never
     [JsonPropertyName("buttonTimeout")] public int ButtonTimeout {get; set;} = 1000;
 
+    [JsonPropertyName("shutdownEnabled")] public bool ShutdownEnabled {get; set;}
+    [JsonPropertyName("shutdownIde")] public bool ShutdownIde {get; set;}
+    [JsonPropertyName("shutdownId")]
+    public int ShutdownId
+    {
+        get;
+        set
+        {
+            field = value;
+            ShutdownIde = field > 2047;
+        }
+    } = 0x5AA;
+    [JsonPropertyName("shutdownDlc")] public int ShutdownDlc {get; set;} = 1;
+    [JsonPropertyName("shutdownData")] public List<int> ShutdownData {get; set;}
+    [JsonPropertyName("shutdownInterval")] public int ShutdownInterval {get; set;} = 500;
+    [JsonPropertyName("graceTime")] public int GraceTime {get; set;} = 3000;
+    [JsonPropertyName("dashOffDelay")] public int DashOffDelay {get; set;} = 5000;
+    [JsonPropertyName("doorInput")] public int DoorInput {get; set;}
+    [JsonPropertyName("doorOnTime")] public int DoorOnTime {get; set;} = 60000;
+
     [JsonPropertyName("outputRoles")] public List<IgnitionOutputRole> OutputRoles {get; set;}
 
     [JsonIgnore][Plotable(displayName:"Ignition")] public int IgnitionOut {get; set;}
@@ -55,15 +77,17 @@ public class Ignition : IDeviceFunction
     [JsonIgnore] public List<DeviceParameter> Params { get; private set; }
 
     [JsonConstructor]
-    public Ignition(string name, List<IgnitionOutputRole>? outputRoles)
+    public Ignition(string name, List<int>? shutdownData, List<IgnitionOutputRole>? outputRoles)
     {
         Name = name;
+        ShutdownData = shutdownData ?? [1];
+        while (ShutdownData.Count < ShutdownDataLength) ShutdownData.Add(0);
         OutputRoles = outputRoles ?? [];
         Params = InitParams();
     }
 
     public Ignition(string name, int outputCount)
-        : this(name, [..new IgnitionOutputRole[outputCount]])
+        : this(name, null, [..new IgnitionOutputRole[outputCount]])
     {
     }
 
@@ -121,6 +145,21 @@ public class Ignition : IDeviceFunction
         Add("buttonByte", () => ButtonByte, v => ButtonByte = (int)v, typeof(int), 0, 12);
         Add("buttonMask", () => ButtonMask, v => ButtonMask = (int)v, typeof(int), 0x01, 13);
         Add("buttonTimeout", () => ButtonTimeout, v => ButtonTimeout = (int)v, typeof(int), 1000, 14);
+
+        Add("shutdownEnabled", () => ShutdownEnabled, v => ShutdownEnabled = (bool)v, typeof(bool), false, 15);
+        Add("shutdownIde", () => ShutdownIde, v => ShutdownIde = (bool)v, typeof(bool), false, 16);
+        Add("shutdownId", () => ShutdownId, v => ShutdownId = (int)v, typeof(int), 0x5AA, 17);
+        Add("shutdownDlc", () => ShutdownDlc, v => ShutdownDlc = (int)v, typeof(int), 1, 18);
+        for (var i = 0; i < ShutdownDataLength; i++)
+        {
+            var idx = i;
+            Add($"shutdownData[{i}]", () => ShutdownData[idx], v => ShutdownData[idx] = (int)v, typeof(int), i == 0 ? 1 : 0, 19 + i);
+        }
+        Add("shutdownInterval", () => ShutdownInterval, v => ShutdownInterval = (int)v, typeof(int), 500, 27);
+        Add("graceTime", () => GraceTime, v => GraceTime = (int)v, typeof(int), 3000, 28);
+        Add("dashOffDelay", () => DashOffDelay, v => DashOffDelay = (int)v, typeof(int), 5000, 29);
+        Add("doorInput", () => DoorInput, v => DoorInput = (int)v, typeof(int), 0, 30);
+        Add("doorOnTime", () => DoorOnTime, v => DoorOnTime = (int)v, typeof(int), 60000, 31);
 
         for (var i = 0; i < OutputRoles.Count; i++)
         {

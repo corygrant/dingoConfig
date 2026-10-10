@@ -223,8 +223,86 @@
                     {
                         <MudText Typo="Typo.caption" Class="muted-text mt-3 d-block">
                             Ignition: on with the ignition. Accessory: the same, but off while cranking.
-                            Dash: on with the ignition. Starter: only while cranking.
+                            Dash: stays on through the dash shutdown. Starter: only while cranking.
                         </MudText>
+                    }
+                </MudPaper>
+            </MudItem>
+
+            @* Dash *@
+            <MudItem xs="12" lg="6">
+                <MudPaper Outlined="true" Class="pa-3 ign-section">
+                    <div class="ign-section-title">
+                        <MudIcon Icon="@Icons.Material.Outlined.Speed" Size="Size.Small"/>
+                        <MudText Typo="Typo.h6">Dash</MudText>
+                    </div>
+
+                    <div class="ign-row">
+                        <span class="ign-label">Stays on after ignition off</span>
+                        @SecondsField(Ign.GraceTime, v => Ign.GraceTime = v, 0, 600, "grace")
+                    </div>
+                    <div class="ign-help">If the ignition comes back on meanwhile, the dash just stays on.</div>
+
+                    <div class="ign-row">
+                        <span class="ign-label">Shutdown frame</span>
+                        <div class="ign-inline" style="align-items: center">
+                            <MudSwitch T="bool" Value="Ign.ShutdownEnabled" ValueChanged="@(v => Ign.ShutdownEnabled = v)"
+                                       Color="Color.Primary"/>
+                            @if (Ign.ShutdownEnabled)
+                            {
+                                <MudTextField T="string" @key="@($"sdid-{_refresh}")" Value="@FormatId(Ign.ShutdownId)"
+                                              ValueChanged="@(v => { Ign.ShutdownId = ParseId(v); _refresh++; })"
+                                              Label="ID" Variant="Variant.Outlined" Margin="Margin.Dense" Style="width: 100px"/>
+                                <MudTextField T="string" @key="@($"sddata-{_refresh}")" Value="@ShutdownHex()"
+                                              ValueChanged="ShutdownDataChanged"
+                                              Label="Data (hex)" Variant="Variant.Outlined" Margin="Margin.Dense" Style="width: 120px"/>
+                            }
+                        </div>
+                    </div>
+
+                    <div class="ign-row">
+                        <span class="ign-label">@(Ign.ShutdownEnabled ? "Power off after the frame" : "Then power off after")</span>
+                        @SecondsField(Ign.DashOffDelay, v => Ign.DashOffDelay = v, 0, 600, "dashoff")
+                    </div>
+                    @if (Ign.ShutdownEnabled)
+                    {
+                        <div class="ign-help">Time the dash gets to shut down cleanly.</div>
+                    }
+
+                    @VarRow("Door switch", Ign.DoorInput, v => Ign.DoorInput = v, true)
+                    @if (Ign.DoorInput != 0)
+                    {
+                        <div class="ign-row">
+                            <span class="ign-label">Dash on after the door opens</span>
+                            @SecondsField(Ign.DoorOnTime, v => Ign.DoorOnTime = v, 1, 3600, "door")
+                        </div>
+                    }
+
+                    @if (Ign.ShutdownEnabled)
+                    {
+                        <MudButton Variant="Variant.Text" Size="Size.Small"
+                                   EndIcon="@(_dashAdvanced ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)"
+                                   OnClick="@(() => _dashAdvanced = !_dashAdvanced)">
+                            Advanced
+                        </MudButton>
+                        @if (_dashAdvanced)
+                        {
+                            <div class="ign-advanced">
+                                <div class="ign-row">
+                                    <span class="ign-label">Repeat the frame every</span>
+                                    <MudNumericField T="int" @key="@($"sdint-{_refresh}")" Value="Ign.ShutdownInterval"
+                                                     ValueChanged="@(v => { Ign.ShutdownInterval = Math.Clamp(v, 0, 60000); _refresh++; })"
+                                                     Adornment="Adornment.End" AdornmentText="ms" Min="0" Max="60000" Step="100"
+                                                     Variant="Variant.Outlined" Margin="Margin.Dense" Style="max-width: 140px"/>
+                                </div>
+                                <div class="ign-help">Until the power is cut. 0 sends it once.</div>
+                            </div>
+                        }
+                    }
+
+                    @foreach (var warning in DashWarnings())
+                    {
+                        <MudAlert Severity="Severity.Warning" Dense="true" Variant="Variant.Text" Class="mt-2">@warning</MudAlert>
                     }
                 </MudPaper>
             </MudItem>
@@ -240,6 +318,7 @@
     private bool Key => Ign.Mode == IgnitionMode.KeySwitch;
     private int _refresh;
     private bool _startAdvanced;
+    private bool _dashAdvanced;
 
     private List<Output> Assigned => Device.Outputs
         .Where(o => o.Number <= Ign.OutputRoles.Count && Ign.OutputRoles[o.Number - 1] != IgnitionOutputRole.None)
@@ -338,6 +417,41 @@
         _refresh++;
     }
 
+    private string ShutdownHex()
+    {
+        var len = Math.Clamp(Ign.ShutdownDlc, 0, Ignition.ShutdownDataLength);
+        return string.Concat(Ign.ShutdownData.Take(len).Select(b => ((byte)Math.Clamp(b, 0, 255)).ToString("X2")));
+    }
+
+    private void ShutdownDataChanged(string value)
+    {
+        var text = (value ?? string.Empty).Replace(" ", "").Replace("-", "");
+
+        if (text.Length % 2 != 0 || text.Length > Ignition.ShutdownDataLength * 2)
+        {
+            Notification.NewWarning($"Data must be 0 to {Ignition.ShutdownDataLength} bytes of hex, for example 01");
+            _refresh++;
+            return;
+        }
+
+        var bytes = new int[Ignition.ShutdownDataLength];
+        for (var i = 0; i < text.Length / 2; i++)
+        {
+            if (!byte.TryParse(text.AsSpan(i * 2, 2), System.Globalization.NumberStyles.HexNumber, null, out var b))
+            {
+                Notification.NewWarning("Data is not valid hex");
+                _refresh++;
+                return;
+            }
+            bytes[i] = b;
+        }
+
+        for (var i = 0; i < Ignition.ShutdownDataLength; i++)
+            Ign.ShutdownData[i] = bytes[i];
+        Ign.ShutdownDlc = text.Length / 2;
+        _refresh++;
+    }
+
     private string ModeHelp() => Key
         ? "The key ON position powers the ignition while it is held there. START is a separate momentary input."
         : "One press toggles the ignition. Pressed while the start condition is held it also cranks.";
@@ -366,4 +480,12 @@
         IgnitionOutputRole.Starter => "var(--mud-palette-error)",
         _ => "var(--mud-palette-lines-default)"
     };
+
+    private IEnumerable<string> DashWarnings()
+    {
+        if (Ign.ShutdownEnabled && Ign.ShutdownInterval > 0 && Ign.DashOffDelay < 3 * Ign.ShutdownInterval)
+            yield return "Fewer than 3 shutdown frames fit before the power is cut. A dash that debounces the command may not see it.";
+        if (Ign.ShutdownEnabled && !HasRole(IgnitionOutputRole.Dash))
+            yield return "No output has the Dash role, so the dash power is never cut here.";
+    }
 }
