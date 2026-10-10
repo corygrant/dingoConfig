@@ -26,5 +26,6 @@ public record FwDeviceDef(
     bool CanBootloader,
     int MinMajorVersion,
     int MinMinorVersion,
-    int MinBuildVersion
+    int MinBuildVersion,
+    int NumTimers = 0
     );
