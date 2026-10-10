@@ -742,6 +742,31 @@ All functions implement `IDeviceFunction` interface:
 - **Condition**: Conditional logic (operators, conditionals)
 - **Wiper**: Wiper control (mode, speed, intervals)
 - **StarterDisable**: Starter lockout configuration
+- **Ignition**: Key switch / start button, output roles (ignition, accessory, dash, starter),
+  dash shutdown frame, master/follower sync between PDMs and sleep after ignition off.
+  Edited in the Ignition tab (`Tabs/IgnitionTab.razor`); needs firmware with the Ignition block.
+
+### Vehicle Functions
+
+**Location**: `domain/Devices/VehicleFunctions/`, UI in `web/Components/Devices/FwDevice/Functions/VehicleFunction*.razor`
+
+Ready-made car functions (headlights, taillights, turn signals, interior light, horn, wipers,
+blower, ECU, fuel pump, coolant fan) that live only in dingoConfig. Each one is a recipe over
+the PDM's existing blocks; the firmware needs nothing new:
+- `VehicleFunction`: input slots, output slots and `Build(FunctionBuilder)`. Saved in the project
+  JSON under the device as `vehicleFunctions` (polymorphic on `kind`).
+- `FunctionBuilder`: claims free virtual inputs, flashers, timers, conditions, the wiper block and
+  CAN inputs, reuses the ones the function already owns and releases the rest after a build.
+- `VehicleFunctionService`: add, rebuild, remove, outputs, ownership (`OwnerOf`, used by
+  `FwDevice.ManagedBy` to lock claimed blocks in the general grids).
+- A function lives on one PDM (its home) and may drive outputs of other PDMs in the project
+  (`VehicleFunction.Remote`, by base ID). It is then built once per PDM: each PDM gets its own
+  blocks and reads the switches off the bus (`RemoteSignals`): a CAN input is copied, anything else
+  is read from the home PDM's status messages (positions from `Definitions/*-signals.json`).
+  Push button toggles run on the home PDM only so every PDM agrees on their state.
+- Settings shared with the Ignition block stay the same in both places (`SharedSignals`, the door
+  switch); empty slots can fall back to an Ignition block signal (`InputSlot.Default`).
+- `CanBitLearner` + `Dialogs/CanLearnDialog.razor`: learn a switch's CAN bit by recording the bus.
 
 ### Device Enums
 

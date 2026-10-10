@@ -5,6 +5,12 @@
 @typeparam TDevice where TDevice : domain.Interfaces.IDeviceConfigurable
 @inherits FunctionComponentBase<TDevice>
 
+@if (Device is domain.Devices.FwDevice fw && fw.ManagedBy(Wiper) is { } managedBy)
+{
+    <MudAlert Severity="Severity.Info" Dense="true" Variant="Variant.Outlined" Class="mb-2">
+        Set up by @managedBy in Vehicle functions. Changes made here are overwritten from there.
+    </MudAlert>
+}
 <MudCard Outlined="true" Class="mb-2">
     <MudCardContent>
         <MudGrid Spacing="5">
