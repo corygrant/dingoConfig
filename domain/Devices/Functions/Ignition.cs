@@ -8,7 +8,7 @@ namespace domain.Devices.Functions;
 
 /// <summary>
 /// Ignition and starter. Outputs are given a role instead of an input,
-/// and the firmware runs the dash shutdown on its own.
+/// and the firmware runs the dash shutdown and sleep on its own.
 /// With several devices on one bus, one master owns the button and the others
 /// follow its state broadcast.
 /// </summary>
@@ -70,6 +70,8 @@ public class Ignition : IDeviceFunction
     [JsonPropertyName("dashOffDelay")] public int DashOffDelay {get; set;} = 5000;
     [JsonPropertyName("doorInput")] public int DoorInput {get; set;}
     [JsonPropertyName("doorOnTime")] public int DoorOnTime {get; set;} = 60000;
+    // 0 = the ignition does not manage sleep
+    [JsonPropertyName("sleepDelay")] public int SleepDelay {get; set;}
 
     [JsonPropertyName("outputRoles")] public List<IgnitionOutputRole> OutputRoles {get; set;}
 
@@ -168,6 +170,7 @@ public class Ignition : IDeviceFunction
         Add("dashOffDelay", () => DashOffDelay, v => DashOffDelay = (int)v, typeof(int), 5000, 29);
         Add("doorInput", () => DoorInput, v => DoorInput = (int)v, typeof(int), 0, 30);
         Add("doorOnTime", () => DoorOnTime, v => DoorOnTime = (int)v, typeof(int), 60000, 31);
+        Add("sleepDelay", () => SleepDelay, v => SleepDelay = (int)v, typeof(int), 0, 32);
 
         for (var i = 0; i < OutputRoles.Count; i++)
         {

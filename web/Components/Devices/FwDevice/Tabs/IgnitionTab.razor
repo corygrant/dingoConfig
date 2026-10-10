@@ -29,6 +29,13 @@
     .ign-out-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .ign-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 8px; }
     .ign-disabled { opacity: 0.45; pointer-events: none; }
+    .ign-seq { display: flex; height: 6px; border-radius: 3px; overflow: hidden; margin-top: 4px; }
+    .ign-seq > div { min-width: 2px; }
+    .ign-seq .on { background: var(--mud-palette-warning); opacity: 0.7; }
+    .ign-seq .halt { background: var(--mud-palette-info); opacity: 0.7; }
+    .ign-seq .idle { background: var(--mud-palette-lines-default); }
+    .ign-seq-text { font-size: 0.78rem; color: var(--mud-palette-text-secondary); margin-top: 6px; }
+    .ign-seq-text b { color: var(--mud-palette-text-primary); font-weight: 500; }
     @@media (max-width: 600px) {
         .ign-row { grid-template-columns: 1fr; }
         .ign-help { margin-left: 0; }
@@ -63,7 +70,7 @@
     @if (!Ign.Enabled)
     {
         <MudAlert Severity="Severity.Normal" Variant="Variant.Outlined" Dense="true" Class="mb-4">
-            The ignition is off. Outputs keep their own inputs.
+            The ignition is off. Outputs keep their own inputs and sleep follows the Device settings.
         </MudAlert>
     }
 
@@ -82,7 +89,7 @@
                     {
                         <MudText Typo="Typo.body2" Class="muted-text mb-2">
                             This device follows the master's ignition on ID @FormatId(Ign.SyncId). Its outputs switch with
-                            the master.
+                            the master and it sleeps when the master does.
                         </MudText>
                     }
                     else
@@ -339,11 +346,67 @@
                     }
                 </MudPaper>
             </MudItem>
+
+            @* Sleep *@
+            <MudItem xs="12" lg="6">
+                <MudPaper Outlined="true" Class="pa-3 ign-section">
+                    <div class="ign-section-title">
+                        <MudIcon Icon="@Icons.Material.Outlined.Bedtime" Size="Size.Small"/>
+                        <MudText Typo="Typo.h6">Sleep</MudText>
+                    </div>
+
+                    <div class="ign-row">
+                        <span class="ign-label">Sleep after ignition off</span>
+                        <div class="ign-inline" style="align-items: center">
+                            <MudSwitch T="bool" Value="Ign.SleepDelay > 0" Color="Color.Primary"
+                                       ValueChanged="@(v => { Ign.SleepDelay = v ? DefaultSleepDelay : 0; _refresh++; })"/>
+                            @if (Ign.SleepDelay > 0)
+                            {
+                                @SecondsField(Ign.SleepDelay, v => Ign.SleepDelay = Math.Max(v, 1000), 1, 3600, "sleep")
+                            }
+                        </div>
+                    </div>
+                    @if (Ign.SleepDelay > 0)
+                    {
+                        <div class="ign-help">Waits for the dash and while USB is connected.</div>
+                    }
+
+                    <div class="ign-row">
+                        <span class="ign-label">Wake on</span>
+                        <div class="ign-inline">
+                            <MudSwitch T="bool" Value="!Device.DisableCanWake" ValueChanged="@(v => Device.DisableCanWake = !v)"
+                                       Color="Color.Primary" Label="CAN"/>
+                            <MudSwitch T="bool" Value="!Device.DisableDigInWake" ValueChanged="@(v => Device.DisableDigInWake = !v)"
+                                       Color="Color.Primary" Label="Digital inputs"/>
+                        </div>
+                    </div>
+
+                    @if (SequenceTotal > 0)
+                    {
+                        <div class="ign-label mt-3">After ignition off</div>
+                        <div class="ign-seq">
+                            @foreach (var (css, seconds) in Sequence())
+                            {
+                                <div class="@css" style="flex: @seconds.ToString(System.Globalization.CultureInfo.InvariantCulture) 1 0"></div>
+                            }
+                        </div>
+                        <div class="ign-seq-text">@((MarkupString)SequenceText())</div>
+                    }
+
+                    @foreach (var warning in SleepWarnings())
+                    {
+                        <MudAlert Severity="Severity.Warning" Dense="true" Variant="Variant.Text" Class="mt-2">@warning</MudAlert>
+                    }
+                </MudPaper>
+            </MudItem>
         </MudGrid>
     </div>
 </div>
 
 @code {
+    private const int DefaultSleepDelay = 30000;
+    private const double QuietSeconds = 2.0;
+
     private static readonly IgnitionOutputRole[] Roles =
         [IgnitionOutputRole.Ignition, IgnitionOutputRole.Accessory, IgnitionOutputRole.Dash, IgnitionOutputRole.Starter];
 
@@ -521,4 +584,42 @@
         if (Ign.ShutdownEnabled && !HasRole(IgnitionOutputRole.Dash))
             yield return "No output has the Dash role, so the dash power is never cut here.";
     }
+
+    private IEnumerable<string> SleepWarnings()
+    {
+        if (Ign.Role != IgnitionRole.Follower && Ign.ButtonSource == IgnitionSource.CanFrame && Device.DisableCanWake)
+            yield return "CAN wake is off, so the CAN button cannot wake this device.";
+        if (Ign.Role == IgnitionRole.Follower && Device.DisableCanWake)
+            yield return "CAN wake is off, so the master cannot wake this follower.";
+        if (Ign.SleepDelay > 0 && (Device.ForceSleepInput != 0 || Device.MuteCanTxInput != 0))
+            yield return "Force sleep or Mute CAN TX is still set in Device settings and works alongside this.";
+    }
+
+    // Seconds from ignition off to: shutdown frame, dash power off, sleep
+    private double DashStart => HasRole(IgnitionOutputRole.Dash) || Ign.ShutdownEnabled ? Ign.GraceTime / 1000.0 : 0;
+    private double DashDone => HasRole(IgnitionOutputRole.Dash) || Ign.ShutdownEnabled ? DashStart + Ign.DashOffDelay / 1000.0 : 0;
+    private double SleepAt => Ign.SleepDelay > 0 ? Math.Max(Ign.SleepDelay / 1000.0, DashDone + QuietSeconds) : 0;
+    private double SequenceTotal => Math.Max(DashDone, SleepAt);
+
+    private IEnumerable<(string Css, double Seconds)> Sequence()
+    {
+        if (DashStart > 0) yield return ("on", DashStart);
+        if (DashDone > DashStart) yield return ("halt", DashDone - DashStart);
+        if (SleepAt > DashDone) yield return ("idle", SleepAt - DashDone);
+    }
+
+    private string SequenceText()
+    {
+        var parts = new List<string>();
+        if (DashDone > 0)
+        {
+            parts.Add($"<b>{Seconds(DashStart)}</b> dash {(Ign.ShutdownEnabled ? "told to shut down" : "power off delay starts")}");
+            parts.Add($"<b>{Seconds(DashDone)}</b> dash power off");
+        }
+        if (SleepAt > 0)
+            parts.Add($"<b>{Seconds(SleepAt)}</b> sleep");
+        return string.Join(" · ", parts);
+    }
+
+    private static string Seconds(double s) => s.ToString("0.#", System.Globalization.CultureInfo.InvariantCulture) + " s";
 }
