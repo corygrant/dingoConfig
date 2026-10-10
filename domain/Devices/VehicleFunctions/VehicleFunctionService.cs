@@ -4,7 +4,10 @@ using domain.Interfaces;
 
 namespace domain.Devices.VehicleFunctions;
 
-/// <summary>Adds, rebuilds and removes vehicle functions on a device.</summary>
+/// <summary>
+/// Adds, rebuilds and removes vehicle functions. A function lives on one PDM, its
+/// home, and may also drive outputs of the other PDMs in the project.
+/// </summary>
 public static class VehicleFunctionService
 {
     /// <summary>Everything that can be added, in the order the UI lists it.</summary>
@@ -48,6 +51,58 @@ public static class VehicleFunctionService
         RebuildReaders(device, null);
     }
 
+    /// <summary>Every function in the project with the PDM it lives on.</summary>
+    public static IEnumerable<(FwDevice Home, VehicleFunction Fn)> AllFunctions(FwDevice device) =>
+        device.Project.SelectMany(d => d.VehicleFunctions.Select(fn => (d, fn))).ToList();
+
+    /// <summary>The PDM a function lives on.</summary>
+    public static FwDevice? HomeOf(FwDevice device, VehicleFunction fn) =>
+        device.Project.FirstOrDefault(d => d.VehicleFunctions.Contains(fn));
+
+    /// <summary>The PDM with this base ID in the project, null when it is not there.</summary>
+    public static FwDevice? DeviceAt(FwDevice device, int baseId) =>
+        device.Project.FirstOrDefault(d => d.BaseId == baseId);
+
+    /// <summary>The outputs of a slot on one PDM: the home's own, or those of a remote part.</summary>
+    public static List<int> OutputsOn(FwDevice home, VehicleFunction fn, FwDevice target, string slot) =>
+        target == home ? fn.OutputsIn(slot) : Part(fn, target).OutputsIn(slot);
+
+    /// <summary>The PDMs a function drives outputs on, its home first.</summary>
+    public static IEnumerable<FwDevice> TargetsOf(FwDevice home, VehicleFunction fn) =>
+        new[] { home }.Concat(fn.Remote.Where(p => !p.Value.Empty)
+                                       .Select(p => DeviceAt(home, p.Key))
+                                       .OfType<FwDevice>()
+                                       .Where(d => d != home));
+
+    private static RemotePart Part(VehicleFunction fn, FwDevice target)
+    {
+        if (!fn.Remote.TryGetValue(target.BaseId, out var part))
+            fn.Remote[target.BaseId] = part = new RemotePart();
+        return part;
+    }
+
+    /// <summary>
+    /// Lets each PDM see the others in the project and builds the functions again,
+    /// now that the PDMs they drive outputs on are known.
+    /// </summary>
+    public static void LinkProject(IReadOnlyList<FwDevice> devices, Func<IEnumerable<FwDevice>> project)
+    {
+        foreach (var device in devices)
+            device.Peers = project;
+        foreach (var device in devices)
+            RebuildAll(device);
+    }
+
+    /// <summary>Keeps the functions pointing at a PDM whose base ID changed.</summary>
+    public static void BaseIdChanged(FwDevice device, int oldBaseId)
+    {
+        if (oldBaseId == device.BaseId)
+            return;
+        foreach (var (_, fn) in AllFunctions(device))
+            if (fn.Remote.Remove(oldBaseId, out var part))
+                fn.Remote[device.BaseId] = part;
+    }
+
     public static VehicleFunction Add(FwDevice device, VehicleFunction fn)
     {
         device.VehicleFunctions.Add(fn);
@@ -69,16 +124,39 @@ public static class VehicleFunctionService
     private static void Build(FwDevice device, VehicleFunction fn)
     {
         fn.Problems.Clear();
-        var builder = new FunctionBuilder(device, fn);
+        var builder = new FunctionBuilder(device, device, fn, fn.Outputs, fn.Blocks);
+        if (fn.Remote.Values.Any(p => !p.Empty))
+            builder.ClaimToggles();
         fn.Build(builder);
         builder.Finish();
         fn.Signals = builder.Shared;
+
+        // The same recipe again on every other PDM it drives outputs on. One that is
+        // not in the project right now keeps what it was given last time.
+        foreach (var (baseId, part) in fn.Remote.ToList())
+        {
+            var target = DeviceAt(device, baseId);
+            if (target == null || target == device)
+                continue;
+
+            if (part.Empty)
+            {
+                foreach (var (key, number) in part.Blocks)
+                    ReleaseBlock(target, key, number);
+                fn.Remote.Remove(baseId);
+                continue;
+            }
+
+            var remote = new FunctionBuilder(device, target, fn, part.Outputs, part.Blocks);
+            fn.Build(remote);
+            remote.Finish();
+        }
     }
 
     private static void RebuildReaders(FwDevice device, VehicleFunction? changed)
     {
-        foreach (var reader in device.VehicleFunctions.Where(f => f.ReadsSignals && f != changed).ToList())
-            Build(device, reader);
+        foreach (var (home, reader) in AllFunctions(device).Where(f => f.Fn.ReadsSignals && f.Fn != changed))
+            Build(home, reader);
     }
 
     public static void Remove(FwDevice device, VehicleFunction fn)
@@ -91,6 +169,18 @@ public static class VehicleFunctionService
             foreach (var number in fn.OutputsIn(slot.Key))
                 ReleaseOutput(device, number, slot);
 
+        foreach (var (baseId, part) in fn.Remote)
+        {
+            if (DeviceAt(device, baseId) is not { } target || target == device)
+                continue;
+            foreach (var (key, number) in part.Blocks)
+                ReleaseBlock(target, key, number);
+            foreach (var slot in fn.OutputSlots)
+                foreach (var number in part.OutputsIn(slot.Key))
+                    ReleaseOutput(target, number, slot);
+        }
+        fn.Remote.Clear();
+
         device.VehicleFunctions.Remove(fn);
         RebuildReaders(device, null);
     }
@@ -101,53 +191,81 @@ public static class VehicleFunctionService
     /// </summary>
     public static void AfterLoad(FwDevice device) => RebuildAll(device);
 
-    public static void AddOutput(FwDevice device, VehicleFunction fn, string slotKey, int outputNumber)
+    public static void AddOutput(FwDevice device, VehicleFunction fn, string slotKey, int outputNumber) =>
+        AddOutput(device, fn, slotKey, device, outputNumber);
+
+    /// <summary>Adds an output of the home PDM or of another PDM in the project to a slot.</summary>
+    public static void AddOutput(FwDevice home, VehicleFunction fn, string slotKey, FwDevice target, int outputNumber)
     {
         var slot = fn.OutputSlots.First(s => s.Key == slotKey);
-        var list = fn.OutputsIn(slotKey);
+        var list = OutputsOn(home, fn, target, slotKey);
         if (list.Contains(outputNumber))
             return;
         list.Add(outputNumber);
 
-        var output = device.Outputs[outputNumber - 1];
+        var output = target.Outputs[outputNumber - 1];
         slot.Defaults.ApplyTo(output);
         if (output.Name == DefaultOutputName(outputNumber))
             output.Name = list.Count > 1 ? $"{slot.OutputName} {list.Count}" : slot.OutputName;
 
-        Rebuild(device, fn);
+        Rebuild(home, fn);
     }
 
-    public static void RemoveOutput(FwDevice device, VehicleFunction fn, string slotKey, int outputNumber)
+    public static void RemoveOutput(FwDevice device, VehicleFunction fn, string slotKey, int outputNumber) =>
+        RemoveOutput(device, fn, slotKey, device, outputNumber);
+
+    public static void RemoveOutput(FwDevice home, VehicleFunction fn, string slotKey, FwDevice target, int outputNumber)
     {
         var slot = fn.OutputSlots.First(s => s.Key == slotKey);
-        if (!fn.OutputsIn(slotKey).Remove(outputNumber))
+        if (!OutputsOn(home, fn, target, slotKey).Remove(outputNumber))
             return;
 
-        ReleaseOutput(device, outputNumber, slot);
-        Rebuild(device, fn);
+        ReleaseOutput(target, outputNumber, slot);
+        Rebuild(home, fn);
     }
 
     /// <summary>Outputs nothing else drives: not the ignition, not a function, not a paired follower.</summary>
     public static IEnumerable<Output> FreeOutputs(FwDevice device) =>
         device.Outputs.Where(o => o.PrimaryOutput < 0 && device.ManagedBy(o) == null);
 
-    /// <summary>The function that built a virtual input, flasher or timer, or drives an output.</summary>
+    /// <summary>
+    /// The function that built a block of this PDM or drives one of its outputs,
+    /// whichever PDM the function lives on.
+    /// </summary>
     public static VehicleFunction? OwnerOf(FwDevice device, IDeviceFunction block)
     {
-        foreach (var fn in device.VehicleFunctions)
+        foreach (var (home, fn) in AllFunctions(device))
         {
+            Dictionary<string, List<int>> outputs;
+            Dictionary<string, int> blocks;
+            if (home == device)
+                (outputs, blocks) = (fn.Outputs, fn.Blocks);
+            else if (fn.Remote.TryGetValue(device.BaseId, out var part))
+                (outputs, blocks) = (part.Outputs, part.Blocks);
+            else
+                continue;
+
             if (block is Output output)
             {
-                if (fn.SlotOf(output.Number) != null)
+                if (outputs.Values.Any(list => list.Contains(output.Number)))
                     return fn;
                 continue;
             }
 
             var prefix = PrefixOf(block);
-            if (prefix != null && fn.Blocks.Any(kv => kv.Value == block.Number && kv.Key.StartsWith(prefix)))
+            if (prefix != null && blocks.Any(kv => kv.Value == block.Number && kv.Key.StartsWith(prefix)))
                 return fn;
         }
         return null;
+    }
+
+    /// <summary>The slot an output of this PDM is in, for the function that drives it.</summary>
+    public static OutputSlot? SlotOn(FwDevice device, VehicleFunction fn, int outputNumber)
+    {
+        var outputs = HomeOf(device, fn) == device ? fn.Outputs
+            : fn.Remote.TryGetValue(device.BaseId, out var part) ? part.Outputs : null;
+        return outputs == null ? null
+            : fn.OutputSlots.FirstOrDefault(s => outputs.TryGetValue(s.Key, out var list) && list.Contains(outputNumber));
     }
 
     internal static void ReleaseBlock(FwDevice device, string key, int number)
@@ -192,6 +310,25 @@ public static class VehicleFunctionService
             wiper.SpeedInput = wiper.ParkInput = wiper.SwipeInput = wiper.WashInput = 0;
             wiper.Name = "wiper";
         }
+        else if (key.StartsWith("can:"))
+        {
+            var input = device.CanInputs.FirstOrDefault(c => c.Number == number);
+            if (input == null) return;
+            input.Enabled = false;
+            input.TimeoutEnabled = false;
+            input.Timeout = 1000;
+            input.Id = 0;
+            input.StartBit = 0;
+            input.BitLength = 8;
+            input.Factor = 1.0;
+            input.Offset = 0;
+            input.ByteOrder = ByteOrder.LittleEndian;
+            input.Signed = false;
+            input.Operator = Operator.Equal;
+            input.Operand = 0;
+            input.Mode = InputMode.Momentary;
+            input.Name = $"canInput{number}";
+        }
         else if (key.StartsWith("timer:"))
         {
             var timer = device.Timers.FirstOrDefault(t => t.Number == number);
@@ -225,6 +362,7 @@ public static class VehicleFunctionService
         DeviceTimer => "timer:",
         Condition => "cond:",
         Wiper => "wiper:",
+        CanInput => "can:",
         _ => null
     };
 }

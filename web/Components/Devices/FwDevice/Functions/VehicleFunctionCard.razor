@@ -11,6 +11,10 @@
     <div class="vf-head" @onclick="@(() => _open = !_open)">
         <MudIcon Icon="@VehicleFunctionIcons.Of(Function)" Color="Color.Primary" Size="Size.Small"/>
         <span class="vf-title" title="@Function.Summary">@Function.Title</span>
+        @if (Device.Project.Count > 1 && Current != null && Current != Device)
+        {
+            <span class="vf-home" title="Set up on @Device.Name, its switches are read there">@Device.Name</span>
+        }
         @if (Function.Problems.Count > 0)
         {
             <MudTooltip Text="@string.Join(" ", Function.Problems)">
@@ -22,9 +26,9 @@
             <span class="vf-summary">@SummaryText()</span>
         }
         <MudSpacer/>
-        @foreach (var output in AssignedOutputs)
+        @foreach (var (pdm, output) in AssignedOutputs)
         {
-            <span class="vf-dot @(output.State == OutState.On ? "on" : "")" title="@output.Number · @output.Name"></span>
+            <span class="vf-dot @(output.State == OutState.On ? "on" : "")" title="@OutLabel(pdm, output)"></span>
         }
         <span @onclick:stopPropagation="true">
             <MudTooltip Text="Remove function">
@@ -172,18 +176,18 @@
                                 </tr>
                                 </thead>
                                 <tbody>
-                                @foreach (var output in AssignedOutputs)
+                                @foreach (var (pdm, output) in AssignedOutputs)
                                 {
                                     var o = output;
                                     <tr>
-                                        <td class="vf-out-name">@o.Number · @o.Name</td>
-                                        <td>@Cell(o.CurrentLimit, v => o.CurrentLimit = v, 0, 100, $"lim{o.Number}")</td>
-                                        <td>@Cell(o.InrushCurrentLimit, v => o.InrushCurrentLimit = v, 0, 100, $"inr{o.Number}")</td>
-                                        <td>@WholeCell(o.InrushTime, v => o.InrushTime = v, 0, 10000, $"inrt{o.Number}")</td>
-                                        <td>@WholeCell(o.ResetCountLimit, v => { o.ResetCountLimit = v; o.ResetMode = v > 0 ? ResetMode.Count : ResetMode.None; }, 0, 20, $"rst{o.Number}")</td>
-                                        <td>@WholeCell(o.FixedDutyCycle, v => { o.FixedDutyCycle = v; UpdatePwm(o); }, 1, 100, $"duty{o.Number}")</td>
-                                        <td>@WholeCell(o.SoftStartEnabled ? o.SoftStartRampTime : 0, v => { o.SoftStartRampTime = v; o.SoftStartEnabled = v > 0; UpdatePwm(o); }, 0, 10000, $"soft{o.Number}")</td>
-                                        <td>@WholeCell(o.Frequency, v => o.Frequency = v, 1, 400, $"hz{o.Number}")</td>
+                                        <td class="vf-out-name">@OutLabel(pdm, o)</td>
+                                        <td>@Cell(o.CurrentLimit, v => o.CurrentLimit = v, 0, 100, $"lim{pdm.BaseId}-{o.Number}")</td>
+                                        <td>@Cell(o.InrushCurrentLimit, v => o.InrushCurrentLimit = v, 0, 100, $"inr{pdm.BaseId}-{o.Number}")</td>
+                                        <td>@WholeCell(o.InrushTime, v => o.InrushTime = v, 0, 10000, $"inrt{pdm.BaseId}-{o.Number}")</td>
+                                        <td>@WholeCell(o.ResetCountLimit, v => { o.ResetCountLimit = v; o.ResetMode = v > 0 ? ResetMode.Count : ResetMode.None; }, 0, 20, $"rst{pdm.BaseId}-{o.Number}")</td>
+                                        <td>@WholeCell(o.FixedDutyCycle, v => { o.FixedDutyCycle = v; UpdatePwm(o); }, 1, 100, $"duty{pdm.BaseId}-{o.Number}")</td>
+                                        <td>@WholeCell(o.SoftStartEnabled ? o.SoftStartRampTime : 0, v => { o.SoftStartRampTime = v; o.SoftStartEnabled = v > 0; UpdatePwm(o); }, 0, 10000, $"soft{pdm.BaseId}-{o.Number}")</td>
+                                        <td>@WholeCell(o.Frequency, v => o.Frequency = v, 1, 400, $"hz{pdm.BaseId}-{o.Number}")</td>
                                     </tr>
                                 }
                                 </tbody>
@@ -199,6 +203,9 @@
 @code {
     [Parameter, EditorRequired] public VehicleFunction Function { get; set; } = null!;
     [Parameter] public EventCallback OnRemoved { get; set; }
+
+    // The PDM whose page shows the card; Device is the PDM the function lives on
+    [Parameter] public domain.Devices.FwDevice? Current { get; set; }
 
     private bool _open;
     private bool _advanced;
@@ -231,20 +238,40 @@
             yield return new Row(output.Label, null, output);
     }
 
-    private List<Output> AssignedOutputs => Function.OutputSlots
-        .SelectMany(s => Function.OutputsIn(s.Key))
-        .Distinct()
-        .Select(n => Device.Outputs[n - 1])
+    private bool ManyPdms => Device.Project.Count > 1;
+
+    // The PDMs the function drives outputs on, its own first
+    private IEnumerable<domain.Devices.FwDevice> Targets => VehicleFunctionService.TargetsOf(Device, Function);
+
+    private IEnumerable<int> OutputsOf(domain.Devices.FwDevice pdm, string slot) =>
+        VehicleFunctionService.OutputsOn(Device, Function, pdm, slot);
+
+    private List<(domain.Devices.FwDevice Pdm, Output Output)> AssignedOutputs => Targets
+        .SelectMany(pdm => Function.OutputSlots
+            .SelectMany(s => OutputsOf(pdm, s.Key))
+            .Distinct()
+            .Where(n => n >= 1 && n <= pdm.Outputs.Count)
+            .Select(n => (pdm, pdm.Outputs[n - 1])))
         .ToList();
+
+    private string OutLabel(domain.Devices.FwDevice pdm, Output output) =>
+        ManyPdms ? $"{pdm.Name} · {output.Number} · {output.Name}" : $"{output.Number} · {output.Name}";
+
+    private string ChipText(domain.Devices.FwDevice pdm, int number) =>
+        pdm == Device ? $"{number}" : $"{pdm.Name}·{number}";
 
     private string SummaryText()
     {
         var parts = Function.OutputSlots
-            .Where(s => Function.HasOutputs(s.Key))
-            .Select(s => $"{s.Label} → {string.Join(", ", Function.OutputsIn(s.Key))}")
+            .Select(s => (s.Label, Chips: Targets.SelectMany(pdm => OutputsOf(pdm, s.Key).Select(n => ChipText(pdm, n))).ToList()))
+            .Where(p => p.Chips.Count > 0)
+            .Select(p => $"{p.Label} → {string.Join(", ", p.Chips)}")
             .ToList();
         return parts.Count > 0 ? string.Join(" · ", parts) : "Not set up";
     }
+
+    // Outputs of another PDM can be picked only while it answers on the bus
+    private bool Reachable(domain.Devices.FwDevice pdm) => pdm == Device || pdm == Current || pdm.Connected;
 
     private RenderFragment InputPicker(InputSlot slot) => __builder =>
     {
@@ -295,17 +322,31 @@
 
     private RenderFragment OutputChips(OutputSlot slot) => __builder =>
     {
-        foreach (var number in Function.OutputsIn(slot.Key).ToList())
+        var empty = true;
+        foreach (var pdm in Targets.ToList())
         {
-            var output = Device.Outputs[number - 1];
-            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Class="vf-chip"
-                     Color="@(output.State == OutState.On ? Color.Success : Color.Default)"
-                     OnClose="@((MudChip<string> _) => RemoveOutput(slot.Key, number))">
-                <span title="@output.Name">@number</span>
-            </MudChip>
+            foreach (var number in OutputsOf(pdm, slot.Key).ToList())
+            {
+                empty = false;
+                if (number < 1 || number > pdm.Outputs.Count)
+                    continue;
+                var output = pdm.Outputs[number - 1];
+                var target = pdm;
+                var reachable = Reachable(pdm);
+                var tip = reachable ? OutLabel(pdm, output) : $"{OutLabel(pdm, output)} (not on the bus)";
+                <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Class="vf-chip"
+                         Color="@(output.State == OutState.On ? Color.Success : Color.Default)"
+                         OnClose="@((MudChip<string> _) => RemoveOutput(slot.Key, target, number))">
+                    <span title="@tip" class="@(reachable ? "" : "muted-text")">@ChipText(pdm, number)</span>
+                </MudChip>
+            }
         }
-        var free = VehicleFunctionService.FreeOutputs(Device).ToList();
-        var empty = Function.OutputsIn(slot.Key).Count == 0;
+        // Every PDM in the project, this one first; the others only while they are on the bus
+        var groups = new[] { Device }.Concat(Device.Project.Where(d => d != Device))
+            .Select(pdm => (Pdm: pdm, Free: VehicleFunctionService.FreeOutputs(pdm).ToList()))
+            .Where(g => g.Free.Count > 0)
+            .ToList();
+        var free = groups.SelectMany(g => g.Free).ToList();
         if (free.Count > 0)
         {
             <MudMenu Dense="true" AriaLabel="Add output">
@@ -322,12 +363,23 @@
                     }
                 </ActivatorContent>
                 <ChildContent>
-                    @foreach (var output in free)
+                    @foreach (var (pdm, outputs) in groups)
                     {
-                        var number = output.Number;
-                        <MudMenuItem OnClick="@(() => AddOutput(slot.Key, number))">
-                            @number · @output.Name@(output.Enabled ? " (in use)" : "")
-                        </MudMenuItem>
+                        var target = pdm;
+                        var reachable = Reachable(pdm);
+                        if (groups.Count > 1)
+                        {
+                            <MudMenuItem Disabled="true" Class="vf-menu-group">
+                                @pdm.Name@(reachable ? "" : " · not on the bus")
+                            </MudMenuItem>
+                        }
+                        @foreach (var output in outputs)
+                        {
+                            var number = output.Number;
+                            <MudMenuItem Disabled="!reachable" OnClick="@(() => AddOutput(slot.Key, target, number))">
+                                @number · @output.Name@(output.Enabled ? " (in use)" : "")
+                            </MudMenuItem>
+                        }
                     }
                 </ChildContent>
             </MudMenu>
@@ -351,9 +403,11 @@
         _refresh++;
     }
 
-    private void AddOutput(string slot, int number) => VehicleFunctionService.AddOutput(Device, Function, slot, number);
+    private void AddOutput(string slot, domain.Devices.FwDevice target, int number) =>
+        VehicleFunctionService.AddOutput(Device, Function, slot, target, number);
 
-    private void RemoveOutput(string slot, int number) => VehicleFunctionService.RemoveOutput(Device, Function, slot, number);
+    private void RemoveOutput(string slot, domain.Devices.FwDevice target, int number) =>
+        VehicleFunctionService.RemoveOutput(Device, Function, slot, target, number);
 
     private async Task RemoveAsync()
     {

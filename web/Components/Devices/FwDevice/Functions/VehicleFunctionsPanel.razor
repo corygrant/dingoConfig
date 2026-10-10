@@ -1,4 +1,8 @@
 @using domain.Devices.VehicleFunctions
+@using application.Services
+@using web.Services
+@inject DeviceManager DeviceManager
+@inject NotificationService Notification
 @typeparam TDevice where TDevice : domain.Devices.FwDevice
 @inherits FunctionComponentBase<TDevice>
 
@@ -33,6 +37,9 @@
     .vf-outs { display: flex; align-items: center; flex-wrap: wrap; gap: 0; min-width: 0; }
     .vf-outs .mud-icon-button { padding: 3px; }
     .vf-chip.mud-chip { margin: 2px; height: 22px; }
+    .vf-home { font-size: 0.72rem; color: var(--mud-palette-text-secondary); border: 1px solid var(--mud-palette-lines-default);
+               border-radius: 8px; padding: 0 6px; white-space: nowrap; }
+    .vf-menu-group.mud-menu-item { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.05em; min-height: 26px; }
     .vf-hint { font-size: 0.75rem; color: var(--mud-palette-text-secondary); }
     /* Column titles and empty-field hints: faint, they only say what goes where */
     .vf-cols { min-height: 18px; font-size: 0.66rem; letter-spacing: 0.06em; text-transform: uppercase;
@@ -67,7 +74,18 @@
     <MudText Typo="Typo.caption" Class="vf-intro muted-text">
         Car basics built from the PDM's own blocks: pick the switch and the outputs on each row, the rest is preset.
         Click a function to open or close it.
+        @if (Pdms.Count > 1)
+        {
+            <span>Outputs can be on any PDM on the bus; each PDM runs its own and reads the switches off the bus.</span>
+        }
     </MudText>
+    @if (Pdms.Count > 1)
+    {
+        <MudTooltip Text="Writes the changed settings to every PDM on the bus">
+            <MudButton Variant="Variant.Outlined" Size="Size.Small" StartIcon="@Icons.Material.Filled.Upload"
+                       OnClick="WriteAll">Write all PDMs</MudButton>
+        </MudTooltip>
+    }
     @if (Available.Count > 0)
     {
         <MudMenu Label="Add function" StartIcon="@Icons.Material.Filled.Add" Variant="Variant.Outlined"
@@ -84,7 +102,7 @@
     }
 </div>
 
-@if (Device.VehicleFunctions.Count == 0)
+@if (Functions.Count == 0)
 {
     <MudText Typo="Typo.body2" Class="muted-text pa-2">
         Nothing added yet. Headlights, turn signals, brake lights and more are ready once you choose their switches and outputs.
@@ -93,19 +111,41 @@
 else
 {
     <div class="vf-grid">
-        @foreach (var fn in Device.VehicleFunctions)
+        @foreach (var (home, fn) in Functions)
         {
-            <VehicleFunctionCard @key="fn" TDevice="TDevice" Device="Device" Function="fn" OnRemoved="StateHasChanged"/>
+            <VehicleFunctionCard @key="fn" TDevice="TDevice" Device="@(home as TDevice ?? Device)" Current="Device"
+                                 Function="fn" OnRemoved="StateHasChanged"/>
         }
     </div>
 }
 
 @code {
+    // The functions of every PDM in the project: one car, one set of functions
+    private List<(domain.Devices.FwDevice Home, VehicleFunction Fn)> Functions =>
+        VehicleFunctionService.AllFunctions(Device).Where(f => f.Home is TDevice).ToList();
+
+    private IReadOnlyList<domain.Devices.FwDevice> Pdms => Device.Project;
+
     // One of each: a second set of turn signals has nothing to drive
     private List<VehicleFunction> Available => VehicleFunctionService.Catalog
         .Select(create => create())
-        .Where(fn => Device.VehicleFunctions.All(existing => existing.GetType() != fn.GetType()))
+        .Where(fn => Functions.All(existing => existing.Fn.GetType() != fn.GetType()))
         .ToList();
+
+    private void WriteAll()
+    {
+        var online = Pdms.Where(p => p.Connected).ToList();
+        foreach (var pdm in online)
+            DeviceManager.WriteDeviceConfig(pdm.Guid);
+
+        var offline = Pdms.Count - online.Count;
+        if (online.Count == 0)
+            Notification.NewWarning("No PDM is on the bus.");
+        else if (offline > 0)
+            Notification.NewWarning($"Writing {online.Count} PDMs. {offline} not on the bus were left out.");
+        else
+            Notification.NewInfo($"Writing {online.Count} PDMs.");
+    }
 
     private void Add(VehicleFunction fn) => VehicleFunctionService.Add(Device, fn);
 }

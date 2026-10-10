@@ -45,6 +45,22 @@ public record OutputDefaults(double CurrentLimit, double InrushLimit, int Inrush
 /// <param name="OutputName">Name given to an output added here while it still has its default name.</param>
 public record OutputSlot(string Key, string Label, string OutputName, OutputDefaults Defaults);
 
+/// <summary>What a function has on a PDM other than its own: the outputs it drives there and the blocks it built there.</summary>
+public sealed class RemotePart
+{
+    [JsonPropertyName("outputs")] public Dictionary<string, List<int>> Outputs { get; set; } = new();
+    [JsonPropertyName("blocks")] public Dictionary<string, int> Blocks { get; set; } = new();
+
+    public List<int> OutputsIn(string slot)
+    {
+        if (!Outputs.TryGetValue(slot, out var list))
+            Outputs[slot] = list = [];
+        return list;
+    }
+
+    [JsonIgnore] public bool Empty => Outputs.Values.All(list => list.Count == 0);
+}
+
 public class FunctionInput
 {
     [JsonPropertyName("var")] public int Var { get; set; }
@@ -77,6 +93,10 @@ public abstract class VehicleFunction
 
     // Blocks this function built, by its own key: "vi:left", "flasher:flash", "timer:delay"
     [JsonPropertyName("blocks")] public Dictionary<string, int> Blocks { get; set; } = new();
+
+    // Other PDMs on the same bus, by base ID: the outputs the function drives there
+    // and the blocks it built there to run them
+    [JsonPropertyName("remote")] public Dictionary<int, RemotePart> Remote { get; set; } = new();
 
     [JsonIgnore] public abstract string Title { get; }
     [JsonIgnore] public abstract string Summary { get; }

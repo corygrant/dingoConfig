@@ -122,7 +122,7 @@
         @* Vehicle functions *@
         @if (Device.Outputs.Count > 0)
         {
-            <MudExpansionPanel Text="@($"Vehicle functions ({Device.VehicleFunctions.Count})")"
+            <MudExpansionPanel Text="@($"Vehicle functions ({VehicleFunctionService.AllFunctions(Device).Count()})")"
                                ExpandedChanged="@((bool expanded) => _vehicleFunctionsExpanded = expanded)">
                 @if (_vehicleFunctionsExpanded)
                 {

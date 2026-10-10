@@ -75,6 +75,31 @@ public class FwDevice : IDeviceConfigurable
     [JsonPropertyName("canMessages")] public List<CanMessage> CanMessages { get; init; } = [];
     // Ready-made functions built from the blocks above, see VehicleFunctionService
     [JsonPropertyName("vehicleFunctions")] public List<VehicleFunction> VehicleFunctions { get; init; } = [];
+
+    /// <summary>The other devices in the project, set by whoever holds them all.</summary>
+    [JsonIgnore] public Func<IEnumerable<FwDevice>>? Peers { get; set; }
+
+    /// <summary>Every PDM in the project, this one included.</summary>
+    [JsonIgnore] public IReadOnlyList<FwDevice> Project
+    {
+        get
+        {
+            var all = Peers?.Invoke().ToList() ?? [];
+            if (!all.Contains(this))
+                all.Insert(0, this);
+            return all;
+        }
+    }
+
+    // Where each block's state goes in the status messages: (target, index) -> (ID offset, signal)
+    private readonly Dictionary<(string Target, int Index), (int Offset, DbcSignal Signal)> _statusSignals = new();
+
+    /// <summary>
+    /// Where this device sends a block's state in its status messages, such as
+    /// ("VirtualInput.Value", 2); null when it does not send it.
+    /// </summary>
+    public (int Id, DbcSignal Signal)? StatusSignal(string target, int index) =>
+        _statusSignals.TryGetValue((target, index), out var s) ? (BaseId + s.Offset, s.Signal) : null;
     
     [JsonIgnore] private DateTime LastRxTime { get; set; }
 
@@ -190,7 +215,7 @@ public class FwDevice : IDeviceConfigurable
                     var globalIdx = sigDef.StartIndex + i;
                     var name = sigDef.Dbc.Name.Replace("{n}", $"{globalIdx + 1}");
 
-                    CyclicSigs[msgDef.IdOffset].Add((new DbcSignal
+                    var signal = new DbcSignal
                     {
                         Name      = name,
                         StartBit  = sigDef.Dbc.StartBit + i * sigDef.Dbc.Length,
@@ -199,7 +224,9 @@ public class FwDevice : IDeviceConfigurable
                         IsSigned  = sigDef.Dbc.IsSigned,
                         Factor    = sigDef.Dbc.Factor,
                         Unit      = sigDef.Dbc.Unit
-                    }, ResolveSetter(sigDef.Target, globalIdx)));
+                    };
+                    CyclicSigs[msgDef.IdOffset].Add((signal, ResolveSetter(sigDef.Target, globalIdx)));
+                    _statusSignals[(sigDef.Target, globalIdx)] = (msgDef.IdOffset, signal);
                 }
             }
 
@@ -401,7 +428,9 @@ public class FwDevice : IDeviceConfigurable
         var fn = VehicleFunctionService.OwnerOf(this, block);
         if (fn == null)
             return null;
-        return block is Output o ? $"{fn.Title} · {fn.SlotOf(o.Number)?.Label}" : fn.Title;
+        var home = VehicleFunctionService.HomeOf(this, fn);
+        var title = home == null || home == this ? fn.Title : $"{fn.Title} ({home.Name})";
+        return block is Output o ? $"{title} · {VehicleFunctionService.SlotOn(this, fn, o.Number)?.Label}" : title;
     }
 
     /// <summary>
