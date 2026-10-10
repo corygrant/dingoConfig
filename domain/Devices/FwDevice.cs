@@ -179,6 +179,19 @@ public class FwDevice : IDeviceConfigurable
         _setters["Ignition.Ignition"] = val => Ignition.IgnitionOut = (int)val;
         _setters["Ignition.Starter"]  = val => Ignition.StarterOut = (int)val;
         _setters["Ignition.State"]    = val => Ignition.State = (int)val;
+        _setters["Ignition.DashState"]      = val => Ignition.DashState = (DashState)val;
+        _setters["Ignition.SleepStatus"]    = val => Ignition.SleepStatus = (IgnitionSleepStatus)val;
+        _setters["Ignition.MasterLink"]     = val => Ignition.MasterLink = (int)val;
+        _setters["Ignition.SleepCountdown"] = val => Ignition.SleepCountdown = (int)val;
+        _setters["Ignition.WakeSource"]     = val => Ignition.WakeSource = (int)val;
+        _setters["Ignition.OutputFlags"]    = val =>
+        {
+            var flags = (int)val;
+            Ignition.IgnitionOut  = flags & 0x01;
+            Ignition.AccessoryOut = (flags >> 1) & 0x01;
+            Ignition.DashOut      = (flags >> 2) & 0x01;
+            Ignition.StarterOut   = (flags >> 3) & 0x01;
+        };
 
         _indexedSetters["AnalogInput.Millivolts"]   = (i, val) => AnalogInputs[i].Millivolts = val;
         _indexedSetters["AnalogInput.RotaryPos"]    = (i, val) => AnalogInputs[i].Rotary.Pos = (short)val;
@@ -290,7 +303,8 @@ public class FwDevice : IDeviceConfigurable
             for (var i = 0; i < Def.NumTimers; i++)
                 Timers.Add(new DeviceTimer(i + 1, "timer" + (i + 1)));
 
-        Ignition ??= new Ignition("ignition");
+        Ignition ??= new Ignition("ignition", Def.NumOutputs);
+        Ignition.SetOutputCount(Def.NumOutputs);
 
         if (CanMessages.Count == 0)
             for (var i = 0; i < Def.NumCanMessages; i++)
@@ -408,6 +422,14 @@ public class FwDevice : IDeviceConfigurable
 
         for (var i = 0; i < Def.NumCanMessages; i++)
             VarMap.AddRange(CanMessages[i].GetVarMap(ref index));
+
+        if (Def.HasIgnition)
+        {
+            var vars = Ignition.GetAppendedVarMap(ref index);
+            foreach (var variable in vars)
+                variable.Owner = Ignition;
+            VarMap.AddRange(vars);
+        }
     }
 
     private void AddVars(IDeviceFunction function, ref int index)
@@ -419,12 +441,19 @@ public class FwDevice : IDeviceConfigurable
     }
 
     /// <summary>
-    /// What switches a block when something other than its own settings does,
-    /// such as a vehicle function. The general settings show it greyed out. Null
-    /// when the block is the user's own.
+    /// What switches a block when something other than its own settings does:
+    /// an ignition role or a vehicle function. The general settings show it
+    /// greyed out. Null when the block is the user's own.
     /// </summary>
     public string? ManagedBy(IDeviceFunction block)
     {
+        if (block is Output output && Def.HasIgnition)
+        {
+            var role = Ignition.RoleOf(output.Number);
+            if (role != IgnitionOutputRole.None)
+                return $"Ignition · {role}";
+        }
+
         var fn = VehicleFunctionService.OwnerOf(this, block);
         if (fn == null)
             return null;
@@ -434,8 +463,8 @@ public class FwDevice : IDeviceConfigurable
     }
 
     /// <summary>
-    /// What reads this block as an input, such as a vehicle function. The general
-    /// settings mark it so it is not repurposed by accident.
+    /// What reads this block as an input: the ignition or a vehicle function.
+    /// The general settings mark it so it is not repurposed by accident.
     /// </summary>
     public IReadOnlyList<string> UsesOf(IDeviceFunction function)
     {
@@ -446,6 +475,26 @@ public class FwDevice : IDeviceConfigurable
             foreach (var slot in fn.InputSlots)
                 if (fn.Inputs.TryGetValue(slot.Key, out var input) && input.Var != 0 && indexes.Contains(input.Var))
                     uses.Add($"{fn.Title}: {slot.Label}");
+
+        if (!Def.HasIgnition || !Ignition.Enabled)
+            return uses;
+
+        void Check(int index, string use)
+        {
+            if (index != 0 && indexes.Contains(index))
+                uses.Add($"Ignition: {use}");
+        }
+
+        var key = Ignition.Mode == IgnitionMode.KeySwitch;
+        if (Ignition.Role != IgnitionRole.Follower)
+        {
+            if (Ignition.ButtonSource == IgnitionSource.Variable)
+                Check(Ignition.IgnInput, key ? "Key ON" : "Start button");
+            Check(Ignition.StartInput, key ? "Key START" : "Start condition");
+            Check(Ignition.EngineRunInput, "Engine running");
+            Check(Ignition.StopInput, "Stop");
+        }
+        Check(Ignition.DoorInput, "Door");
 
         return uses;
     }
