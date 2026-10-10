@@ -4,6 +4,7 @@
 @using web.Components.Devices.FwDevice.Functions
 @using web.Services
 @inject NotificationService Notification
+@inject UserPreferencesManager UserPrefs
 @typeparam TDevice where TDevice : domain.Devices.FwDevice
 @inherits FunctionComponentBase<TDevice>
 
@@ -88,7 +89,29 @@
                     </div>
                     <div class="ign-help">@ModeHelp()</div>
 
-                    @VarRow(Key ? "Key ON position" : "Start button", Ign.IgnInput, v => Ign.IgnInput = v, false)
+                    <div class="ign-row">
+                        <span class="ign-label">@(Key ? "Key ON from" : "Button from")</span>
+                        <MudToggleGroup T="IgnitionSource" Value="Ign.ButtonSource" ValueChanged="@(s => Ign.ButtonSource = s)"
+                                        Color="Color.Primary" Size="Size.Small" Outlined="true" Delimiters="true"
+                                        SelectionMode="SelectionMode.SingleSelection">
+                            <MudToggleItem Value="IgnitionSource.Variable" Text="Input"/>
+                            <MudToggleItem Value="IgnitionSource.CanFrame" Text="CAN frame"/>
+                        </MudToggleGroup>
+                    </div>
+
+                    @if (Ign.ButtonSource == IgnitionSource.Variable)
+                    {
+                        @VarRow(Key ? "Key ON position" : "Start button", Ign.IgnInput, v => Ign.IgnInput = v, false)
+                    }
+                    else
+                    {
+                        <div class="ign-row">
+                            <span class="ign-label">Button frame ID</span>
+                            <MudTextField T="string" @key="@($"btnid-{_refresh}")" Value="@FormatId(Ign.ButtonId)"
+                                          ValueChanged="@(v => { Ign.ButtonId = ParseId(v); _refresh++; })"
+                                          Variant="Variant.Outlined" Margin="Margin.Dense" Style="max-width: 140px"/>
+                        </div>
+                    }
 
                     @VarRow(Key ? "Key START position" : "Start condition", Ign.StartInput, v => Ign.StartInput = v, true)
                     @VarRow("Engine running", Ign.EngineRunInput, v => Ign.EngineRunInput = v, true)
@@ -103,6 +126,33 @@
                     @if (_startAdvanced)
                     {
                         <div class="ign-advanced">
+                            @if (Ign.ButtonSource == IgnitionSource.CanFrame)
+                            {
+                                <div class="ign-row">
+                                    <span class="ign-label">Button bit</span>
+                                    <div class="ign-inline">
+                                        <MudSelect T="int" Value="Ign.ButtonByte" ValueChanged="@(b => Ign.ButtonByte = b)"
+                                                   Label="Byte" Variant="Variant.Outlined" Margin="Margin.Dense" Style="width: 90px">
+                                            @for (var b = 0; b < 8; b++)
+                                            {
+                                                <MudSelectItem T="int" Value="b">@b</MudSelectItem>
+                                            }
+                                        </MudSelect>
+                                        <MudSelect T="int" Value="ButtonBit" ValueChanged="@(b => Ign.ButtonMask = 1 << b)"
+                                                   Label="Bit" Variant="Variant.Outlined" Margin="Margin.Dense" Style="width: 90px">
+                                            @for (var b = 0; b < 8; b++)
+                                            {
+                                                <MudSelectItem T="int" Value="b">@b</MudSelectItem>
+                                            }
+                                        </MudSelect>
+                                    </div>
+                                </div>
+                                <div class="ign-row">
+                                    <span class="ign-label">Released after</span>
+                                    @SecondsField(Ign.ButtonTimeout, v => Ign.ButtonTimeout = v, 0, 60, "btntimeout")
+                                </div>
+                                <div class="ign-help">Without a frame for this long the button counts as released. 0 = never.</div>
+                            }
                             @VarRow("Stop", Ign.StopInput, v => Ign.StopInput = v, true)
                             <div class="ign-help">Switches everything off while it is on, for example a kill switch.</div>
                             <div class="ign-row">
@@ -200,6 +250,16 @@
         .Where(o => o.PrimaryOutput < 0 && Ign.OutputRoles[o.Number - 1] == IgnitionOutputRole.None)
         .ToList();
 
+    private int ButtonBit
+    {
+        get
+        {
+            for (var b = 0; b < 8; b++)
+                if (Ign.ButtonMask == 1 << b) return b;
+            return 0;
+        }
+    }
+
     private void EnabledChanged(bool enabled)
     {
         Ign.Enabled = enabled;
@@ -231,6 +291,9 @@
     }
 
     private bool HasRole(IgnitionOutputRole role) => Ign.OutputRoles.Contains(role);
+
+    private string FormatId(int id) => Utils.FormatId(id, UserPrefs.Preferences.IdFormat);
+    private int ParseId(string text) => Utils.ParseId(text, UserPrefs.Preferences.IdFormat, Notification);
 
     private string VarText(int index) => index == 0 ? "Not used" : GetSelectedVarText(index);
 

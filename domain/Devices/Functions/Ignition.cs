@@ -27,6 +27,23 @@ public class Ignition : IDeviceFunction
     [JsonPropertyName("stopInput")] public int StopInput {get; set;}
     [JsonPropertyName("maxCrankTime")] public int MaxCrankTime {get; set;} = 10000;
 
+    [JsonPropertyName("buttonSource")] public IgnitionSource ButtonSource {get; set;} = IgnitionSource.Variable;
+    [JsonPropertyName("buttonIde")] public bool ButtonIde {get; set;}
+    [JsonPropertyName("buttonId")]
+    public int ButtonId
+    {
+        get;
+        set
+        {
+            field = value;
+            ButtonIde = field > 2047;
+        }
+    } = 0x6F0;
+    [JsonPropertyName("buttonByte")] public int ButtonByte {get; set;}
+    [JsonPropertyName("buttonMask")] public int ButtonMask {get; set;} = 0x01;
+    // Without a frame for this long the button reads released, 0 = never
+    [JsonPropertyName("buttonTimeout")] public int ButtonTimeout {get; set;} = 1000;
+
     [JsonPropertyName("outputRoles")] public List<IgnitionOutputRole> OutputRoles {get; set;}
 
     [JsonIgnore][Plotable(displayName:"Ignition")] public int IgnitionOut {get; set;}
@@ -98,6 +115,13 @@ public class Ignition : IDeviceFunction
         Add("maxCrankTime", () => MaxCrankTime, v => MaxCrankTime = (int)v, typeof(int), 10000);
 
         // The rest have fixed subindexes, numbered as in the firmware
+        Add("buttonSource", () => ButtonSource, v => ButtonSource = (IgnitionSource)v, typeof(IgnitionSource), IgnitionSource.Variable, 9);
+        Add("buttonIde", () => ButtonIde, v => ButtonIde = (bool)v, typeof(bool), false, 10);
+        Add("buttonId", () => ButtonId, v => ButtonId = (int)v, typeof(int), 0x6F0, 11);
+        Add("buttonByte", () => ButtonByte, v => ButtonByte = (int)v, typeof(int), 0, 12);
+        Add("buttonMask", () => ButtonMask, v => ButtonMask = (int)v, typeof(int), 0x01, 13);
+        Add("buttonTimeout", () => ButtonTimeout, v => ButtonTimeout = (int)v, typeof(int), 1000, 14);
+
         for (var i = 0; i < OutputRoles.Count; i++)
         {
             var idx = i;
