@@ -69,6 +69,8 @@ public class FwDevice : IDeviceConfigurable
     [JsonPropertyName("conditions")] public List<Condition> Conditions { get; init; } = [];
     [JsonPropertyName("keypads")] public List<KeypadMaster> Keypads { get; init; } = [];
     [JsonPropertyName("flowLayout")] public Dictionary<string, FlowNodePosition> FlowLayout { get; set; } = new();
+    [JsonPropertyName("timers")] public List<DeviceTimer> Timers { get; init; } = [];
+    [JsonPropertyName("ignition")] public Ignition Ignition { get; set; } = null!;
     
     [JsonIgnore] private DateTime LastRxTime { get; set; }
 
@@ -142,6 +144,9 @@ public class FwDevice : IDeviceConfigurable
         _setters["Wiper.FastState"]  = val => Wipers.FastState = val != 0;
         _setters["Wiper.Speed"]      = val => Wipers.Speed = (WiperSpeed)val;
         _setters["Wiper.State"]      = val => Wipers.State = (WiperState)val;
+        _setters["Ignition.Ignition"] = val => Ignition.IgnitionOut = (int)val;
+        _setters["Ignition.Starter"]  = val => Ignition.StarterOut = (int)val;
+        _setters["Ignition.State"]    = val => Ignition.State = (int)val;
 
         _indexedSetters["AnalogInput.Millivolts"]   = (i, val) => AnalogInputs[i].Millivolts = val;
         _indexedSetters["AnalogInput.RotaryPos"]    = (i, val) => AnalogInputs[i].Rotary.Pos = (short)val;
@@ -158,6 +163,7 @@ public class FwDevice : IDeviceConfigurable
         _indexedSetters["Flasher.Value"]      = (i, val) => Flashers[i].Value = val != 0;
         _indexedSetters["Counter.Value"]      = (i, val) => Counters[i].Value = (int)val;
         _indexedSetters["Condition.Value"]    = (i, val) => Conditions[i].Value = (int)val;
+        _indexedSetters["Timer.Value"]        = (i, val) => Timers[i].Value = (int)val;
     }
 
     public void BindCyclicSigs(CyclicSigsConfig config)
@@ -244,6 +250,12 @@ public class FwDevice : IDeviceConfigurable
         if (Conditions.Count == 0)
             for (var i = 0; i < Def.NumConditions; i++)
                 Conditions.Add(new Condition(i + 1, "condition" + (i + 1)));
+
+        if (Timers.Count == 0)
+            for (var i = 0; i < Def.NumTimers; i++)
+                Timers.Add(new DeviceTimer(i + 1, "timer" + (i + 1)));
+
+        Ignition ??= new Ignition("ignition");
 
         StarterDisable ??= new StarterDisable("starterDisable", Def.NumOutputs);
 
@@ -345,6 +357,15 @@ public class FwDevice : IDeviceConfigurable
 
         for (var i = 0; i < Def.NumKeypads; i++)
             AddVars(Keypads[i], ref index);
+
+        // Appended last, matching InitVarMap() in the firmware
+        for (var i = 0; i < Def.NumTimers; i++)
+            AddVars(Timers[i], ref index);
+
+        if (Def.HasIgnition)
+        {
+            AddVars(Ignition, ref index);
+        }
     }
 
     private void AddVars(IDeviceFunction function, ref int index)
@@ -437,6 +458,8 @@ public class FwDevice : IDeviceConfigurable
         foreach (var flasher in Flashers) allParams.AddRange(flasher.Params);
         if (Def.HasStarterDisable) allParams.AddRange(StarterDisable.Params);
         if (Def.HasWipers) allParams.AddRange(Wipers.Params);
+        foreach (var timer in Timers) allParams.AddRange(timer.Params);
+        if (Def.HasIgnition) allParams.AddRange(Ignition.Params);
         foreach (var canOutput in CanOutputs) allParams.AddRange(canOutput.Params);
         foreach (var digOutput in DigitalOutputs) allParams.AddRange(digOutput.Params);
         foreach (var analogInput in AnalogInputs) allParams.AddRange(analogInput.Params);
@@ -828,5 +851,7 @@ public class FwDevice : IDeviceConfigurable
     public IReadOnlyList<Condition> GetConditions() => Conditions.AsReadOnly();
     public Wiper GetWipers() => Wipers;
     public StarterDisable GetStarterDisable() => StarterDisable;
+    public IReadOnlyList<DeviceTimer> GetTimers() => Timers.AsReadOnly();
+    public Ignition GetIgnition() => Ignition;
     public IReadOnlyList<KeypadMaster> GetKeypads() => Keypads.AsReadOnly();
 }
