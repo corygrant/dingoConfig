@@ -128,6 +128,11 @@ public sealed class Ecu : VehicleFunction
         hold.Mode = TimerMode.OffDelay;
         hold.Time = HoldTime;
         b.Drive("ecu", b.Logic("vi:ecu", "ECU", relay, Conditional.And, b.VarOf(hold), op1: Conditional.Or, c: ignition));
+
+        // Sleep cuts every output, the ECU's too
+        if (b.Ignition is { Enabled: true, SleepDelay: > 0 } ign && HoldTime >= ign.SleepDelay)
+            b.Problem($"The PDM sleeps {ign.SleepDelay / 1000.0:0.#} s after ignition off, before the hold ends. " +
+                      "Shorten the hold or sleep later (Ignition tab).");
     }
 }
 

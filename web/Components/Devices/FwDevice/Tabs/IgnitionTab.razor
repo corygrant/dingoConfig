@@ -1,5 +1,6 @@
 @using application.Services
 @using domain.Devices.Functions
+@using domain.Devices.VehicleFunctions
 @using domain.Enums
 @using web.Components.Devices.FwDevice.Functions
 @using web.Services
@@ -18,6 +19,11 @@
     .ign-row { display: grid; grid-template-columns: 170px minmax(0, 1fr); gap: 10px; align-items: center; margin-bottom: 4px; min-height: 34px; }
     .ign-label { color: var(--mud-palette-text-secondary); font-size: 0.8rem; }
     .ign-help { color: var(--mud-palette-text-secondary); font-size: 0.72rem; margin: -2px 0 6px 180px; }
+    .ign-shared { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+    .ign-shared .mud-icon-root { font-size: 14px; }
+    .ign-more.mud-button-root { text-transform: none; font-weight: 400; font-size: 0.72rem; padding: 0 6px;
+                                min-width: 0; color: var(--mud-palette-text-secondary); }
+    .ign-more.mud-button-root:hover { color: var(--mud-palette-primary); }
     .ign-var { display: flex; align-items: center; gap: 4px; min-width: 0; }
     .ign-var .mud-button-root { justify-content: flex-start; text-transform: none; min-width: 0; height: 28px; font-size: 0.8rem; }
     .ign-var .mud-button-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -146,7 +152,7 @@
                         }
 
                         @VarRow(Key ? "Key START position" : "Start condition", Ign.StartInput, v => Ign.StartInput = v, true)
-                        @VarRow("Engine running", Ign.EngineRunInput, v => Ign.EngineRunInput = v, true)
+                        @VarRow("Engine running", Ign.EngineRunInput, v => { Ign.EngineRunInput = v; VehicleFunctionService.RebuildAll(Device); }, true)
                         <div class="ign-help">Releases the starter once the engine runs.</div>
                     }
 
@@ -325,7 +331,30 @@
                         <div class="ign-help">Time the dash gets to shut down cleanly.</div>
                     }
 
-                    @VarRow("Door switch", Ign.DoorInput, v => Ign.DoorInput = v, true)
+                    @if (DoorOwner is { } doorOwner)
+                    {
+                        @* The interior light holds the doors; the ignition reads what it built from them *@
+                        @foreach (var slot in DoorSlotsShown(doorOwner))
+                        {
+                            @VarRow(slot.Label, doorOwner.Input(slot.Key).Var, v => SetDoor(doorOwner, slot, v), true)
+                        }
+                        <div class="ign-help ign-shared">
+                            <MudIcon Icon="@Icons.Material.Outlined.Link"/>
+                            <span>Same as the @doorOwner.Title's door switches, set them in either place.</span>
+                            @if (NextDoorSlot(doorOwner) is { } next)
+                            {
+                                <MudButton Variant="Variant.Text" Size="Size.Small" Class="ign-more"
+                                           StartIcon="@Icons.Material.Filled.Add"
+                                           OnClick="@(() => OpenVariableSelectorAsync(["bool"], v => SetDoor(doorOwner, next, v)))">
+                                    Another door
+                                </MudButton>
+                            }
+                        </div>
+                    }
+                    else
+                    {
+                        @VarRow("Door switch", Ign.DoorInput, v => Ign.DoorInput = v, true)
+                    }
                     @if (Ign.DoorInput != 0)
                     {
                         <div class="ign-row">
@@ -436,9 +465,8 @@
         .Where(o => o.Number <= Ign.OutputRoles.Count && Ign.OutputRoles[o.Number - 1] != IgnitionOutputRole.None)
         .ToList();
 
-    // Not paired to another output, not given a role already
-    private List<Output> FreeOutputs => Device.Outputs
-        .Where(o => o.PrimaryOutput < 0 && Ign.OutputRoles[o.Number - 1] == IgnitionOutputRole.None)
+    private List<Output> FreeOutputs => VehicleFunctionService.FreeOutputs(Device)
+        .Where(o => Ign.OutputRoles[o.Number - 1] == IgnitionOutputRole.None)
         .ToList();
 
     private int ButtonBit
@@ -454,6 +482,7 @@
     private void EnabledChanged(bool enabled)
     {
         Ign.Enabled = enabled;
+        VehicleFunctionService.RebuildAll(Device);
 
         // An output given a role has to be enabled for the ignition to switch it
         if (enabled)
@@ -482,6 +511,28 @@
     }
 
     private bool HasRole(IgnitionOutputRole role) => Ign.OutputRoles.Contains(role);
+
+    private VehicleFunction? DoorOwner => VehicleFunctionService.SharedOwner(Device, "door");
+
+    // The doors that are set, or the first one to set
+    private IEnumerable<InputSlot> DoorSlotsShown(VehicleFunction owner)
+    {
+        var slots = VehicleFunctionService.SharedSlots(owner, "door").ToList();
+        var set = slots.Where(s => owner.Input(s.Key).Var != 0).ToList();
+        return set.Count > 0 ? set : slots.Take(1);
+    }
+
+    private InputSlot? NextDoorSlot(VehicleFunction owner) =>
+        VehicleFunctionService.SharedSlots(owner, "door").Any(s => owner.Input(s.Key).Var != 0)
+            ? VehicleFunctionService.SharedSlots(owner, "door").FirstOrDefault(s => owner.Input(s.Key).Var == 0)
+            : null;
+
+    private void SetDoor(VehicleFunction owner, InputSlot slot, int var)
+    {
+        owner.Input(slot.Key).Var = var;
+        VehicleFunctionService.Rebuild(Device, owner);
+        _refresh++;
+    }
 
     private string FormatId(int id) => Utils.FormatId(id, UserPrefs.Preferences.IdFormat);
     private int ParseId(string text) => Utils.ParseId(text, UserPrefs.Preferences.IdFormat, Notification);

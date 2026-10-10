@@ -7,10 +7,14 @@ namespace domain.Devices.VehicleFunctions;
 /// <summary>An input a function asks for, filled with any device variable.</summary>
 /// <param name="CanToggle">The input may be a push button that toggles the function on and off.</param>
 /// <param name="Advanced">Rarely changed, shown under Advanced.</param>
+/// <param name="Shared">
+/// A signal the Ignition block reads too, kept the same in both places: "door".
+/// See <see cref="VehicleFunctionService.SharedSignals"/>.
+/// </param>
 /// <param name="Default">Left empty, the slot reads this signal of the Ignition block.</param>
 /// <param name="Value">Takes a number, such as a temperature, rather than on/off.</param>
 public record InputSlot(string Key, string Label, bool Required, bool CanToggle = false, string Help = "",
-                        bool Advanced = false, IgnitionDefault Default = IgnitionDefault.None,
+                        bool Advanced = false, string? Shared = null, IgnitionDefault Default = IgnitionDefault.None,
                         bool Value = false);
 
 /// <summary>An Ignition block signal an empty input slot falls back to.</summary>
@@ -106,7 +110,7 @@ public abstract class VehicleFunction
     // What the last build could not do, for the UI
     [JsonIgnore] public List<string> Problems { get; } = [];
 
-    // Signals the last build handed out, for other functions: "lowBeam"
+    // Signals the last build handed out, for the ignition and other functions: "door", "lowBeam"
     [JsonIgnore] public IReadOnlyDictionary<string, int> Signals { get; internal set; } = new Dictionary<string, int>();
 
     /// <summary>Builds from another function's signals, so it is rebuilt after the others.</summary>

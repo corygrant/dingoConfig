@@ -759,12 +759,13 @@ the PDM's existing blocks; the firmware needs nothing new:
   CAN inputs, reuses the ones the function already owns and releases the rest after a build.
 - `VehicleFunctionService`: add, rebuild, remove, outputs, ownership (`OwnerOf`, used by
   `FwDevice.ManagedBy` to lock claimed blocks in the general grids).
-- Empty slots can fall back to an Ignition block signal (`InputSlot.Default`).
 - A function lives on one PDM (its home) and may drive outputs of other PDMs in the project
   (`VehicleFunction.Remote`, by base ID). It is then built once per PDM: each PDM gets its own
   blocks and reads the switches off the bus (`RemoteSignals`): a CAN input is copied, anything else
   is read from the home PDM's status messages (positions from `Definitions/*-signals.json`).
   Push button toggles run on the home PDM only so every PDM agrees on their state.
+- Settings shared with the Ignition block stay the same in both places (`SharedSignals`, the door
+  switch); empty slots can fall back to an Ignition block signal (`InputSlot.Default`).
 - `CanBitLearner` + `Dialogs/CanLearnDialog.razor`: learn a switch's CAN bit by recording the bus.
 
 ### Device Enums

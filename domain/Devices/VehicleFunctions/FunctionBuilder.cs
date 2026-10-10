@@ -22,7 +22,7 @@ public sealed class FunctionBuilder
     private readonly Dictionary<string, int> _blocks;
     private readonly HashSet<string> _used = [];
 
-    // Signals the build hands out to other functions
+    // Signals the build hands out, to the Ignition block or to other functions
     internal Dictionary<string, int> Shared { get; } = new();
 
     internal FunctionBuilder(FwDevice home, FwDevice target, VehicleFunction fn,
@@ -43,9 +43,9 @@ public sealed class FunctionBuilder
     public Ignition? Ignition => _target.Def.HasIgnition ? _target.Ignition : null;
 
     /// <summary>
-    /// Hands out a signal another function builds on, such as the low beam for the
-    /// rear fog lamp. Only the function's own PDM hands them out; the others read
-    /// them from there.
+    /// Hands out a signal: one the Ignition block reads (any door open), or one
+    /// another function builds on (the low beam for the rear fog lamp). Only the
+    /// function's own PDM hands them out; the others read them from there.
     /// </summary>
     public void Share(string key, int var)
     {

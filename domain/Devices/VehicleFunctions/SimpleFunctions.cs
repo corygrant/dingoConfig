@@ -37,9 +37,9 @@ public sealed class InteriorLight : VehicleFunction
 
     public override IReadOnlyList<InputSlot> InputSlots { get; } =
     [
-        new("door1", "Door switch", true),
-        new("door2", "Door switch 2", false),
-        new("door3", "Door switch 3", false),
+        new("door1", "Door switch", true, Shared: "door"),
+        new("door2", "Door switch 2", false, Shared: "door"),
+        new("door3", "Door switch 3", false, Shared: "door"),
         new("manual", "Light switch", false, CanToggle: true)
     ];
 
@@ -50,15 +50,17 @@ public sealed class InteriorLight : VehicleFunction
 
     protected internal override void Build(FunctionBuilder b)
     {
-        if (!b.HasOutputs("light"))
-            return;
-
+        // The doors are built even without a light: the ignition turns the dash on with them
         var door1 = b.In("door1");
         var door2 = b.In("door2");
         var door3 = b.In("door3");
         var doors = door2 == 0 && door3 == 0
             ? door1
             : b.Logic("vi:doors", "doors", door1, Conditional.Or, door2, op1: Conditional.Or, c: door3);
+        b.Share("door", doors);
+
+        if (!b.HasOutputs("light"))
+            return;
 
         var lit = doors;
         var timer = b.Timer("timer:delay", "off delay");

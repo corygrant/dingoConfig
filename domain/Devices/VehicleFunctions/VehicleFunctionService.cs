@@ -44,7 +44,7 @@ public static class VehicleFunctionService
         };
     }
 
-    /// <summary>Rebuilds every function, for example after a project is loaded.</summary>
+    /// <summary>Rebuilds every function, for example after an Ignition block setting they read changed.</summary>
     public static void RebuildAll(FwDevice device)
     {
         foreach (var fn in device.VehicleFunctions.Where(f => !f.ReadsSignals).ToList())
@@ -104,10 +104,24 @@ public static class VehicleFunctionService
                 fn.Remote[device.BaseId] = part;
     }
 
+    /// <summary>
+    /// Settings a function and the Ignition block both have, kept the same: set in
+    /// either place, they show in both. The function owns the value (the interior
+    /// light's door switches) and hands the ignition the signal it built from them.
+    /// </summary>
+    public static IReadOnlyDictionary<string, SharedSignal> SharedSignals { get; } = new Dictionary<string, SharedSignal>
+    {
+        ["door"] = new("Door switch", "Opening a door also turns the dash on (Ignition tab)",
+                       ign => ign.DoorInput, (ign, v) => ign.DoorInput = v)
+    };
+
+    public sealed record SharedSignal(string Label, string Help, Func<Ignition, int> Get, Action<Ignition, int> Set);
+
     public static VehicleFunction Add(FwDevice device, VehicleFunction fn)
     {
         device.VehicleFunctions.Add(fn);
         fn.OnAdded(device);
+        AdoptShared(device, fn);
         Rebuild(device, fn);
         return fn;
     }
@@ -131,6 +145,11 @@ public static class VehicleFunctionService
         fn.Build(builder);
         builder.Finish();
         fn.Signals = builder.Shared;
+
+        if (device.Def.HasIgnition)
+            foreach (var (key, var) in builder.Shared)
+                if (SharedSignals.TryGetValue(key, out var signal) && SharedOwner(device, key) == fn)
+                    signal.Set(device.Ignition, var);
 
         // The same recipe again on every other PDM it drives outputs on. One that is
         // not in the project right now keeps what it was given last time.
@@ -162,6 +181,8 @@ public static class VehicleFunctionService
 
     public static void Remove(FwDevice device, VehicleFunction fn)
     {
+        var owned = SharedSignals.Keys.Where(key => SharedOwner(device, key) == fn).ToList();
+
         foreach (var (key, number) in fn.Blocks)
             ReleaseBlock(device, key, number);
         fn.Blocks.Clear();
@@ -184,13 +205,62 @@ public static class VehicleFunctionService
 
         device.VehicleFunctions.Remove(fn);
         RebuildReaders(device, null);
+
+        // The ignition keeps the first door; a combined signal went with the function
+        foreach (var key in owned)
+        {
+            if (SharedOwner(device, key) is { } next)
+                Rebuild(device, next);
+            else if (device.Def.HasIgnition)
+                SharedSignals[key].Set(device.Ignition, SharedSlots(fn, key)
+                    .Select(s => fn.Input(s.Key).Var).FirstOrDefault(v => v != 0));
+        }
     }
 
+    /// <summary>The function that holds a shared setting: the first one with a slot for it.</summary>
+    public static VehicleFunction? SharedOwner(FwDevice device, string key) =>
+        device.VehicleFunctions.FirstOrDefault(fn => fn.InputSlots.Any(s => s.Shared == key));
+
+    public static IEnumerable<InputSlot> SharedSlots(VehicleFunction fn, string key) =>
+        fn.InputSlots.Where(s => s.Shared == key);
+
     /// <summary>
-    /// Brings a loaded project in step with the current recipes: everything is
-    /// rebuilt so signals between functions are known again.
+    /// Brings a loaded project in step with the current recipes: settings shared
+    /// with the ignition are evened out (what the function has wins, one only the
+    /// ignition has moves into the function), and everything is rebuilt so signals
+    /// between functions are known again.
     /// </summary>
-    public static void AfterLoad(FwDevice device) => RebuildAll(device);
+    public static void AfterLoad(FwDevice device)
+    {
+        foreach (var key in SharedSignals.Keys)
+            if (SharedOwner(device, key) is { } owner)
+                AdoptShared(device, owner);
+
+        RebuildAll(device);
+    }
+
+    // A function taking over a shared setting starts from what the ignition already has
+    private static void AdoptShared(FwDevice device, VehicleFunction fn)
+    {
+        if (!device.Def.HasIgnition)
+            return;
+
+        foreach (var (key, signal) in SharedSignals)
+        {
+            var slots = SharedSlots(fn, key).ToList();
+            var current = signal.Get(device.Ignition);
+            if (slots.Count == 0 || current == 0 || SharedOwner(device, key) != fn ||
+                slots.Any(s => fn.Input(s.Key).Var != 0))
+                continue;
+
+            // Not a block a function built, such as the doors combined last time
+            var block = device.VarMap.FirstOrDefault(v => v.VariableIndex == current)?.Owner;
+            if (block != null && OwnerOf(device, block) != null)
+                continue;
+
+            fn.Input(slots[0].Key).Var = current;
+        }
+    }
 
     public static void AddOutput(FwDevice device, VehicleFunction fn, string slotKey, int outputNumber) =>
         AddOutput(device, fn, slotKey, device, outputNumber);

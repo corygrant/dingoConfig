@@ -328,6 +328,12 @@
                     </MudChip>
                 </MudTooltip>
             }
+            else if (SharedNote(slot) is { } note)
+            {
+                <MudTooltip Text="@note">
+                    <span class="vf-shared"><MudIcon Icon="@Icons.Material.Outlined.Link"/>Ignition</span>
+                </MudTooltip>
+            }
         </span>
     };
 
@@ -427,6 +433,16 @@
         else
             Notification.NewSuccess($"{slot.Label} reads {canInput.Name} (0x{bit.Id:X3} byte {bit.Byte} bit {bit.BitInByte})");
         _refresh++;
+    }
+
+    // Shown where the slot is the same setting as one in the Ignition tab
+    private string? SharedNote(InputSlot slot)
+    {
+        if (slot.Shared == null || !Device.Def.HasIgnition || !Device.Ignition.Enabled ||
+            !VehicleFunctionService.SharedSignals.TryGetValue(slot.Shared, out var signal) ||
+            VehicleFunctionService.SharedOwner(Device, slot.Shared) != Function)
+            return null;
+        return $"{signal.Help}. The same setting as there: change it in either place.";
     }
 
     private void Rebuild()
