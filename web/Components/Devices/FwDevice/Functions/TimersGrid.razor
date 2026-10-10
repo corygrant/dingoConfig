@@ -1,0 +1,110 @@
+@using web.Services
+@using domain.Devices.Functions
+@using domain.Enums
+@inject NotificationService Notification
+@typeparam TDevice where TDevice : domain.Interfaces.IDeviceConfigurable
+@inherits FunctionComponentBase<TDevice>
+
+<MudDataGrid Items="@Timers" Dense="true" Hover="true" Striped="false" EditMode="DataGridEditMode.Cell" ReadOnly="false"
+             SortMode="SortMode.None" ColumnResizeMode="ResizeMode.Container" Virtualize="true"
+             FixedHeader="true" HorizontalScrollbar="true" Style="max-height: 400px;">
+    <Columns>
+        <PropertyColumn Property="x => x.Number" Title="#" StickyLeft="true" Editable="false" CellStyle="max-width: 100px"/>
+        <PropertyColumn Property="x => x.Enabled" CellStyle="max-width: 100px">
+            <EditTemplate>
+                <MudCheckBox @bind-Value="context.Item.Enabled" Dense="true" />
+            </EditTemplate>
+        </PropertyColumn>
+        <PropertyColumn Property="x => x.Name" CellStyle="max-width: 200px">
+            <EditTemplate>
+                <MudTextField @bind-Value="context.Item.Name" Variant="Variant.Outlined" Margin="Margin.Dense" />
+            </EditTemplate>
+        </PropertyColumn>
+        <PropertyColumn Property="x => x.Value" Title="Value" Editable="false" CellStyle="max-width: 100px">
+            <CellTemplate>
+                <MudChip T="string"
+                         Variant="Variant.Outlined"
+                         Color="@(context.Item.Value > 0 ? Color.Success : Color.Default)"
+                         Size="Size.Small" Style="min-width: 50px;">
+                    @context.Item.Value
+                </MudChip>
+            </CellTemplate>
+        </PropertyColumn>
+        <PropertyColumn Property="x => x.Input" Title="Input" CellStyle="max-width: 250px;">
+            <EditTemplate>
+                <MudStack Row="true">
+                    <MudIconButton Icon="@Icons.Material.Filled.Search"
+                                   Color="Color.Primary"
+                                   Size="Size.Small"
+                                   Disabled="(!context.Item.Enabled)"
+                                   Style="max-width: 20px"
+                                   OnClick="@(() => OpenVariableSelectorAsync(["bool", "int", "float"], v => context.Item.Input = v))">
+                    </MudIconButton>
+                    <MudText>@GetSelectedVarText(context.Item.Input)</MudText>
+                </MudStack>
+            </EditTemplate>
+        </PropertyColumn>
+        <PropertyColumn Property="x => x.ResetInput" Title="Reset" CellStyle="max-width: 250px;">
+            <EditTemplate>
+                <MudStack Row="true">
+                    <MudIconButton Icon="@Icons.Material.Filled.Search"
+                                   Color="Color.Primary"
+                                   Size="Size.Small"
+                                   Disabled="(!context.Item.Enabled)"
+                                   Style="max-width: 20px"
+                                   OnClick="@(() => OpenVariableSelectorAsync(["bool", "int", "float"], v => context.Item.ResetInput = v))">
+                    </MudIconButton>
+                    <MudText>@GetSelectedVarText(context.Item.ResetInput)</MudText>
+                </MudStack>
+            </EditTemplate>
+        </PropertyColumn>
+        <PropertyColumn Property="x => x.Mode" CellStyle="max-width: 200px">
+            <EditTemplate>
+                <MudSelect T="TimerMode" @bind-Value="context.Item.Mode" Variant="Variant.Outlined" Dense="true"
+                           Disabled="!context.Item.Enabled">
+                    @foreach (TimerMode mode in Enum.GetValues(typeof(TimerMode)))
+                    {
+                        <MudSelectItem T="TimerMode" Value="@mode">@ModeText(mode)</MudSelectItem>
+                    }
+                </MudSelect>
+            </EditTemplate>
+        </PropertyColumn>
+        <TemplateColumn Title="Time (ms)" Resizable="true" CellStyle="max-width: 120px">
+            <EditTemplate>
+                <MudNumericField @key="@($"time-{context.Item.Number}-{_refreshCounter}")"
+                                 Value="@context.Item.Time"
+                                 Disabled="!context.Item.Enabled"
+                                 ValueChanged="@((int val) => TimeChanged(context.Item, val))"/>
+            </EditTemplate>
+        </TemplateColumn>
+    </Columns>
+</MudDataGrid>
+
+@code {
+    [Parameter, EditorRequired]
+    public List<DeviceTimer> Timers { get; set; } = null!;
+
+    private int _refreshCounter;
+
+    private const int MinTime = 0;
+    private const int MaxTime = 600000;
+
+    private static string ModeText(TimerMode mode) => mode switch
+    {
+        TimerMode.OnDelay => "On delay",
+        TimerMode.OffDelay => "Off delay",
+        TimerMode.PulseRetrig => "Pulse (retriggerable)",
+        TimerMode.PulseOneShot => "Pulse (one shot)",
+        _ => mode.ToString()
+    };
+
+    private void TimeChanged(DeviceTimer item, int value)
+    {
+        if (value < MinTime || value > MaxTime)
+        {
+            Notification.NewWarning($"{item.Name}.Time must be {MinTime} to {MaxTime} ms");
+        }
+        item.Time = Math.Clamp(value, MinTime, MaxTime);
+        _refreshCounter++;
+    }
+}
