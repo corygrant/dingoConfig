@@ -1,0 +1,206 @@
+@using web.Services
+@using application.Services
+@using domain.Devices.Functions
+@inject NotificationService Notification
+@inject UserPreferencesManager UserPrefs
+@typeparam TDevice where TDevice : domain.Interfaces.IDeviceConfigurable
+@inherits FunctionComponentBase<TDevice>
+
+<MudPaper MaxHeight="400">
+    <MudDataGrid Items="@CanMessages" Dense="true" Hover="true" Striped="false" EditMode="DataGridEditMode.Cell"
+                 ReadOnly="false"
+                 SortMode="SortMode.None" ColumnResizeMode="ResizeMode.Container" Virtualize="true"
+                 FixedHeader="true" HorizontalScrollbar="true" Style="max-height: 400px;">
+        <Columns>
+            <PropertyColumn Property="x => x.Number" Title="#" StickyLeft="true" Editable="false"
+                            CellStyle="max-width: 100px"/>
+            <PropertyColumn Property="x => x.Enabled" CellStyle="max-width: 100px">
+                <EditTemplate>
+                    <MudCheckBox @bind-Value="context.Item.Enabled" Dense="true"/>
+                </EditTemplate>
+            </PropertyColumn>
+            <PropertyColumn Property="x => x.Name" CellStyle="max-width: 200px">
+                <EditTemplate>
+                    <MudTextField @bind-Value="context.Item.Name" Variant="Variant.Outlined" Margin="Margin.Dense"/>
+                </EditTemplate>
+            </PropertyColumn>
+            <PropertyColumn Property="x => x.Value" Title="Sending" Editable="false" CellStyle="max-width: 100px">
+                <CellTemplate>
+                    <MudChip T="string"
+                             Variant="Variant.Outlined"
+                             Color="@(context.Item.Value > 0 ? Color.Success : Color.Default)"
+                             Size="Size.Small" Style="min-width: 50px;">
+                        @context.Item.Value
+                    </MudChip>
+                </CellTemplate>
+            </PropertyColumn>
+            <PropertyColumn Property="x => x.Input" Title="Send while" CellStyle="max-width: 250px;">
+                <EditTemplate>
+                    <MudStack Row="true">
+                        <MudIconButton Icon="@Icons.Material.Filled.Search"
+                                       Color="Color.Primary"
+                                       Size="Size.Small"
+                                       Disabled="(!context.Item.Enabled)"
+                                       Style="max-width: 20px"
+                                       OnClick="@(() => OpenVariableSelectorAsync(["bool"], v => context.Item.Input = v))">
+                        </MudIconButton>
+                        <MudText>@GetSelectedVarText(context.Item.Input)</MudText>
+                    </MudStack>
+                </EditTemplate>
+            </PropertyColumn>
+            <TemplateColumn Title="ID" Resizable="true" CellStyle="max-width: 100px">
+                <EditTemplate>
+                    <MudTextField @key="@($"id-{context.Item.Number}-{_refreshCounter}")"
+                                  Value="@_id[context.Item.Number - 1]"
+                                  Disabled="!context.Item.Enabled"
+                                  ValueChanged="@((string val) => @context.Item.Id = Utils.ParseId(val, UserPrefs.Preferences.IdFormat, Notification))"/>
+                </EditTemplate>
+            </TemplateColumn>
+            <PropertyColumn Property="x => x.Ide" Title="Extended" CellStyle="max-width: 100px">
+                <EditTemplate>
+                    <MudCheckBox @bind-Value="context.Item.Ide" Disabled="true" Dense="true"/>
+                </EditTemplate>
+            </PropertyColumn>
+            <TemplateColumn Title="DLC" Resizable="true" CellStyle="max-width: 90px">
+                <EditTemplate>
+                    <MudNumericField @key="@($"dlc-{context.Item.Number}-{_refreshCounter}")"
+                                     Value="@context.Item.Dlc"
+                                     Disabled="!context.Item.Enabled"
+                                     ValueChanged="@((int val) => DlcChanged(context.Item, val))"
+                                     Step="1"/>
+                </EditTemplate>
+            </TemplateColumn>
+            <TemplateColumn Title="Data (hex)" Resizable="true" CellStyle="max-width: 200px">
+                <EditTemplate>
+                    <MudTextField @key="@($"data-{context.Item.Number}-{_refreshCounter}")"
+                                  Value="@_data[context.Item.Number - 1]"
+                                  Disabled="!context.Item.Enabled"
+                                  Placeholder="21424F4F544C0000"
+                                  ValueChanged="@((string val) => DataChanged(context.Item, val))"/>
+                </EditTemplate>
+            </TemplateColumn>
+            <TemplateColumn Title="Interval (ms)" Resizable="true" CellStyle="max-width: 120px">
+                <EditTemplate>
+                    <MudNumericField @key="@($"interval-{context.Item.Number}-{_refreshCounter}")"
+                                     Value="@context.Item.Interval"
+                                     Disabled="!context.Item.Enabled"
+                                     ValueChanged="@((int val) => IntervalChanged(context.Item, val))"
+                                     Step="10"/>
+                </EditTemplate>
+            </TemplateColumn>
+        </Columns>
+    </MudDataGrid>
+</MudPaper>
+
+<MudText Typo="Typo.caption" Class="mt-2">
+    The whole frame is sent, unchanged, while the chosen variable is true. Interval is the
+    gap between repeats - a receiver that debounces a command over several seconds needs the
+    frame to keep arriving. Set the interval to 0 to send a single frame each time the
+    variable goes true.
+</MudText>
+
+@code {
+    [Parameter, EditorRequired]
+    public List<CanMessage> CanMessages { get; set; } = null!;
+
+    private int _refreshCounter;
+    private string[] _id = [];
+    private string[] _data = [];
+
+    protected override Task OnInitializedAsync()
+    {
+        _id = new string[CanMessages.Count];
+        _data = new string[CanMessages.Count];
+
+        return Task.CompletedTask;
+    }
+
+    protected override void OnParametersSet()
+    {
+        foreach (var msg in CanMessages)
+        {
+            _id[msg.Number - 1] = Utils.FormatId(msg.Id, UserPrefs.Preferences.IdFormat);
+            _data[msg.Number - 1] = ToHex(msg);
+        }
+
+        StateHasChanged();
+
+        base.OnParametersSet();
+    }
+
+    private static string ToHex(CanMessage msg)
+    {
+        var len = Math.Clamp(msg.Dlc, 0, CanMessage.DataLength);
+        var chars = new char[len * 2];
+        for (var i = 0; i < len; i++)
+        {
+            var b = (byte)Math.Clamp(msg.Data[i], 0, 255);
+            b.ToString("X2").CopyTo(0, chars, i * 2, 2);
+        }
+        return new string(chars);
+    }
+
+    private void DataChanged(CanMessage item, string value)
+    {
+        var text = (value ?? string.Empty).Replace(" ", "").Replace("-", "");
+
+        if (text.Length % 2 != 0)
+        {
+            Notification.NewWarning($"{item.Name}.Data needs an even number of hex digits");
+            _refreshCounter++;
+            return;
+        }
+
+        if (text.Length > CanMessage.DataLength * 2)
+        {
+            Notification.NewWarning($"{item.Name}.Data is at most {CanMessage.DataLength} bytes");
+            _refreshCounter++;
+            return;
+        }
+
+        var bytes = new int[CanMessage.DataLength];
+        for (var i = 0; i < text.Length / 2; i++)
+        {
+            if (!byte.TryParse(text.AsSpan(i * 2, 2), System.Globalization.NumberStyles.HexNumber, null, out var b))
+            {
+                Notification.NewWarning($"{item.Name}.Data is not valid hex");
+                _refreshCounter++;
+                return;
+            }
+            bytes[i] = b;
+        }
+
+        for (var i = 0; i < CanMessage.DataLength; i++)
+            item.Data[i] = bytes[i];
+
+        _data[item.Number - 1] = ToHex(item);
+        _refreshCounter++;
+    }
+
+    private void DlcChanged(CanMessage item, int value)
+    {
+        const int min = 0;
+        const int max = CanMessage.DataLength;
+        if (value < min || value > max)
+        {
+            Notification.NewWarning($"{item.Name}.DLC must be {min} to {max}");
+        }
+
+        item.Dlc = Math.Clamp(value, min, max);
+        _data[item.Number - 1] = ToHex(item);
+        _refreshCounter++;
+    }
+
+    private void IntervalChanged(CanMessage item, int value)
+    {
+        const int min = 0;
+        const int max = 60000;
+        if (value < min || value > max)
+        {
+            Notification.NewWarning($"{item.Name}.Interval must be {min} to {max} ms");
+        }
+
+        item.Interval = Math.Clamp(value, min, max);
+        _refreshCounter++;
+    }
+}

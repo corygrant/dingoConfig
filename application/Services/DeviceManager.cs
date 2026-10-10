@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using application.Models;
 using domain.Devices;
+using domain.Devices.VehicleFunctions;
 using domain.Devices.Generic;
 using domain.Devices.Keypad.BlinkMarine;
 using domain.Devices.Keypad.Grayhill;
@@ -77,6 +78,8 @@ public class DeviceManager(ILogger<DeviceManager> logger, ILoggerFactory loggerF
 
         SetLoggers(device);
         _devices[device.Guid] = device;
+        if (device is FwDevice fw)
+            fw.Peers = ProjectPdms;
 
         // Keypads don't need read - they're passive reporting devices
         var needsRead = device is not BlinkMarineKeypadDevice and not GrayhillKeypadDevice;
@@ -176,7 +179,23 @@ public class DeviceManager(ILogger<DeviceManager> logger, ILoggerFactory loggerF
             OnDeviceAdded(new DeviceEventArgs(device));
         }
 
+        // Vehicle functions may drive outputs on several PDMs: build them again now
+        // that all of them are here
+        VehicleFunctionService.LinkProject(devices.OfType<FwDevice>().ToList(), ProjectPdms);
+
         logger.LogInformation("Added {Count} devices", devices.Count);
+    }
+
+    private IEnumerable<FwDevice> ProjectPdms() => _devices.Values.OfType<FwDevice>();
+
+    // Vehicle functions copy CAN inputs from one PDM to another; whatever changed
+    // since, the copies are brought up to date before anything is written
+    private static void RefreshVehicleFunctions(IDevice device)
+    {
+        if (device is not FwDevice fw)
+            return;
+        foreach (var pdm in fw.Project)
+            VehicleFunctionService.RebuildAll(pdm);
     }
 
     /// <summary>
@@ -452,6 +471,7 @@ public class DeviceManager(ILogger<DeviceManager> logger, ILoggerFactory loggerF
         if (device is not IDeviceConfigurable configurable)
             return false;
 
+        RefreshVehicleFunctions(device);
         var downloadMsgs = configurable.GetWriteMsgs(allParams: false);
         foreach (var msg in downloadMsgs)
         {
@@ -476,6 +496,7 @@ public class DeviceManager(ILogger<DeviceManager> logger, ILoggerFactory loggerF
         if (device is not IDeviceConfigurable configurable)
             return false;
 
+        RefreshVehicleFunctions(device);
         var downloadMsgs = configurable.GetWriteMsgs(allParams: true);
         foreach (var msg in downloadMsgs)
         {
@@ -510,8 +531,11 @@ public class DeviceManager(ILogger<DeviceManager> logger, ILoggerFactory loggerF
         //Wait for modify messages to be sent, then update the base ID
         Thread.Sleep(300);
 
+        var oldBaseId = device.BaseId;
         device.Name = newName;
         device.BaseId = newBaseId;
+        if (device is FwDevice fw)
+            VehicleFunctionService.BaseIdChanged(fw, oldBaseId);
     }
 
     /// <summary>
