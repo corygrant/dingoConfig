@@ -762,6 +762,7 @@ the PDM's existing blocks; the firmware needs nothing new:
   blocks and reads the switches off the bus (`RemoteSignals`): a CAN input is copied, anything else
   is read from the home PDM's status messages (positions from `Definitions/*-signals.json`).
   Push button toggles run on the home PDM only so every PDM agrees on their state.
+- `CanBitLearner` + `Dialogs/CanLearnDialog.razor`: learn a switch's CAN bit by recording the bus.
 
 ### Device Enums
 

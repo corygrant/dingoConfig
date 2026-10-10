@@ -1,3 +1,4 @@
+using domain.Common;
 using domain.Devices.Functions;
 using domain.Enums;
 using domain.Interfaces;
@@ -223,6 +224,75 @@ public static class VehicleFunctionService
         ReleaseOutput(target, outputNumber, slot);
         Rebuild(home, fn);
     }
+
+    /// <summary>
+    /// Points an input at a bit learned from the bus. A CAN input already reading
+    /// exactly that bit is reused, otherwise a free one is set up for it.
+    /// Returns null when every CAN input is taken.
+    /// </summary>
+    public static CanInput? UseLearnedInput(FwDevice device, VehicleFunction fn, string slotKey,
+                                            CanBitCandidate bit, string name)
+    {
+        var operand = bit.ActiveHigh ? 1.0 : 0.0;
+        var input = device.CanInputs.FirstOrDefault(c => ReadsBit(c, bit))
+                    ?? device.CanInputs.FirstOrDefault(c => !c.Enabled && device.UsesOf(c).Count == 0);
+        if (input == null)
+            return null;
+
+        if (!input.Enabled)
+        {
+            input.Enabled = true;
+            input.Name = name;
+            input.Id = bit.Id;
+            input.StartBit = bit.Bit;
+            input.BitLength = 1;
+            input.Factor = 1.0;
+            input.Offset = 0.0;
+            input.ByteOrder = ByteOrder.LittleEndian;
+            input.Signed = false;
+            input.Operator = Operator.Equal;
+            input.Operand = operand;
+            input.Mode = InputMode.Momentary;
+
+            // A message sent all the time can time out to "off" if its sender dies.
+            // One sent only on change must not, or a held switch would drop out.
+            input.TimeoutEnabled = bit.PeriodMs > 0 && bit.PeriodMs <= 1000;
+            input.Timeout = Math.Clamp(bit.PeriodMs * 5, 500, 5000);
+        }
+
+        fn.Input(slotKey).Var = device.VarMap
+            .First(v => v.Owner == input && v.PropertyName == "State").VariableIndex;
+        Rebuild(device, fn);
+        return input;
+    }
+
+    /// <summary>
+    /// An enabled CAN input that is on exactly when the bit reads its active value,
+    /// however it is written (= 1, > 0, != 0, AND 1 ...).
+    /// </summary>
+    private static bool ReadsBit(CanInput c, CanBitCandidate bit)
+    {
+        if (!c.Enabled || c.Id != bit.Id || c.StartBit != bit.Bit || c.BitLength != 1 ||
+            c.ByteOrder != ByteOrder.LittleEndian || c.Mode != InputMode.Momentary)
+            return false;
+
+        bool On(int raw) => Compare(c.Operator, raw * c.Factor + c.Offset, c.Operand);
+        return On(bit.ActiveHigh ? 1 : 0) && !On(bit.ActiveHigh ? 0 : 1);
+    }
+
+    // As the firmware's CAN input compares
+    private static bool Compare(Operator op, double value, double operand) => op switch
+    {
+        Operator.Equal => value == operand,
+        Operator.NotEqual => value != operand,
+        Operator.GreaterThan => value > operand,
+        Operator.LessThan => value < operand,
+        Operator.GreaterThanOrEqual => value >= operand,
+        Operator.LessThanOrEqual => value <= operand,
+        Operator.BitwiseAnd => ((uint)value & (uint)operand) > 0,
+        Operator.BitwiseNand => ((uint)value & (uint)operand) == 0,
+        _ => false
+    };
 
     /// <summary>Outputs nothing else drives: not the ignition, not a function, not a paired follower.</summary>
     public static IEnumerable<Output> FreeOutputs(FwDevice device) =>

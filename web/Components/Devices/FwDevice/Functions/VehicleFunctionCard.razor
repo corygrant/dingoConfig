@@ -296,6 +296,17 @@
                 }
             </MudButton>
         </MudTooltip>
+        @if (slot.Value)
+        {
+            <span class="vf-slot"></span>
+        }
+        else
+        {
+            <MudTooltip Text="Learn from the CAN bus: record while you switch it on and off">
+                <MudIconButton Icon="@Icons.Material.Filled.FiberManualRecord" Size="Size.Small" Class="vf-learn"
+                               OnClick="@(() => LearnAsync(slot))"/>
+            </MudTooltip>
+        }
         @* Fixed slots keep the pickers lined up from row to row *@
         <span class="vf-slot">
             @if (input.Var != 0)
@@ -395,6 +406,27 @@
         // "canInput3 - State" reads fine without the property for state-only blocks
         var text = GetSelectedVarText(index);
         return text.EndsWith(" - State") ? text[..^8] : text;
+    }
+
+    private async Task LearnAsync(InputSlot slot)
+    {
+        var parameters = new DialogParameters<web.Components.Dialogs.CanLearnDialog>
+        {
+            { x => x.Device, Device },
+            { x => x.Title, $"{Function.Title} · {slot.Label}" }
+        };
+        var dialog = await DialogService.ShowAsync<web.Components.Dialogs.CanLearnDialog>(
+            "Learn from CAN", parameters, new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true });
+        var result = await dialog.Result;
+        if (result is not { Canceled: false, Data: domain.Common.CanBitCandidate bit })
+            return;
+
+        var canInput = VehicleFunctionService.UseLearnedInput(Device, Function, slot.Key, bit, $"{Function.Title}: {slot.Label}");
+        if (canInput == null)
+            Notification.NewWarning("Every CAN input is in use. Free one up in Configuration → CAN Inputs.");
+        else
+            Notification.NewSuccess($"{slot.Label} reads {canInput.Name} (0x{bit.Id:X3} byte {bit.Byte} bit {bit.BitInByte})");
+        _refresh++;
     }
 
     private void Rebuild()
