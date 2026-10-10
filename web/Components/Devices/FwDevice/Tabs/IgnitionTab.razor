@@ -62,6 +62,22 @@
                 else if (Ign.Enabled)
                 {
                     <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="@StateColor()">@StateText()</MudChip>
+                    @if (HasRole(IgnitionOutputRole.Dash))
+                    {
+                        <MudChip T="string" Size="Size.Small" Variant="Variant.Text"
+                                 Icon="@Icons.Material.Outlined.Speed">Dash @DashText()</MudChip>
+                    }
+                    @if (Ign.Role == IgnitionRole.Follower)
+                    {
+                        <MudChip T="string" Size="Size.Small" Variant="Variant.Text"
+                                 Color="@(Ign.MasterLink == 1 ? Color.Success : Color.Error)"
+                                 Icon="@Icons.Material.Outlined.Hub">@(Ign.MasterLink == 1 ? "Master online" : "Master lost")</MudChip>
+                    }
+                    <MudText Typo="Typo.body2" Class="muted-text">@SleepText()</MudText>
+                    @if ((Ign.WakeSource & 0x80) != 0)
+                    {
+                        <MudText Typo="Typo.body2" Class="muted-text">· woken by @WakeText()</MudText>
+                    }
                 }
             </div>
         </div>
@@ -567,6 +583,38 @@
         IgnitionState.Running => Color.Success,
         _ => Color.Default
     };
+
+    private string DashText() => Ign.DashState switch
+    {
+        DashState.On => "on",
+        DashState.Grace => "on after ignition off",
+        DashState.Halting => "shutting down",
+        DashState.Restart => "power cycle",
+        _ => "off"
+    };
+
+    private string SleepText() => Ign.SleepStatus switch
+    {
+        IgnitionSleepStatus.Counting => $"Sleep in {Ign.SleepCountdown} s",
+        IgnitionSleepStatus.Following => "Sleeps with the master",
+        IgnitionSleepStatus.WaitingDash => "Sleep waits for the dash",
+        IgnitionSleepStatus.BlockedUsb => "Sleep blocked by USB",
+        IgnitionSleepStatus.Quiet => "Going to sleep",
+        IgnitionSleepStatus.Sleep => "Going to sleep",
+        IgnitionSleepStatus.Awake => "Awake",
+        _ => "Sleep not managed"
+    };
+
+    private string WakeText()
+    {
+        var sources = new List<string>();
+        if ((Ign.WakeSource & 0x01) != 0) sources.Add("CAN");
+        if ((Ign.WakeSource & 0x02) != 0) sources.Add("digital input");
+        if ((Ign.WakeSource & 0x04) != 0) sources.Add("USB");
+        if ((Ign.WakeSource & 0x08) != 0) sources.Add("another wake line");
+        if ((Ign.WakeSource & 0x10) != 0) sources.Add("an internal interrupt");
+        return sources.Count > 0 ? string.Join(" + ", sources) : "unknown";
+    }
 
     private static string RoleCss(IgnitionOutputRole role) => role switch
     {

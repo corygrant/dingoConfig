@@ -148,6 +148,19 @@ public class FwDevice : IDeviceConfigurable
         _setters["Ignition.Ignition"] = val => Ignition.IgnitionOut = (int)val;
         _setters["Ignition.Starter"]  = val => Ignition.StarterOut = (int)val;
         _setters["Ignition.State"]    = val => Ignition.State = (int)val;
+        _setters["Ignition.DashState"]      = val => Ignition.DashState = (DashState)val;
+        _setters["Ignition.SleepStatus"]    = val => Ignition.SleepStatus = (IgnitionSleepStatus)val;
+        _setters["Ignition.MasterLink"]     = val => Ignition.MasterLink = (int)val;
+        _setters["Ignition.SleepCountdown"] = val => Ignition.SleepCountdown = (int)val;
+        _setters["Ignition.WakeSource"]     = val => Ignition.WakeSource = (int)val;
+        _setters["Ignition.OutputFlags"]    = val =>
+        {
+            var flags = (int)val;
+            Ignition.IgnitionOut  = flags & 0x01;
+            Ignition.AccessoryOut = (flags >> 1) & 0x01;
+            Ignition.DashOut      = (flags >> 2) & 0x01;
+            Ignition.StarterOut   = (flags >> 3) & 0x01;
+        };
 
         _indexedSetters["AnalogInput.Millivolts"]   = (i, val) => AnalogInputs[i].Millivolts = val;
         _indexedSetters["AnalogInput.RotaryPos"]    = (i, val) => AnalogInputs[i].Rotary.Pos = (short)val;
@@ -409,6 +422,38 @@ public class FwDevice : IDeviceConfigurable
         }
 
         return null;
+    }
+
+    /// <summary>
+    /// What reads this block as an input, such as the ignition. The general
+    /// settings mark it so it is not repurposed by accident.
+    /// </summary>
+    public IReadOnlyList<string> UsesOf(IDeviceFunction function)
+    {
+        var uses = new List<string>();
+        if (!Def.HasIgnition || !Ignition.Enabled)
+            return uses;
+
+        var indexes = VarMap.Where(v => v.Owner == function).Select(v => v.VariableIndex).ToHashSet();
+
+        void Check(int index, string use)
+        {
+            if (index != 0 && indexes.Contains(index))
+                uses.Add($"Ignition: {use}");
+        }
+
+        var key = Ignition.Mode == IgnitionMode.KeySwitch;
+        if (Ignition.Role != IgnitionRole.Follower)
+        {
+            if (Ignition.ButtonSource == IgnitionSource.Variable)
+                Check(Ignition.IgnInput, key ? "Key ON" : "Start button");
+            Check(Ignition.StartInput, key ? "Key START" : "Start condition");
+            Check(Ignition.EngineRunInput, "Engine running");
+            Check(Ignition.StopInput, "Stop");
+        }
+        Check(Ignition.DoorInput, "Door");
+
+        return uses;
     }
 
     private void InitParams()

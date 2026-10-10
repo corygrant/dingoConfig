@@ -80,6 +80,13 @@ public class Ignition : IDeviceFunction
     [JsonIgnore][Plotable(displayName:"Accessory")] public int AccessoryOut {get; set;}
     [JsonIgnore][Plotable(displayName:"Dash")] public int DashOut {get; set;}
     [JsonIgnore][Plotable(displayName:"State")] public int State {get; set;}
+    [JsonIgnore] public DashState DashState {get; set;}
+    [JsonIgnore] public IgnitionSleepStatus SleepStatus {get; set;}
+    [JsonIgnore] public int MasterLink {get; set;} // 0 = not a follower, 1 = ok, 2 = lost
+    // What woke the device from its last sleep: bit 0 CAN, 1 digital input, 2 USB,
+    // 3 other wake line, 4 other interrupt, 7 = this boot followed a sleep
+    [JsonIgnore] public int WakeSource {get; set;}
+    [JsonIgnore][Plotable(displayName:"SleepCountdown", unit:"s")] public int SleepCountdown {get; set;}
 
     [JsonIgnore] public List<DeviceParameter> Params { get; private set; }
 
