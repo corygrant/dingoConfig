@@ -12,6 +12,11 @@ public static class VehicleFunctionIcons
         TurnSignals => Icons.Material.Outlined.SyncAlt,
         InteriorLight => Icons.Material.Outlined.Lightbulb,
         Horn => Icons.Material.Outlined.Campaign,
+        Wipers => Icons.Material.Outlined.Water,
+        BlowerFan => Icons.Material.Outlined.Air,
+        Ecu => Icons.Material.Outlined.Memory,
+        FuelPump => Icons.Material.Outlined.LocalGasStation,
+        CoolantFan => Icons.Material.Outlined.ModeFanOff,
         _ => Icons.Material.Outlined.Extension
     };
 }

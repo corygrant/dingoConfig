@@ -50,9 +50,7 @@ public sealed class Headlights : VehicleFunction
     protected internal override void OnAdded(FwDevice device)
     {
         // The ignition, when this device runs one
-        if (device.Def.HasIgnition && device.Ignition.Enabled)
-            Input("ignition").Var = device.VarMap
-                .FirstOrDefault(v => v.Owner == device.Ignition && v.PropertyName == "Ignition")?.VariableIndex ?? 0;
+        Input("ignition").Var = VehicleFunctionService.DefaultVar(device, IgnitionDefault.Ignition);
     }
 
     protected internal override void Build(FunctionBuilder b)

@@ -110,6 +110,50 @@
                             @Whole(interior.OffDelay / 1000, v => { interior.OffDelay = v * 1000; Rebuild(); }, 0, 600, "delay", "s")
                         </div>
                     }
+                    @if (Function is FuelPump pump)
+                    {
+                        <div class="vf-settings">
+                            <span class="vf-name">Prime</span>
+                            @Whole(pump.PrimeTime / 1000, v => { pump.PrimeTime = v * 1000; Rebuild(); }, 0, 30, "prime", "s")
+                            <span class="vf-hint">at ignition on, without an ECU request</span>
+                        </div>
+                    }
+                    @if (Function is Ecu ecu)
+                    {
+                        <div class="vf-settings">
+                            <span class="vf-name">Hold after off</span>
+                            @Whole(ecu.HoldTime / 1000, v => { ecu.HoldTime = v * 1000; Rebuild(); }, 0, 300, "hold", "s")
+                            <span class="vf-hint">longest the ECU is kept on for its shutdown</span>
+                        </div>
+                    }
+                    @if (Function is CoolantFan coolant)
+                    {
+                        @if (coolant.Input("temp").Var != 0)
+                        {
+                            <div class="vf-settings">
+                                <span class="vf-name">On / off</span>
+                                @Whole((int)coolant.OnTemp, v => { coolant.OnTemp = v; Rebuild(); }, -40, 200, "on", "°C")
+                                @Whole((int)coolant.OffTemp, v => { coolant.OffTemp = v; Rebuild(); }, -40, 200, "off", "°C")
+                            </div>
+                        }
+                        <div class="vf-settings">
+                            <span class="vf-name">Run on</span>
+                            @Whole(coolant.AfterRun / 1000, v => { coolant.AfterRun = v * 1000; Rebuild(); }, 0, 600, "after", "s")
+                            <span class="vf-hint">fan 1 keeps running after it is no longer needed</span>
+                        </div>
+                    }
+                    @if (Function is Wipers wipers)
+                    {
+                        <div class="vf-settings">
+                            <span class="vf-name">Pause / wipes</span>
+                            @Whole(wipers.InterPause / 1000, v => { wipers.InterPause = v * 1000; Rebuild(); }, 1, 60, "pause", "s")
+                            @Whole(wipers.WashWipes, v => { wipers.WashWipes = v; Rebuild(); }, 0, 10, "wipes", "×")
+                            <span class="vf-hint">intermittent pause, wipes after washing</span>
+                        </div>
+                        <MudCheckBox T="bool" Value="wipers.ParkedHigh" Dense="true" Size="Size.Small"
+                                     ValueChanged="@(v => { wipers.ParkedHigh = v; Rebuild(); })"
+                                     Label="Park switch reads on when the blades are parked"/>
+                    }
 
                     @if (AssignedOutputs.Count > 0)
                     {
@@ -205,13 +249,19 @@
     private RenderFragment InputPicker(InputSlot slot) => __builder =>
     {
         var input = Function.Input(slot.Key);
-        <MudTooltip Text="@slot.Label" Delay="600" RootClass="vf-pick-wrap">
+        var fallback = input.Var == 0 ? VehicleFunctionService.DefaultVar(Device, slot.Default) : 0;
+        <MudTooltip Text="@(fallback != 0 ? $"{slot.Label}: empty, so it follows the Ignition tab" : slot.Label)"
+                    Delay="600" RootClass="vf-pick-wrap">
             <MudButton Variant="Variant.Outlined" Size="Size.Small" Class="vf-pick"
                        Color="@(input.Var == 0 ? Color.Default : Color.Primary)"
-                       OnClick="@(() => OpenVariableSelectorAsync(["bool"], v => { input.Var = v; Rebuild(); }))">
-                @if (input.Var == 0)
+                       OnClick="@(() => OpenVariableSelectorAsync(slot.Value ? ["int"] : ["bool"], v => { input.Var = v; Rebuild(); }))">
+                @if (fallback != 0)
                 {
-                    <span class="vf-placeholder">Select input</span>
+                    <span class="vf-placeholder">Ignition: @VarName(fallback)</span>
+                }
+                else if (input.Var == 0)
+                {
+                    <span class="vf-placeholder">@(slot.Value ? "Select value" : "Select input")</span>
                 }
                 else
                 {

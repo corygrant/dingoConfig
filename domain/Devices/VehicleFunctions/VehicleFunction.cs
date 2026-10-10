@@ -7,12 +7,20 @@ namespace domain.Devices.VehicleFunctions;
 /// <summary>An input a function asks for, filled with any device variable.</summary>
 /// <param name="CanToggle">The input may be a push button that toggles the function on and off.</param>
 /// <param name="Advanced">Rarely changed, shown under Advanced.</param>
+/// <param name="Default">Left empty, the slot reads this signal of the Ignition block.</param>
+/// <param name="Value">Takes a number, such as a temperature, rather than on/off.</param>
 public record InputSlot(string Key, string Label, bool Required, bool CanToggle = false, string Help = "",
-                        bool Advanced = false);
+                        bool Advanced = false, IgnitionDefault Default = IgnitionDefault.None,
+                        bool Value = false);
+
+/// <summary>An Ignition block signal an empty input slot falls back to.</summary>
+public enum IgnitionDefault { None, Ignition, Accessory, EngineRunning }
 
 /// <summary>Electrical defaults an output gets when it is added to a slot.</summary>
+/// <param name="SoftStartMs">Ramps a motor up over this long instead of switching it on at once.</param>
 public record OutputDefaults(double CurrentLimit, double InrushLimit, int InrushTime,
-                             ResetMode ResetMode = ResetMode.Count, int ResetCount = 3, int ResetTime = 1000)
+                             ResetMode ResetMode = ResetMode.Count, int ResetCount = 3, int ResetTime = 1000,
+                             int SoftStartMs = 0)
 {
     public void ApplyTo(Output output)
     {
@@ -22,6 +30,14 @@ public record OutputDefaults(double CurrentLimit, double InrushLimit, int Inrush
         output.ResetMode = ResetMode;
         output.ResetCountLimit = ResetCount;
         output.ResetTime = ResetTime;
+        if (SoftStartMs <= 0)
+            return;
+
+        // Soft start runs on the PWM; at full duty the motor ends up on plain DC
+        output.SoftStartEnabled = true;
+        output.SoftStartRampTime = SoftStartMs;
+        output.FixedDutyCycle = 100;
+        output.PwmEnabled = true;
     }
 }
 
@@ -47,6 +63,11 @@ public class FunctionInput
 [JsonDerivedType(typeof(Taillights), "taillights")]
 [JsonDerivedType(typeof(InteriorLight), "interiorLight")]
 [JsonDerivedType(typeof(Horn), "horn")]
+[JsonDerivedType(typeof(FuelPump), "fuelPump")]
+[JsonDerivedType(typeof(Ecu), "ecu")]
+[JsonDerivedType(typeof(CoolantFan), "coolantFan")]
+[JsonDerivedType(typeof(BlowerFan), "blowerFan")]
+[JsonDerivedType(typeof(Wipers), "wipers")]
 public abstract class VehicleFunction
 {
     [JsonPropertyName("inputs")] public Dictionary<string, FunctionInput> Inputs { get; set; } = new();

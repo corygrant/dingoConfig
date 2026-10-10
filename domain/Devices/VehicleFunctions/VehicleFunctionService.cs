@@ -14,8 +14,31 @@ public static class VehicleFunctionService
         () => new Taillights(),
         () => new TurnSignals(),
         () => new InteriorLight(),
-        () => new Horn()
+        () => new Horn(),
+        () => new Wipers(),
+        () => new BlowerFan(),
+        () => new Ecu(),
+        () => new FuelPump(),
+        () => new CoolantFan()
     ];
+
+    /// <summary>The Ignition block signal an empty slot falls back to, 0 without an ignition.</summary>
+    public static int DefaultVar(FwDevice device, IgnitionDefault source)
+    {
+        if (!device.Def.HasIgnition || !device.Ignition.Enabled)
+            return 0;
+
+        int Var(string name) => device.VarMap
+            .FirstOrDefault(v => v.Owner == device.Ignition && v.PropertyName == name)?.VariableIndex ?? 0;
+
+        return source switch
+        {
+            IgnitionDefault.Ignition => Var("Ignition"),
+            IgnitionDefault.Accessory => Var("Accessory"),
+            IgnitionDefault.EngineRunning => device.Ignition.EngineRunInput,
+            _ => 0
+        };
+    }
 
     /// <summary>Rebuilds every function, for example after a project is loaded.</summary>
     public static void RebuildAll(FwDevice device)
@@ -151,6 +174,24 @@ public static class VehicleFunctionService
             flasher.OffTime = 500;
             flasher.Name = $"flasher{number}";
         }
+        else if (key.StartsWith("cond:"))
+        {
+            var condition = device.Conditions.FirstOrDefault(c => c.Number == number);
+            if (condition == null) return;
+            condition.Enabled = false;
+            condition.Input = 0;
+            condition.Operator = Operator.Equal;
+            condition.Arg = 0;
+            condition.Name = $"condition{number}";
+        }
+        else if (key.StartsWith("wiper:"))
+        {
+            var wiper = device.Wipers;
+            wiper.Enabled = false;
+            wiper.SlowInput = wiper.FastInput = wiper.InterInput = wiper.OnInput = 0;
+            wiper.SpeedInput = wiper.ParkInput = wiper.SwipeInput = wiper.WashInput = 0;
+            wiper.Name = "wiper";
+        }
         else if (key.StartsWith("timer:"))
         {
             var timer = device.Timers.FirstOrDefault(t => t.Number == number);
@@ -169,6 +210,8 @@ public static class VehicleFunctionService
         var output = device.Outputs[number - 1];
         output.Enabled = false;
         output.Input = 0;
+        output.VariableDutyCycle = false;
+        output.DutyCycleInput = 0;
         if (output.Name.StartsWith(slot.OutputName))
             output.Name = DefaultOutputName(number);
     }
@@ -180,6 +223,8 @@ public static class VehicleFunctionService
         VirtualInput => "vi:",
         Flasher => "flasher:",
         DeviceTimer => "timer:",
+        Condition => "cond:",
+        Wiper => "wiper:",
         _ => null
     };
 }
