@@ -125,7 +125,7 @@
                                ExpandedChanged="@((bool expanded) => _outputsExpanded = expanded)">
                 @if (_outputsExpanded)
                 {
-                    <OutputsGrid Outputs="Device.Outputs" Device="Device"/>
+                    <OutputsGrid Outputs="Device.Outputs" Device="Device" ManagedBy="Device.ManagedBy"/>
                 }
             </MudExpansionPanel>
 
@@ -167,7 +167,7 @@
                                ExpandedChanged="@((bool expanded) => _digitalInputsExpanded = expanded)">
                 @if (_digitalInputsExpanded)
                 {
-                    <DigitalInputsGrid Inputs="Device.DigitalInputs"/>
+                    <DigitalInputsGrid Inputs="Device.DigitalInputs" Uses="Device.UsesOf"/>
                 }
             </MudExpansionPanel>
         }
@@ -191,7 +191,7 @@
                                ExpandedChanged="@((bool expanded) => _canInputsExpanded = expanded)">
                 @if (_canInputsExpanded)
                 {
-                    <CanInputsGrid CanInputs="Device.CanInputs" Device="Device"/>
+                    <CanInputsGrid CanInputs="Device.CanInputs" Device="Device" Uses="Device.UsesOf"/>
                 }
             </MudExpansionPanel>
         }
@@ -215,7 +215,7 @@
                                ExpandedChanged="@((bool expanded) => _virtualInputsExpanded = expanded)">
                 @if (_virtualInputsExpanded)
                 {
-                    <VirtualInputsGrid VirtualInputs="Device.VirtualInputs" Device="Device"/>
+                    <VirtualInputsGrid VirtualInputs="Device.VirtualInputs" Device="Device" Uses="Device.UsesOf"/>
                 }
             </MudExpansionPanel>
         }
@@ -227,7 +227,7 @@
                                ExpandedChanged="@((bool expanded) => _conditionsExpanded = expanded)">
                 @if (_conditionsExpanded)
                 {
-                    <ConditionsGrid Conditions="Device.Conditions" Device="Device"/>
+                    <ConditionsGrid Conditions="Device.Conditions" Device="Device" Uses="Device.UsesOf"/>
                 }
             </MudExpansionPanel>
         }
@@ -279,6 +279,30 @@
                 }
             </MudExpansionPanel>
         }
+
+        @* Timers *@
+        @if (Device.Timers.Count > 0)
+        {
+            <MudExpansionPanel Text="@($"Timers ({Device.Timers.Count})")"
+                               ExpandedChanged="@((bool expanded) => _timersExpanded = expanded)">
+                @if (_timersExpanded)
+                {
+                    <TimersGrid Timers="Device.Timers" Device="Device"/>
+                }
+            </MudExpansionPanel>
+        }
+
+        @* CAN Messages *@
+        @if (Device.CanMessages.Count > 0)
+        {
+            <MudExpansionPanel Text="@($"CAN Messages ({Device.CanMessages.Count})")"
+                               ExpandedChanged="@((bool expanded) => _canMessagesExpanded = expanded)">
+                @if (_canMessagesExpanded)
+                {
+                    <CanMessagesGrid CanMessages="Device.CanMessages" Device="Device"/>
+                }
+            </MudExpansionPanel>
+        }
     </MudExpansionPanels>
 </div>
 
@@ -298,6 +322,8 @@
     private bool _flashersExpanded;
     private bool _wiperExpanded;
     private bool _starterDisableExpanded;
+    private bool _timersExpanded;
+    private bool _canMessagesExpanded;
 
     private string _baseId = string.Empty;
     

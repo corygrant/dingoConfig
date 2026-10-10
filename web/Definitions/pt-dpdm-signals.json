@@ -157,6 +157,18 @@
         { "target": "AnalogInput.RotaryPos", "count": 2, "dbc": {"name": "AnalogInputs{n}.Rotary.Pos", "startBit": 32, "length": 4}},
         { "target": "AnalogInput.DigitalMode", "count": 2, "dbc": {"name": "AnalogInputs{n}.Switch.State", "startBit": 40, "length": 1}}
       ]
+    },
+    {
+      "idOffset": 30,
+      "signals": [
+        { "target": "Ignition.State",          "dbc": { "name": "IgnitionState",   "startBit": 0,  "length": 4 } },
+        { "target": "Ignition.DashState",      "dbc": { "name": "DashState",       "startBit": 8,  "length": 8 } },
+        { "target": "Ignition.SleepStatus",    "dbc": { "name": "SleepStatus",     "startBit": 16, "length": 8 } },
+        { "target": "Ignition.MasterLink",     "dbc": { "name": "MasterLink",      "startBit": 24, "length": 8 } },
+        { "target": "Ignition.SleepCountdown", "dbc": { "name": "SleepCountdown",  "startBit": 32, "length": 16, "unit": "s" } },
+        { "target": "Ignition.OutputFlags",    "dbc": { "name": "IgnitionOutputs", "startBit": 48, "length": 8 } },
+        { "target": "Ignition.WakeSource",     "dbc": { "name": "WakeSource",      "startBit": 56, "length": 8 } }
+      ]
     }
   ]
 }

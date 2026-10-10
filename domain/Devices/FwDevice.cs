@@ -69,6 +69,9 @@ public class FwDevice : IDeviceConfigurable
     [JsonPropertyName("conditions")] public List<Condition> Conditions { get; init; } = [];
     [JsonPropertyName("keypads")] public List<KeypadMaster> Keypads { get; init; } = [];
     [JsonPropertyName("flowLayout")] public Dictionary<string, FlowNodePosition> FlowLayout { get; set; } = new();
+    [JsonPropertyName("timers")] public List<DeviceTimer> Timers { get; init; } = [];
+    [JsonPropertyName("ignition")] public Ignition Ignition { get; set; } = null!;
+    [JsonPropertyName("canMessages")] public List<CanMessage> CanMessages { get; init; } = [];
     
     [JsonIgnore] private DateTime LastRxTime { get; set; }
 
@@ -142,6 +145,22 @@ public class FwDevice : IDeviceConfigurable
         _setters["Wiper.FastState"]  = val => Wipers.FastState = val != 0;
         _setters["Wiper.Speed"]      = val => Wipers.Speed = (WiperSpeed)val;
         _setters["Wiper.State"]      = val => Wipers.State = (WiperState)val;
+        _setters["Ignition.Ignition"] = val => Ignition.IgnitionOut = (int)val;
+        _setters["Ignition.Starter"]  = val => Ignition.StarterOut = (int)val;
+        _setters["Ignition.State"]    = val => Ignition.State = (int)val;
+        _setters["Ignition.DashState"]      = val => Ignition.DashState = (DashState)val;
+        _setters["Ignition.SleepStatus"]    = val => Ignition.SleepStatus = (IgnitionSleepStatus)val;
+        _setters["Ignition.MasterLink"]     = val => Ignition.MasterLink = (int)val;
+        _setters["Ignition.SleepCountdown"] = val => Ignition.SleepCountdown = (int)val;
+        _setters["Ignition.WakeSource"]     = val => Ignition.WakeSource = (int)val;
+        _setters["Ignition.OutputFlags"]    = val =>
+        {
+            var flags = (int)val;
+            Ignition.IgnitionOut  = flags & 0x01;
+            Ignition.AccessoryOut = (flags >> 1) & 0x01;
+            Ignition.DashOut      = (flags >> 2) & 0x01;
+            Ignition.StarterOut   = (flags >> 3) & 0x01;
+        };
 
         _indexedSetters["AnalogInput.Millivolts"]   = (i, val) => AnalogInputs[i].Millivolts = val;
         _indexedSetters["AnalogInput.RotaryPos"]    = (i, val) => AnalogInputs[i].Rotary.Pos = (short)val;
@@ -158,6 +177,8 @@ public class FwDevice : IDeviceConfigurable
         _indexedSetters["Flasher.Value"]      = (i, val) => Flashers[i].Value = val != 0;
         _indexedSetters["Counter.Value"]      = (i, val) => Counters[i].Value = (int)val;
         _indexedSetters["Condition.Value"]    = (i, val) => Conditions[i].Value = (int)val;
+        _indexedSetters["Timer.Value"]        = (i, val) => Timers[i].Value = (int)val;
+        _indexedSetters["CanMessage.Value"]   = (i, val) => CanMessages[i].Value = (int)val;
     }
 
     public void BindCyclicSigs(CyclicSigsConfig config)
@@ -244,6 +265,17 @@ public class FwDevice : IDeviceConfigurable
         if (Conditions.Count == 0)
             for (var i = 0; i < Def.NumConditions; i++)
                 Conditions.Add(new Condition(i + 1, "condition" + (i + 1)));
+
+        if (Timers.Count == 0)
+            for (var i = 0; i < Def.NumTimers; i++)
+                Timers.Add(new DeviceTimer(i + 1, "timer" + (i + 1)));
+
+        Ignition ??= new Ignition("ignition", Def.NumOutputs);
+        Ignition.SetOutputCount(Def.NumOutputs);
+
+        if (CanMessages.Count == 0)
+            for (var i = 0; i < Def.NumCanMessages; i++)
+                CanMessages.Add(new CanMessage(i + 1, "canMessage" + (i + 1)));
 
         StarterDisable ??= new StarterDisable("starterDisable", Def.NumOutputs);
 
@@ -345,6 +377,26 @@ public class FwDevice : IDeviceConfigurable
 
         for (var i = 0; i < Def.NumKeypads; i++)
             AddVars(Keypads[i], ref index);
+
+        // Appended last, matching InitVarMap() in the firmware
+        for (var i = 0; i < Def.NumTimers; i++)
+            AddVars(Timers[i], ref index);
+
+        if (Def.HasIgnition)
+        {
+            AddVars(Ignition, ref index);
+        }
+
+        for (var i = 0; i < Def.NumCanMessages; i++)
+            VarMap.AddRange(CanMessages[i].GetVarMap(ref index));
+
+        if (Def.HasIgnition)
+        {
+            var vars = Ignition.GetAppendedVarMap(ref index);
+            foreach (var variable in vars)
+                variable.Owner = Ignition;
+            VarMap.AddRange(vars);
+        }
     }
 
     private void AddVars(IDeviceFunction function, ref int index)
@@ -353,6 +405,55 @@ public class FwDevice : IDeviceConfigurable
         foreach (var variable in vars)
             variable.Owner = function;
         VarMap.AddRange(vars);
+    }
+
+    /// <summary>
+    /// What switches a block when something other than its own settings does,
+    /// such as an ignition role. The general settings show it greyed out. Null
+    /// when the block is the user's own.
+    /// </summary>
+    public string? ManagedBy(IDeviceFunction block)
+    {
+        if (block is Output output && Def.HasIgnition)
+        {
+            var role = Ignition.RoleOf(output.Number);
+            if (role != IgnitionOutputRole.None)
+                return $"Ignition · {role}";
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// What reads this block as an input, such as the ignition. The general
+    /// settings mark it so it is not repurposed by accident.
+    /// </summary>
+    public IReadOnlyList<string> UsesOf(IDeviceFunction function)
+    {
+        var uses = new List<string>();
+        if (!Def.HasIgnition || !Ignition.Enabled)
+            return uses;
+
+        var indexes = VarMap.Where(v => v.Owner == function).Select(v => v.VariableIndex).ToHashSet();
+
+        void Check(int index, string use)
+        {
+            if (index != 0 && indexes.Contains(index))
+                uses.Add($"Ignition: {use}");
+        }
+
+        var key = Ignition.Mode == IgnitionMode.KeySwitch;
+        if (Ignition.Role != IgnitionRole.Follower)
+        {
+            if (Ignition.ButtonSource == IgnitionSource.Variable)
+                Check(Ignition.IgnInput, key ? "Key ON" : "Start button");
+            Check(Ignition.StartInput, key ? "Key START" : "Start condition");
+            Check(Ignition.EngineRunInput, "Engine running");
+            Check(Ignition.StopInput, "Stop");
+        }
+        Check(Ignition.DoorInput, "Door");
+
+        return uses;
     }
 
     private void InitParams()
@@ -437,6 +538,9 @@ public class FwDevice : IDeviceConfigurable
         foreach (var flasher in Flashers) allParams.AddRange(flasher.Params);
         if (Def.HasStarterDisable) allParams.AddRange(StarterDisable.Params);
         if (Def.HasWipers) allParams.AddRange(Wipers.Params);
+        foreach (var timer in Timers) allParams.AddRange(timer.Params);
+        if (Def.HasIgnition) allParams.AddRange(Ignition.Params);
+        foreach (var canMessage in CanMessages) allParams.AddRange(canMessage.Params);
         foreach (var canOutput in CanOutputs) allParams.AddRange(canOutput.Params);
         foreach (var digOutput in DigitalOutputs) allParams.AddRange(digOutput.Params);
         foreach (var analogInput in AnalogInputs) allParams.AddRange(analogInput.Params);
@@ -828,5 +932,8 @@ public class FwDevice : IDeviceConfigurable
     public IReadOnlyList<Condition> GetConditions() => Conditions.AsReadOnly();
     public Wiper GetWipers() => Wipers;
     public StarterDisable GetStarterDisable() => StarterDisable;
+    public IReadOnlyList<DeviceTimer> GetTimers() => Timers.AsReadOnly();
+    public Ignition GetIgnition() => Ignition;
+    public IReadOnlyList<CanMessage> GetCanMessages() => CanMessages.AsReadOnly();
     public IReadOnlyList<KeypadMaster> GetKeypads() => Keypads.AsReadOnly();
 }
