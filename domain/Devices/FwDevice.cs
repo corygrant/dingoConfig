@@ -3,6 +3,7 @@ using System.Text.Json.Serialization;
 using domain.Common;
 using domain.Devices.Functions;
 using domain.Devices.Functions.Keypad;
+using domain.Devices.VehicleFunctions;
 using domain.Enums;
 using domain.Interfaces;
 using domain.Models;
@@ -69,6 +70,11 @@ public class FwDevice : IDeviceConfigurable
     [JsonPropertyName("conditions")] public List<Condition> Conditions { get; init; } = [];
     [JsonPropertyName("keypads")] public List<KeypadMaster> Keypads { get; init; } = [];
     [JsonPropertyName("flowLayout")] public Dictionary<string, FlowNodePosition> FlowLayout { get; set; } = new();
+    [JsonPropertyName("timers")] public List<DeviceTimer> Timers { get; init; } = [];
+    [JsonPropertyName("ignition")] public Ignition Ignition { get; set; } = null!;
+    [JsonPropertyName("canMessages")] public List<CanMessage> CanMessages { get; init; } = [];
+    // Ready-made functions built from the blocks above, see VehicleFunctionService
+    [JsonPropertyName("vehicleFunctions")] public List<VehicleFunction> VehicleFunctions { get; init; } = [];
     
     [JsonIgnore] private DateTime LastRxTime { get; set; }
 
@@ -122,6 +128,9 @@ public class FwDevice : IDeviceConfigurable
 
         InitVarMap();
         InitParams();
+
+        // Vehicle functions in step with the current recipes after a load
+        VehicleFunctionService.AfterLoad(this);
     }
     
     public void SetLogger(ILogger<FwDevice> logger)
@@ -142,6 +151,9 @@ public class FwDevice : IDeviceConfigurable
         _setters["Wiper.FastState"]  = val => Wipers.FastState = val != 0;
         _setters["Wiper.Speed"]      = val => Wipers.Speed = (WiperSpeed)val;
         _setters["Wiper.State"]      = val => Wipers.State = (WiperState)val;
+        _setters["Ignition.Ignition"] = val => Ignition.IgnitionOut = (int)val;
+        _setters["Ignition.Starter"]  = val => Ignition.StarterOut = (int)val;
+        _setters["Ignition.State"]    = val => Ignition.State = (int)val;
 
         _indexedSetters["AnalogInput.Millivolts"]   = (i, val) => AnalogInputs[i].Millivolts = val;
         _indexedSetters["AnalogInput.RotaryPos"]    = (i, val) => AnalogInputs[i].Rotary.Pos = (short)val;
@@ -158,6 +170,8 @@ public class FwDevice : IDeviceConfigurable
         _indexedSetters["Flasher.Value"]      = (i, val) => Flashers[i].Value = val != 0;
         _indexedSetters["Counter.Value"]      = (i, val) => Counters[i].Value = (int)val;
         _indexedSetters["Condition.Value"]    = (i, val) => Conditions[i].Value = (int)val;
+        _indexedSetters["Timer.Value"]        = (i, val) => Timers[i].Value = (int)val;
+        _indexedSetters["CanMessage.Value"]   = (i, val) => CanMessages[i].Value = (int)val;
     }
 
     public void BindCyclicSigs(CyclicSigsConfig config)
@@ -244,6 +258,16 @@ public class FwDevice : IDeviceConfigurable
         if (Conditions.Count == 0)
             for (var i = 0; i < Def.NumConditions; i++)
                 Conditions.Add(new Condition(i + 1, "condition" + (i + 1)));
+
+        if (Timers.Count == 0)
+            for (var i = 0; i < Def.NumTimers; i++)
+                Timers.Add(new DeviceTimer(i + 1, "timer" + (i + 1)));
+
+        Ignition ??= new Ignition("ignition");
+
+        if (CanMessages.Count == 0)
+            for (var i = 0; i < Def.NumCanMessages; i++)
+                CanMessages.Add(new CanMessage(i + 1, "canMessage" + (i + 1)));
 
         StarterDisable ??= new StarterDisable("starterDisable", Def.NumOutputs);
 
@@ -345,6 +369,18 @@ public class FwDevice : IDeviceConfigurable
 
         for (var i = 0; i < Def.NumKeypads; i++)
             AddVars(Keypads[i], ref index);
+
+        // Appended last, matching InitVarMap() in the firmware
+        for (var i = 0; i < Def.NumTimers; i++)
+            AddVars(Timers[i], ref index);
+
+        if (Def.HasIgnition)
+        {
+            AddVars(Ignition, ref index);
+        }
+
+        for (var i = 0; i < Def.NumCanMessages; i++)
+            VarMap.AddRange(CanMessages[i].GetVarMap(ref index));
     }
 
     private void AddVars(IDeviceFunction function, ref int index)
@@ -353,6 +389,36 @@ public class FwDevice : IDeviceConfigurable
         foreach (var variable in vars)
             variable.Owner = function;
         VarMap.AddRange(vars);
+    }
+
+    /// <summary>
+    /// What switches a block when something other than its own settings does,
+    /// such as a vehicle function. The general settings show it greyed out. Null
+    /// when the block is the user's own.
+    /// </summary>
+    public string? ManagedBy(IDeviceFunction block)
+    {
+        var fn = VehicleFunctionService.OwnerOf(this, block);
+        if (fn == null)
+            return null;
+        return block is Output o ? $"{fn.Title} · {fn.SlotOf(o.Number)?.Label}" : fn.Title;
+    }
+
+    /// <summary>
+    /// What reads this block as an input, such as a vehicle function. The general
+    /// settings mark it so it is not repurposed by accident.
+    /// </summary>
+    public IReadOnlyList<string> UsesOf(IDeviceFunction function)
+    {
+        var uses = new List<string>();
+        var indexes = VarMap.Where(v => v.Owner == function).Select(v => v.VariableIndex).ToHashSet();
+
+        foreach (var fn in VehicleFunctions)
+            foreach (var slot in fn.InputSlots)
+                if (fn.Inputs.TryGetValue(slot.Key, out var input) && input.Var != 0 && indexes.Contains(input.Var))
+                    uses.Add($"{fn.Title}: {slot.Label}");
+
+        return uses;
     }
 
     private void InitParams()
@@ -437,6 +503,9 @@ public class FwDevice : IDeviceConfigurable
         foreach (var flasher in Flashers) allParams.AddRange(flasher.Params);
         if (Def.HasStarterDisable) allParams.AddRange(StarterDisable.Params);
         if (Def.HasWipers) allParams.AddRange(Wipers.Params);
+        foreach (var timer in Timers) allParams.AddRange(timer.Params);
+        if (Def.HasIgnition) allParams.AddRange(Ignition.Params);
+        foreach (var canMessage in CanMessages) allParams.AddRange(canMessage.Params);
         foreach (var canOutput in CanOutputs) allParams.AddRange(canOutput.Params);
         foreach (var digOutput in DigitalOutputs) allParams.AddRange(digOutput.Params);
         foreach (var analogInput in AnalogInputs) allParams.AddRange(analogInput.Params);
@@ -828,5 +897,8 @@ public class FwDevice : IDeviceConfigurable
     public IReadOnlyList<Condition> GetConditions() => Conditions.AsReadOnly();
     public Wiper GetWipers() => Wipers;
     public StarterDisable GetStarterDisable() => StarterDisable;
+    public IReadOnlyList<DeviceTimer> GetTimers() => Timers.AsReadOnly();
+    public Ignition GetIgnition() => Ignition;
+    public IReadOnlyList<CanMessage> GetCanMessages() => CanMessages.AsReadOnly();
     public IReadOnlyList<KeypadMaster> GetKeypads() => Keypads.AsReadOnly();
 }

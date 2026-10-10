@@ -1,0 +1,12 @@
+@* Marks a block something else reads, so it is not repurposed by accident *@
+@if (Uses is { Count: > 0 })
+{
+    <MudTooltip Text="@($"Read by {string.Join(", ", Uses)}")">
+        <MudIcon Icon="@Icons.Material.Outlined.Link" Color="Color.Primary" Size="Size.Small"
+                 Style="vertical-align: middle; margin-left: 4px;"/>
+    </MudTooltip>
+}
+
+@code {
+    [Parameter] public IReadOnlyList<string>? Uses { get; set; }
+}
