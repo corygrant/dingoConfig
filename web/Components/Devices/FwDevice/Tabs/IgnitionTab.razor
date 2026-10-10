@@ -78,44 +78,54 @@
                         <MudText Typo="Typo.h6">Start</MudText>
                     </div>
 
-                    <div class="ign-row">
-                        <span class="ign-label">Mode</span>
-                        <MudToggleGroup T="IgnitionMode" Value="Ign.Mode" ValueChanged="@(m => Ign.Mode = m)"
-                                        Color="Color.Primary" Size="Size.Small" Outlined="true" Delimiters="true"
-                                        SelectionMode="SelectionMode.SingleSelection">
-                            <MudToggleItem Value="IgnitionMode.KeySwitch" Text="Key switch"/>
-                            <MudToggleItem Value="IgnitionMode.StartButton" Text="Start button"/>
-                        </MudToggleGroup>
-                    </div>
-                    <div class="ign-help">@ModeHelp()</div>
-
-                    <div class="ign-row">
-                        <span class="ign-label">@(Key ? "Key ON from" : "Button from")</span>
-                        <MudToggleGroup T="IgnitionSource" Value="Ign.ButtonSource" ValueChanged="@(s => Ign.ButtonSource = s)"
-                                        Color="Color.Primary" Size="Size.Small" Outlined="true" Delimiters="true"
-                                        SelectionMode="SelectionMode.SingleSelection">
-                            <MudToggleItem Value="IgnitionSource.Variable" Text="Input"/>
-                            <MudToggleItem Value="IgnitionSource.CanFrame" Text="CAN frame"/>
-                        </MudToggleGroup>
-                    </div>
-
-                    @if (Ign.ButtonSource == IgnitionSource.Variable)
+                    @if (Ign.Role == IgnitionRole.Follower)
                     {
-                        @VarRow(Key ? "Key ON position" : "Start button", Ign.IgnInput, v => Ign.IgnInput = v, false)
+                        <MudText Typo="Typo.body2" Class="muted-text mb-2">
+                            This device follows the master's ignition on ID @FormatId(Ign.SyncId). Its outputs switch with
+                            the master.
+                        </MudText>
                     }
                     else
                     {
                         <div class="ign-row">
-                            <span class="ign-label">Button frame ID</span>
-                            <MudTextField T="string" @key="@($"btnid-{_refresh}")" Value="@FormatId(Ign.ButtonId)"
-                                          ValueChanged="@(v => { Ign.ButtonId = ParseId(v); _refresh++; })"
-                                          Variant="Variant.Outlined" Margin="Margin.Dense" Style="max-width: 140px"/>
+                            <span class="ign-label">Mode</span>
+                            <MudToggleGroup T="IgnitionMode" Value="Ign.Mode" ValueChanged="@(m => Ign.Mode = m)"
+                                            Color="Color.Primary" Size="Size.Small" Outlined="true" Delimiters="true"
+                                            SelectionMode="SelectionMode.SingleSelection">
+                                <MudToggleItem Value="IgnitionMode.KeySwitch" Text="Key switch"/>
+                                <MudToggleItem Value="IgnitionMode.StartButton" Text="Start button"/>
+                            </MudToggleGroup>
                         </div>
-                    }
+                        <div class="ign-help">@ModeHelp()</div>
 
-                    @VarRow(Key ? "Key START position" : "Start condition", Ign.StartInput, v => Ign.StartInput = v, true)
-                    @VarRow("Engine running", Ign.EngineRunInput, v => Ign.EngineRunInput = v, true)
-                    <div class="ign-help">Releases the starter once the engine runs.</div>
+                        <div class="ign-row">
+                            <span class="ign-label">@(Key ? "Key ON from" : "Button from")</span>
+                            <MudToggleGroup T="IgnitionSource" Value="Ign.ButtonSource" ValueChanged="@(s => Ign.ButtonSource = s)"
+                                            Color="Color.Primary" Size="Size.Small" Outlined="true" Delimiters="true"
+                                            SelectionMode="SelectionMode.SingleSelection">
+                                <MudToggleItem Value="IgnitionSource.Variable" Text="Input"/>
+                                <MudToggleItem Value="IgnitionSource.CanFrame" Text="CAN frame"/>
+                            </MudToggleGroup>
+                        </div>
+
+                        @if (Ign.ButtonSource == IgnitionSource.Variable)
+                        {
+                            @VarRow(Key ? "Key ON position" : "Start button", Ign.IgnInput, v => Ign.IgnInput = v, false)
+                        }
+                        else
+                        {
+                            <div class="ign-row">
+                                <span class="ign-label">Button frame ID</span>
+                                <MudTextField T="string" @key="@($"btnid-{_refresh}")" Value="@FormatId(Ign.ButtonId)"
+                                              ValueChanged="@(v => { Ign.ButtonId = ParseId(v); _refresh++; })"
+                                              Variant="Variant.Outlined" Margin="Margin.Dense" Style="max-width: 140px"/>
+                            </div>
+                        }
+
+                        @VarRow(Key ? "Key START position" : "Start condition", Ign.StartInput, v => Ign.StartInput = v, true)
+                        @VarRow("Engine running", Ign.EngineRunInput, v => Ign.EngineRunInput = v, true)
+                        <div class="ign-help">Releases the starter once the engine runs.</div>
+                    }
 
                     <MudButton Variant="Variant.Text" Size="Size.Small"
                                EndIcon="@(_startAdvanced ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)"
@@ -126,39 +136,62 @@
                     @if (_startAdvanced)
                     {
                         <div class="ign-advanced">
-                            @if (Ign.ButtonSource == IgnitionSource.CanFrame)
+                            @if (Ign.Role != IgnitionRole.Follower)
+                            {
+                                @if (Ign.ButtonSource == IgnitionSource.CanFrame)
+                                {
+                                    <div class="ign-row">
+                                        <span class="ign-label">Button bit</span>
+                                        <div class="ign-inline">
+                                            <MudSelect T="int" Value="Ign.ButtonByte" ValueChanged="@(b => Ign.ButtonByte = b)"
+                                                       Label="Byte" Variant="Variant.Outlined" Margin="Margin.Dense" Style="width: 90px">
+                                                @for (var b = 0; b < 8; b++)
+                                                {
+                                                    <MudSelectItem T="int" Value="b">@b</MudSelectItem>
+                                                }
+                                            </MudSelect>
+                                            <MudSelect T="int" Value="ButtonBit" ValueChanged="@(b => Ign.ButtonMask = 1 << b)"
+                                                       Label="Bit" Variant="Variant.Outlined" Margin="Margin.Dense" Style="width: 90px">
+                                                @for (var b = 0; b < 8; b++)
+                                                {
+                                                    <MudSelectItem T="int" Value="b">@b</MudSelectItem>
+                                                }
+                                            </MudSelect>
+                                        </div>
+                                    </div>
+                                    <div class="ign-row">
+                                        <span class="ign-label">Released after</span>
+                                        @SecondsField(Ign.ButtonTimeout, v => Ign.ButtonTimeout = v, 0, 60, "btntimeout")
+                                    </div>
+                                    <div class="ign-help">Without a frame for this long the button counts as released. 0 = never.</div>
+                                }
+                                @VarRow("Stop", Ign.StopInput, v => Ign.StopInput = v, true)
+                                <div class="ign-help">Switches everything off while it is on, for example a kill switch.</div>
+                                <div class="ign-row">
+                                    <span class="ign-label">Max crank time</span>
+                                    @SecondsField(Ign.MaxCrankTime, v => Ign.MaxCrankTime = v, 0.5, 30, "crank")
+                                </div>
+                            }
+
+                            <div class="ign-row">
+                                <span class="ign-label">Several PDMs on one bus</span>
+                                <MudSelect T="IgnitionRole" Value="Ign.Role" ValueChanged="@(r => Ign.Role = r)"
+                                           Variant="Variant.Outlined" Margin="Margin.Dense" Style="max-width: 220px">
+                                    <MudSelectItem T="IgnitionRole" Value="IgnitionRole.Standalone">No, this one only</MudSelectItem>
+                                    <MudSelectItem T="IgnitionRole" Value="IgnitionRole.Master">Yes, this one is the master</MudSelectItem>
+                                    <MudSelectItem T="IgnitionRole" Value="IgnitionRole.Follower">Yes, this one follows</MudSelectItem>
+                                </MudSelect>
+                            </div>
+                            @if (Ign.Role != IgnitionRole.Standalone)
                             {
                                 <div class="ign-row">
-                                    <span class="ign-label">Button bit</span>
-                                    <div class="ign-inline">
-                                        <MudSelect T="int" Value="Ign.ButtonByte" ValueChanged="@(b => Ign.ButtonByte = b)"
-                                                   Label="Byte" Variant="Variant.Outlined" Margin="Margin.Dense" Style="width: 90px">
-                                            @for (var b = 0; b < 8; b++)
-                                            {
-                                                <MudSelectItem T="int" Value="b">@b</MudSelectItem>
-                                            }
-                                        </MudSelect>
-                                        <MudSelect T="int" Value="ButtonBit" ValueChanged="@(b => Ign.ButtonMask = 1 << b)"
-                                                   Label="Bit" Variant="Variant.Outlined" Margin="Margin.Dense" Style="width: 90px">
-                                            @for (var b = 0; b < 8; b++)
-                                            {
-                                                <MudSelectItem T="int" Value="b">@b</MudSelectItem>
-                                            }
-                                        </MudSelect>
-                                    </div>
+                                    <span class="ign-label">State broadcast ID</span>
+                                    <MudTextField T="string" @key="@($"sync-{_refresh}")" Value="@FormatId(Ign.SyncId)"
+                                                  ValueChanged="@(v => { Ign.SyncId = ParseId(v); _refresh++; })"
+                                                  Variant="Variant.Outlined" Margin="Margin.Dense" Style="max-width: 140px"/>
                                 </div>
-                                <div class="ign-row">
-                                    <span class="ign-label">Released after</span>
-                                    @SecondsField(Ign.ButtonTimeout, v => Ign.ButtonTimeout = v, 0, 60, "btntimeout")
-                                </div>
-                                <div class="ign-help">Without a frame for this long the button counts as released. 0 = never.</div>
+                                <div class="ign-help">The same ID on the master and every follower.</div>
                             }
-                            @VarRow("Stop", Ign.StopInput, v => Ign.StopInput = v, true)
-                            <div class="ign-help">Switches everything off while it is on, for example a kill switch.</div>
-                            <div class="ign-row">
-                                <span class="ign-label">Max crank time</span>
-                                @SecondsField(Ign.MaxCrankTime, v => Ign.MaxCrankTime = v, 0.5, 30, "crank")
-                            </div>
                         </div>
                     }
                 </MudPaper>

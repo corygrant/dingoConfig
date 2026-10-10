@@ -9,6 +9,8 @@ namespace domain.Devices.Functions;
 /// <summary>
 /// Ignition and starter. Outputs are given a role instead of an input,
 /// and the firmware runs the dash shutdown on its own.
+/// With several devices on one bus, one master owns the button and the others
+/// follow its state broadcast.
 /// </summary>
 public class Ignition : IDeviceFunction
 {
@@ -28,6 +30,9 @@ public class Ignition : IDeviceFunction
     [JsonPropertyName("engineRunInput")] public int EngineRunInput {get; set;}
     [JsonPropertyName("stopInput")] public int StopInput {get; set;}
     [JsonPropertyName("maxCrankTime")] public int MaxCrankTime {get; set;} = 10000;
+
+    [JsonPropertyName("role")] public IgnitionRole Role {get; set;} = IgnitionRole.Standalone;
+    [JsonPropertyName("syncId")] public int SyncId {get; set;} = 0x6F1;
 
     [JsonPropertyName("buttonSource")] public IgnitionSource ButtonSource {get; set;} = IgnitionSource.Variable;
     [JsonPropertyName("buttonIde")] public bool ButtonIde {get; set;}
@@ -139,6 +144,9 @@ public class Ignition : IDeviceFunction
         Add("maxCrankTime", () => MaxCrankTime, v => MaxCrankTime = (int)v, typeof(int), 10000);
 
         // The rest have fixed subindexes, numbered as in the firmware
+        Add("role", () => Role, v => Role = (IgnitionRole)v, typeof(IgnitionRole), IgnitionRole.Standalone, 7);
+        Add("syncId", () => SyncId, v => SyncId = (int)v, typeof(int), 0x6F1, 8);
+
         Add("buttonSource", () => ButtonSource, v => ButtonSource = (IgnitionSource)v, typeof(IgnitionSource), IgnitionSource.Variable, 9);
         Add("buttonIde", () => ButtonIde, v => ButtonIde = (bool)v, typeof(bool), false, 10);
         Add("buttonId", () => ButtonId, v => ButtonId = (int)v, typeof(int), 0x6F0, 11);
