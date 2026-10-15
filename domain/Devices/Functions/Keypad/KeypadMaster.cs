@@ -209,7 +209,7 @@ public class KeypadMaster : IDeviceFunction
                         KeypadModel.Blink10Key or 
                         KeypadModel.Blink12Key or 
                         KeypadModel.Blink15Key or 
-                        KeypadModel.Blink13Key2Dial or 
+                        KeypadModel.Blink15Key2Dial or 
                         KeypadModel.BlinkRacepad or 
                         KeypadModel.Blink1Key;
     }

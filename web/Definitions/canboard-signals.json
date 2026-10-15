@@ -10,7 +10,7 @@
       "idOffset": 3,
       "signals": [
         { "target": "AnalogInput.Millivolts", "count": 1, "startIndex": 4, "dbc": { "name": "AnalogInput5.Millivolts", "length": 16, "unit": "mV" } },
-        { "target": "BoardTempC",                                            "dbc": { "name": "BoardTempC",              "startBit": 48, "length": 16, "factor": 0.01, "unit": "degC" } }
+        { "target": "BoardTempC",                                            "dbc": { "name": "BoardTempC",              "startBit": 48, "length": 16, "factor": 1.0, "unit": "degC" } }
       ]
     },
     {
