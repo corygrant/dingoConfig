@@ -53,6 +53,9 @@ builder.Services.AddScoped(sp =>
 // Add NotificationService for combined Snackbar + GlobalLogger calls
 builder.Services.AddScoped<NotificationService>();
 
+// Opens config files for both the file toolbar and the home page
+builder.Services.AddScoped<ProjectService>();
+
 // Add API services
 builder.Services.AddTransient<UsbAdapter>();
 builder.Services.AddTransient<SlcanAdapter>();

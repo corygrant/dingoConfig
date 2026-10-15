@@ -59,6 +59,7 @@
     [Inject] private NotificationService Notification { get; set; } = null!;
     [Inject] private ICommsAdapterManager AdapterManager { get; set; } = null!;
     [Inject] private NavigationManager Nav { get; set; } = null!;
+    [Inject] private ProjectService Projects { get; set; } = null!;
 
     private string _locationUri = "";
     
@@ -128,27 +129,7 @@
 
     private async Task HandleOpen(string fileName)
     {
-        try
-        {
-            var devices = await FileManager.LoadDevices(fileName);
-            if (devices is { Count: > 0 })
-            {
-                DeviceManager.ClearDevices();
-                DeviceManager.AddDevices(devices);
-                Notification.NewSuccess($"Opened {fileName} - {devices.Count} device(s) loaded");
-                
-                foreach(var device in devices)
-                    Notification.NewSuccess($"Loaded device: {device.Name}, ID: {device.BaseId}");
-            }
-            else
-            {
-                Notification.NewWarning($"No devices found in {fileName}");
-            }
-        }
-        catch (Exception ex)
-        {
-            Notification.NewError($"Error opening file: {fileName}", ex);
-        }
+        await Projects.OpenAsync(fileName);
     }
 
     private async Task HandleSave()
