@@ -53,10 +53,10 @@ public class BlinkMarineKeypadDevice : IKeypadDevice
         null!;
 
     [JsonConstructor]
-    public BlinkMarineKeypadDevice(string name, int id, string model)
+    public BlinkMarineKeypadDevice(string name, int baseId, string model)
     {
         Name = name;
-        BaseId = id;
+        BaseId = baseId;
         Model = model;
         var config = BlinkMarineModels.Lookup(Model);
         NumButtons = config.numButtons;
