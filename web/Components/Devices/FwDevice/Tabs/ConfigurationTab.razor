@@ -279,6 +279,30 @@
                 }
             </MudExpansionPanel>
         }
+
+        @* Timers *@
+        @if (Device.Timers.Count > 0)
+        {
+            <MudExpansionPanel Text="@($"Timers ({Device.Timers.Count})")"
+                               ExpandedChanged="@((bool expanded) => _timersExpanded = expanded)">
+                @if (_timersExpanded)
+                {
+                    <TimersGrid Timers="Device.Timers" Device="Device"/>
+                }
+            </MudExpansionPanel>
+        }
+
+        @* Ignition *@
+        @if (Device.Def.HasIgnition)
+        {
+            <MudExpansionPanel Text="Ignition"
+                               ExpandedChanged="@((bool expanded) => _ignitionExpanded = expanded)">
+                @if (_ignitionExpanded)
+                {
+                    <IgnitionConfig Ignition="Device.Ignition" Device="Device"/>
+                }
+            </MudExpansionPanel>
+        }
     </MudExpansionPanels>
 </div>
 
@@ -298,6 +322,8 @@
     private bool _flashersExpanded;
     private bool _wiperExpanded;
     private bool _starterDisableExpanded;
+    private bool _timersExpanded;
+    private bool _ignitionExpanded;
 
     private string _baseId = string.Empty;
     
