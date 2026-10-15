@@ -1,0 +1,369 @@
+@using application.Services
+@using domain.Devices.Functions
+@using domain.Enums
+@using web.Components.Devices.FwDevice.Functions
+@using web.Services
+@inject NotificationService Notification
+@inject UserPreferencesManager UserPrefs
+@typeparam TDevice where TDevice : domain.Devices.FwDevice
+@inherits FunctionComponentBase<TDevice>
+
+<style>
+    .ign-header { display: flex; align-items: center; flex-wrap: wrap; gap: 16px; }
+    .ign-title { display: flex; align-items: center; gap: 10px; }
+    .ign-live { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+    .ign-section { height: 100%; }
+    .ign-section-title { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+    .ign-section-title .mud-typography-h6 { font-size: 1rem; }
+    .ign-row { display: grid; grid-template-columns: 170px minmax(0, 1fr); gap: 10px; align-items: center; margin-bottom: 4px; min-height: 34px; }
+    .ign-label { color: var(--mud-palette-text-secondary); font-size: 0.8rem; }
+    .ign-help { color: var(--mud-palette-text-secondary); font-size: 0.72rem; margin: -2px 0 6px 180px; }
+    .ign-var { display: flex; align-items: center; gap: 4px; min-width: 0; }
+    .ign-var .mud-button-root { justify-content: flex-start; text-transform: none; min-width: 0; height: 28px; font-size: 0.8rem; }
+    .ign-var .mud-button-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .ign-inline { display: flex; gap: 8px; flex-wrap: wrap; }
+    .ign-advanced { border-top: 1px solid var(--mud-palette-lines-default); margin-top: 6px; padding-top: 12px; }
+    .ign-out { display: grid; grid-template-columns: 28px minmax(0, 1fr) 56px 150px 32px; gap: 10px; align-items: center;
+               padding: 4px 0; border-top: 1px solid var(--mud-palette-lines-default); }
+    .ign-out:first-of-type { border-top: none; }
+    .ign-out-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .ign-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 8px; }
+    .ign-disabled { opacity: 0.45; pointer-events: none; }
+    @@media (max-width: 600px) {
+        .ign-row { grid-template-columns: 1fr; }
+        .ign-help { margin-left: 0; }
+    }
+</style>
+
+<div style="overflow-y: auto; height: calc(100vh - 250px); padding: 16px; scrollbar-width: auto; scrollbar-color: #888 transparent;">
+
+    @* Header: on/off and what the device is doing right now *@
+    <MudPaper Outlined="true" Class="px-3 py-2 mb-3">
+        <div class="ign-header">
+            <div class="ign-title">
+                <MudIcon Icon="@Icons.Material.Outlined.Key" Color="Color.Primary"/>
+                <MudText Typo="Typo.h6">Ignition</MudText>
+            </div>
+            <MudSwitch T="bool" Value="Ign.Enabled" ValueChanged="EnabledChanged"
+                       Color="Color.Primary" Label="@(Ign.Enabled ? "Enabled" : "Disabled")"/>
+            <MudSpacer/>
+            <div class="ign-live">
+                @if (!Device.Connected)
+                {
+                    <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">Offline</MudChip>
+                }
+                else if (Ign.Enabled)
+                {
+                    <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="@StateColor()">@StateText()</MudChip>
+                }
+            </div>
+        </div>
+    </MudPaper>
+
+    @if (!Ign.Enabled)
+    {
+        <MudAlert Severity="Severity.Normal" Variant="Variant.Outlined" Dense="true" Class="mb-4">
+            The ignition is off. Outputs keep their own inputs.
+        </MudAlert>
+    }
+
+    <div class="@(Ign.Enabled ? "" : "ign-disabled")">
+        <MudGrid Spacing="2">
+
+            @* Start *@
+            <MudItem xs="12" lg="6">
+                <MudPaper Outlined="true" Class="pa-3 ign-section">
+                    <div class="ign-section-title">
+                        <MudIcon Icon="@Icons.Material.Outlined.TouchApp" Size="Size.Small"/>
+                        <MudText Typo="Typo.h6">Start</MudText>
+                    </div>
+
+                    <div class="ign-row">
+                        <span class="ign-label">Mode</span>
+                        <MudToggleGroup T="IgnitionMode" Value="Ign.Mode" ValueChanged="@(m => Ign.Mode = m)"
+                                        Color="Color.Primary" Size="Size.Small" Outlined="true" Delimiters="true"
+                                        SelectionMode="SelectionMode.SingleSelection">
+                            <MudToggleItem Value="IgnitionMode.KeySwitch" Text="Key switch"/>
+                            <MudToggleItem Value="IgnitionMode.StartButton" Text="Start button"/>
+                        </MudToggleGroup>
+                    </div>
+                    <div class="ign-help">@ModeHelp()</div>
+
+                    <div class="ign-row">
+                        <span class="ign-label">@(Key ? "Key ON from" : "Button from")</span>
+                        <MudToggleGroup T="IgnitionSource" Value="Ign.ButtonSource" ValueChanged="@(s => Ign.ButtonSource = s)"
+                                        Color="Color.Primary" Size="Size.Small" Outlined="true" Delimiters="true"
+                                        SelectionMode="SelectionMode.SingleSelection">
+                            <MudToggleItem Value="IgnitionSource.Variable" Text="Input"/>
+                            <MudToggleItem Value="IgnitionSource.CanFrame" Text="CAN frame"/>
+                        </MudToggleGroup>
+                    </div>
+
+                    @if (Ign.ButtonSource == IgnitionSource.Variable)
+                    {
+                        @VarRow(Key ? "Key ON position" : "Start button", Ign.IgnInput, v => Ign.IgnInput = v, false)
+                    }
+                    else
+                    {
+                        <div class="ign-row">
+                            <span class="ign-label">Button frame ID</span>
+                            <MudTextField T="string" @key="@($"btnid-{_refresh}")" Value="@FormatId(Ign.ButtonId)"
+                                          ValueChanged="@(v => { Ign.ButtonId = ParseId(v); _refresh++; })"
+                                          Variant="Variant.Outlined" Margin="Margin.Dense" Style="max-width: 140px"/>
+                        </div>
+                    }
+
+                    @VarRow(Key ? "Key START position" : "Start condition", Ign.StartInput, v => Ign.StartInput = v, true)
+                    @VarRow("Engine running", Ign.EngineRunInput, v => Ign.EngineRunInput = v, true)
+                    <div class="ign-help">Releases the starter once the engine runs.</div>
+
+                    <MudButton Variant="Variant.Text" Size="Size.Small"
+                               EndIcon="@(_startAdvanced ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)"
+                               OnClick="@(() => _startAdvanced = !_startAdvanced)">
+                        Advanced
+                    </MudButton>
+
+                    @if (_startAdvanced)
+                    {
+                        <div class="ign-advanced">
+                            @if (Ign.ButtonSource == IgnitionSource.CanFrame)
+                            {
+                                <div class="ign-row">
+                                    <span class="ign-label">Button bit</span>
+                                    <div class="ign-inline">
+                                        <MudSelect T="int" Value="Ign.ButtonByte" ValueChanged="@(b => Ign.ButtonByte = b)"
+                                                   Label="Byte" Variant="Variant.Outlined" Margin="Margin.Dense" Style="width: 90px">
+                                            @for (var b = 0; b < 8; b++)
+                                            {
+                                                <MudSelectItem T="int" Value="b">@b</MudSelectItem>
+                                            }
+                                        </MudSelect>
+                                        <MudSelect T="int" Value="ButtonBit" ValueChanged="@(b => Ign.ButtonMask = 1 << b)"
+                                                   Label="Bit" Variant="Variant.Outlined" Margin="Margin.Dense" Style="width: 90px">
+                                            @for (var b = 0; b < 8; b++)
+                                            {
+                                                <MudSelectItem T="int" Value="b">@b</MudSelectItem>
+                                            }
+                                        </MudSelect>
+                                    </div>
+                                </div>
+                                <div class="ign-row">
+                                    <span class="ign-label">Released after</span>
+                                    @SecondsField(Ign.ButtonTimeout, v => Ign.ButtonTimeout = v, 0, 60, "btntimeout")
+                                </div>
+                                <div class="ign-help">Without a frame for this long the button counts as released. 0 = never.</div>
+                            }
+                            @VarRow("Stop", Ign.StopInput, v => Ign.StopInput = v, true)
+                            <div class="ign-help">Switches everything off while it is on, for example a kill switch.</div>
+                            <div class="ign-row">
+                                <span class="ign-label">Max crank time</span>
+                                @SecondsField(Ign.MaxCrankTime, v => Ign.MaxCrankTime = v, 0.5, 30, "crank")
+                            </div>
+                        </div>
+                    }
+                </MudPaper>
+            </MudItem>
+
+            @* Outputs: only the ones added here *@
+            <MudItem xs="12" lg="6">
+                <MudPaper Outlined="true" Class="pa-3 ign-section">
+                    <div class="ign-section-title">
+                        <MudIcon Icon="@Icons.Material.Outlined.Power" Size="Size.Small"/>
+                        <MudText Typo="Typo.h6">Outputs</MudText>
+                        <MudSpacer/>
+                        @if (FreeOutputs.Count > 0)
+                        {
+                            <MudMenu Label="Add output" StartIcon="@Icons.Material.Filled.Add" Variant="Variant.Text"
+                                     Color="Color.Primary" Size="Size.Small" Dense="true">
+                                @foreach (var output in FreeOutputs)
+                                {
+                                    var number = output.Number;
+                                    <MudMenuItem OnClick="@(() => AddOutput(number))">
+                                        @number · @output.Name@(output.Enabled ? " (in use)" : "")
+                                    </MudMenuItem>
+                                }
+                            </MudMenu>
+                        }
+                    </div>
+
+                    @if (Assigned.Count == 0)
+                    {
+                        <MudText Typo="Typo.body2" Class="muted-text">
+                            No outputs yet. Add the ones the ignition switches, such as the ECU, fuel pump or dash.
+                        </MudText>
+                    }
+                    @foreach (var output in Assigned)
+                    {
+                        var index = output.Number - 1;
+                        <div class="ign-out">
+                            <MudText Typo="Typo.body2" Class="muted-text">@output.Number</MudText>
+                            <span class="ign-out-name" title="@output.Name">@output.Name</span>
+                            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined"
+                                     Color="@(output.State == OutState.On ? Color.Success : Color.Default)">
+                                @(output.State == OutState.On ? "On" : "Off")
+                            </MudChip>
+                            <MudSelect T="IgnitionOutputRole" Value="Ign.OutputRoles[index]"
+                                       ValueChanged="@(r => SetRole(index, r))"
+                                       Variant="Variant.Outlined" Margin="Margin.Dense" Dense="true">
+                                @foreach (var r in Roles)
+                                {
+                                    <MudSelectItem T="IgnitionOutputRole" Value="r">
+                                        <span class="ign-dot" style="background: @RoleCss(r)"></span>@r
+                                    </MudSelectItem>
+                                }
+                            </MudSelect>
+                            <MudTooltip Text="Remove">
+                                <MudIconButton Icon="@Icons.Material.Outlined.Close" Size="Size.Small"
+                                               OnClick="@(() => RemoveOutput(index))"/>
+                            </MudTooltip>
+                        </div>
+                    }
+
+                    @if (Assigned.Count > 0)
+                    {
+                        <MudText Typo="Typo.caption" Class="muted-text mt-3 d-block">
+                            Ignition: on with the ignition. Accessory: the same, but off while cranking.
+                            Dash: on with the ignition. Starter: only while cranking.
+                        </MudText>
+                    }
+                </MudPaper>
+            </MudItem>
+        </MudGrid>
+    </div>
+</div>
+
+@code {
+    private static readonly IgnitionOutputRole[] Roles =
+        [IgnitionOutputRole.Ignition, IgnitionOutputRole.Accessory, IgnitionOutputRole.Dash, IgnitionOutputRole.Starter];
+
+    private Ignition Ign => Device.Ignition;
+    private bool Key => Ign.Mode == IgnitionMode.KeySwitch;
+    private int _refresh;
+    private bool _startAdvanced;
+
+    private List<Output> Assigned => Device.Outputs
+        .Where(o => o.Number <= Ign.OutputRoles.Count && Ign.OutputRoles[o.Number - 1] != IgnitionOutputRole.None)
+        .ToList();
+
+    // Not paired to another output, not given a role already
+    private List<Output> FreeOutputs => Device.Outputs
+        .Where(o => o.PrimaryOutput < 0 && Ign.OutputRoles[o.Number - 1] == IgnitionOutputRole.None)
+        .ToList();
+
+    private int ButtonBit
+    {
+        get
+        {
+            for (var b = 0; b < 8; b++)
+                if (Ign.ButtonMask == 1 << b) return b;
+            return 0;
+        }
+    }
+
+    private void EnabledChanged(bool enabled)
+    {
+        Ign.Enabled = enabled;
+
+        // An output given a role has to be enabled for the ignition to switch it
+        if (enabled)
+            foreach (var output in Assigned)
+                output.Enabled = true;
+    }
+
+    private void AddOutput(int number)
+    {
+        Ign.OutputRoles[number - 1] = IgnitionOutputRole.Ignition;
+        Device.Outputs[number - 1].Enabled = true;
+    }
+
+    private void SetRole(int index, IgnitionOutputRole role)
+    {
+        Ign.OutputRoles[index] = role;
+        Device.Outputs[index].Enabled = true;
+    }
+
+    private void RemoveOutput(int index)
+    {
+        Ign.OutputRoles[index] = IgnitionOutputRole.None;
+        // Back to its own input; with none set there is no reason to keep it on
+        if (Device.Outputs[index].Input == 0)
+            Device.Outputs[index].Enabled = false;
+    }
+
+    private bool HasRole(IgnitionOutputRole role) => Ign.OutputRoles.Contains(role);
+
+    private string FormatId(int id) => Utils.FormatId(id, UserPrefs.Preferences.IdFormat);
+    private int ParseId(string text) => Utils.ParseId(text, UserPrefs.Preferences.IdFormat, Notification);
+
+    private string VarText(int index) => index == 0 ? "Not used" : GetSelectedVarText(index);
+
+    private RenderFragment VarRow(string label, int index, Action<int> setter, bool clearable) => __builder =>
+    {
+        <div class="ign-row">
+            <span class="ign-label">@label</span>
+            <div class="ign-var">
+                <MudButton Variant="Variant.Outlined" Size="Size.Small" FullWidth="true"
+                           StartIcon="@Icons.Material.Filled.Search"
+                           Color="@(index == 0 ? Color.Default : Color.Primary)"
+                           OnClick="@(() => OpenVariableSelectorAsync(["bool"], setter))">
+                    @VarText(index)
+                </MudButton>
+                @if (clearable && index != 0)
+                {
+                    <MudTooltip Text="Clear">
+                        <MudIconButton Icon="@Icons.Material.Outlined.Close" Size="Size.Small"
+                                       OnClick="@(() => setter(0))"/>
+                    </MudTooltip>
+                }
+            </div>
+        </div>
+    };
+
+    private RenderFragment SecondsField(int ms, Action<int> setter, double min, double max, string key) => __builder =>
+    {
+        <MudNumericField T="double" @key="@($"{key}-{_refresh}")"
+                         Value="@(ms / 1000.0)"
+                         ValueChanged="@(v => SecondsChanged(v, setter, min, max))"
+                         Min="min" Max="max" Step="0.5" Format="0.##"
+                         Adornment="Adornment.End" AdornmentText="s"
+                         Variant="Variant.Outlined" Margin="Margin.Dense" Style="max-width: 140px"/>
+    };
+
+    private void SecondsChanged(double seconds, Action<int> setter, double min, double max)
+    {
+        if (seconds < min || seconds > max)
+            Notification.NewWarning($"Must be {min:0.##} to {max:0.##} s");
+
+        setter((int)Math.Round(Math.Clamp(seconds, min, max) * 1000));
+        _refresh++;
+    }
+
+    private string ModeHelp() => Key
+        ? "The key ON position powers the ignition while it is held there. START is a separate momentary input."
+        : "One press toggles the ignition. Pressed while the start condition is held it also cranks.";
+
+    private string StateText() => (IgnitionState)Ign.State switch
+    {
+        IgnitionState.Ignition => "Ignition",
+        IgnitionState.Cranking => "Cranking",
+        IgnitionState.Running => "Running",
+        _ => "Off"
+    };
+
+    private Color StateColor() => (IgnitionState)Ign.State switch
+    {
+        IgnitionState.Ignition => Color.Info,
+        IgnitionState.Cranking => Color.Warning,
+        IgnitionState.Running => Color.Success,
+        _ => Color.Default
+    };
+
+    private static string RoleCss(IgnitionOutputRole role) => role switch
+    {
+        IgnitionOutputRole.Ignition => "var(--mud-palette-success)",
+        IgnitionOutputRole.Accessory => "var(--mud-palette-warning)",
+        IgnitionOutputRole.Dash => "var(--mud-palette-info)",
+        IgnitionOutputRole.Starter => "var(--mud-palette-error)",
+        _ => "var(--mud-palette-lines-default)"
+    };
+}

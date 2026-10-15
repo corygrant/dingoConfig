@@ -10,6 +10,13 @@
     <MudTabPanel Text="Configuration" Icon="@Icons.Material.Filled.Settings">
         <ConfigurationTab TDevice="TDevice" Device="Device" />
     </MudTabPanel>
+
+    @if (Device.Def.HasIgnition)
+    {
+        <MudTabPanel Text="Ignition" Icon="@Icons.Material.Outlined.Key">
+            <IgnitionTab TDevice="TDevice" Device="Device" />
+        </MudTabPanel>
+    }
     
     @for (var i= 0; i < Device.Keypads.Count; i++)
     {
