@@ -742,6 +742,9 @@ All functions implement `IDeviceFunction` interface:
 - **Condition**: Conditional logic (operators, conditionals)
 - **Wiper**: Wiper control (mode, speed, intervals)
 - **StarterDisable**: Starter lockout configuration
+- **Ignition**: Key switch / start button, output roles (ignition, accessory, dash, starter),
+  dash shutdown frame, master/follower sync between PDMs and sleep after ignition off.
+  Edited in the Ignition tab (`Tabs/IgnitionTab.razor`); needs firmware with the Ignition block.
 
 ### Device Enums
 

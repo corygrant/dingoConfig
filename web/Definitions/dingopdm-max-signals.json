@@ -149,6 +149,18 @@
       "signals": [
         { "target": "Output.DutyCycle", "count": 4,                "dbc": { "name": "Output{n}.DutyCycle", "length": 8, "unit": "%" } }
       ]
+    },
+    {
+      "idOffset": 29,
+      "signals": [
+        { "target": "Ignition.State",          "dbc": { "name": "IgnitionState",   "startBit": 0,  "length": 4 } },
+        { "target": "Ignition.DashState",      "dbc": { "name": "DashState",       "startBit": 8,  "length": 8 } },
+        { "target": "Ignition.SleepStatus",    "dbc": { "name": "SleepStatus",     "startBit": 16, "length": 8 } },
+        { "target": "Ignition.MasterLink",     "dbc": { "name": "MasterLink",      "startBit": 24, "length": 8 } },
+        { "target": "Ignition.SleepCountdown", "dbc": { "name": "SleepCountdown",  "startBit": 32, "length": 16, "unit": "s" } },
+        { "target": "Ignition.OutputFlags",    "dbc": { "name": "IgnitionOutputs", "startBit": 48, "length": 8 } },
+        { "target": "Ignition.WakeSource",     "dbc": { "name": "WakeSource",      "startBit": 56, "length": 8 } }
+      ]
     }
   ]
 }
