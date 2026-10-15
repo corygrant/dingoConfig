@@ -279,6 +279,42 @@
                 }
             </MudExpansionPanel>
         }
+
+        @* Timers *@
+        @if (Device.Timers.Count > 0)
+        {
+            <MudExpansionPanel Text="@($"Timers ({Device.Timers.Count})")"
+                               ExpandedChanged="@((bool expanded) => _timersExpanded = expanded)">
+                @if (_timersExpanded)
+                {
+                    <TimersGrid Timers="Device.Timers" Device="Device"/>
+                }
+            </MudExpansionPanel>
+        }
+
+        @* CAN Messages *@
+        @if (Device.CanMessages.Count > 0)
+        {
+            <MudExpansionPanel Text="@($"CAN Messages ({Device.CanMessages.Count})")"
+                               ExpandedChanged="@((bool expanded) => _canMessagesExpanded = expanded)">
+                @if (_canMessagesExpanded)
+                {
+                    <CanMessagesGrid CanMessages="Device.CanMessages" Device="Device"/>
+                }
+            </MudExpansionPanel>
+        }
+
+        @* Ignition *@
+        @if (Device.Def.HasIgnition)
+        {
+            <MudExpansionPanel Text="Ignition"
+                               ExpandedChanged="@((bool expanded) => _ignitionExpanded = expanded)">
+                @if (_ignitionExpanded)
+                {
+                    <IgnitionConfig Ignition="Device.Ignition" Device="Device"/>
+                }
+            </MudExpansionPanel>
+        }
     </MudExpansionPanels>
 </div>
 
@@ -298,6 +334,9 @@
     private bool _flashersExpanded;
     private bool _wiperExpanded;
     private bool _starterDisableExpanded;
+    private bool _timersExpanded;
+    private bool _ignitionExpanded;
+    private bool _canMessagesExpanded;
 
     private string _baseId = string.Empty;
     
