@@ -9,13 +9,16 @@
 @typeparam TDevice where TDevice : domain.Interfaces.IDevice
 
 <MudPaper MaxHeight="400">
-    <MudDataGrid Items="@CanInputs" Dense="true" Hover="true" Striped="false" EditMode="DataGridEditMode.Cell"
+    <MudDataGrid Items="@CanInputs" RowStyleFunc="@UsesRowStyle" Dense="true" Hover="true" Striped="false" EditMode="DataGridEditMode.Cell"
                  ReadOnly="false"
                  SortMode="SortMode.None" ColumnResizeMode="ResizeMode.Container" Virtualize="true"
                  FixedHeader="true" HorizontalScrollbar="true" Style="max-height: 400px;">
         <Columns>
-            <PropertyColumn Property="x => x.Number" Title="#" StickyLeft="true" Editable="false"
-                            CellStyle="max-width: 100px"/>
+            <TemplateColumn Title="#" StickyLeft="true" Editable="false" CellStyle="max-width: 100px">
+                <CellTemplate>
+                    @context.Item.Number<UsesBadge Uses="@Uses?.Invoke(context.Item)"/>
+                </CellTemplate>
+            </TemplateColumn>
             <PropertyColumn Property="x => x.Enabled" CellStyle="max-width: 100px">
                 <EditTemplate>
                     <MudCheckBox @bind-Value="context.Item.Enabled" Dense="true"/>
@@ -140,6 +143,12 @@
 </MudPaper>
 
 @code {
+    // What else reads each item, see FwDevice.UsesOf
+    [Parameter] public Func<domain.Interfaces.IDeviceFunction, IReadOnlyList<string>>? Uses { get; set; }
+
+    private string UsesRowStyle(CanInput item, int _) =>
+        Uses?.Invoke(item) is { Count: > 0 } ? "background-color: rgba(var(--mud-palette-primary-rgb), 0.06);" : "";
+
     [Parameter, EditorRequired] public List<CanInput> CanInputs { get; set; } = null!;
     [Parameter, EditorRequired] public TDevice Device { get; set; } = default!;
     

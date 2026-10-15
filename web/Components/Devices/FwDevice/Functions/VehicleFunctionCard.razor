@@ -1,0 +1,345 @@
+@using domain.Devices.Functions
+@using domain.Devices.VehicleFunctions
+@using domain.Enums
+@using web.Services
+@inject NotificationService Notification
+@typeparam TDevice where TDevice : domain.Devices.FwDevice
+@inherits FunctionComponentBase<TDevice>
+
+<MudPaper Outlined="true" Class="vf-card">
+    @* Header doubles as the collapsed view: what drives what, and whether it is on *@
+    <div class="vf-head" @onclick="@(() => _open = !_open)">
+        <MudIcon Icon="@VehicleFunctionIcons.Of(Function)" Color="Color.Primary" Size="Size.Small"/>
+        <span class="vf-title" title="@Function.Summary">@Function.Title</span>
+        @if (Function.Problems.Count > 0)
+        {
+            <MudTooltip Text="@string.Join(" ", Function.Problems)">
+                <MudIcon Icon="@Icons.Material.Outlined.WarningAmber" Color="Color.Warning" Size="Size.Small"/>
+            </MudTooltip>
+        }
+        @if (!_open)
+        {
+            <span class="vf-summary">@SummaryText()</span>
+        }
+        <MudSpacer/>
+        @foreach (var output in AssignedOutputs)
+        {
+            <span class="vf-dot @(output.State == OutState.On ? "on" : "")" title="@output.Number · @output.Name"></span>
+        }
+        <span @onclick:stopPropagation="true">
+            <MudTooltip Text="Remove function">
+                <MudIconButton Icon="@Icons.Material.Outlined.Delete" Size="Size.Small" OnClick="RemoveAsync"/>
+            </MudTooltip>
+        </span>
+        <MudIcon Icon="@(_open ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)" Size="Size.Small"/>
+    </div>
+
+    @if (_open)
+    {
+        <div class="vf-body">
+            <div class="vf-line vf-cols">
+                <span></span>
+                <span>Input</span>
+                <span>Outputs</span>
+            </div>
+            @foreach (var row in Rows())
+            {
+                <div class="vf-line">
+                    <span class="vf-name" title="@(row.Input?.Help ?? "")">@row.Label</span>
+                    <div class="vf-in">
+                        @if (row.Input != null)
+                        {
+                            @InputPicker(row.Input)
+                        }
+                    </div>
+                    <div class="vf-outs">
+                        @if (row.Output != null)
+                        {
+                            @OutputChips(row.Output)
+                        }
+                    </div>
+                </div>
+            }
+
+            @foreach (var problem in Function.Problems)
+            {
+                <div class="vf-problem">@problem</div>
+            }
+
+            <div class="vf-foot">
+                <MudButton Variant="Variant.Text" Size="Size.Small"
+                           EndIcon="@(_advanced ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)"
+                           OnClick="@(() => _advanced = !_advanced)">
+                    Advanced
+                </MudButton>
+            </div>
+
+            @if (_advanced)
+            {
+                <div class="vf-advanced">
+                    @foreach (var slot in Function.InputSlots.Where(s => s.Advanced))
+                    {
+                        <div class="vf-line">
+                            <span class="vf-name" title="@slot.Help">@slot.Label</span>
+                            <div class="vf-in">@InputPicker(slot)</div>
+                            <div class="vf-outs vf-hint">@slot.Help</div>
+                        </div>
+                    }
+
+                    @if (Function is Headlights headlights)
+                    {
+                        <MudCheckBox T="bool" Value="headlights.LowOffWithHigh" Dense="true" Size="Size.Small"
+                                     ValueChanged="@(v => { headlights.LowOffWithHigh = v; Rebuild(); })"
+                                     Label="Low beam off while the high beam is on (H4 bulbs)"/>
+                    }
+                    @if (Function is TurnSignals turnSignals)
+                    {
+                        <div class="vf-settings">
+                            <span class="vf-name">Lamp on / off</span>
+                            @Whole(turnSignals.OnTime, v => { turnSignals.OnTime = v; Rebuild(); }, 50, 5000, "on", "ms")
+                            @Whole(turnSignals.OffTime, v => { turnSignals.OffTime = v; Rebuild(); }, 50, 5000, "off", "ms")
+                            <span class="vf-hint">
+                                @(60000 / Math.Max(1, turnSignals.OnTime + turnSignals.OffTime))/min, 60–120 is legal
+                            </span>
+                        </div>
+                    }
+                    @if (Function is InteriorLight interior)
+                    {
+                        <div class="vf-settings">
+                            <span class="vf-name">Off delay</span>
+                            @Whole(interior.OffDelay / 1000, v => { interior.OffDelay = v * 1000; Rebuild(); }, 0, 600, "delay", "s")
+                        </div>
+                    }
+
+                    @if (AssignedOutputs.Count > 0)
+                    {
+                        <div class="vf-table-wrap">
+                            <table class="vf-table">
+                                <thead>
+                                <tr>
+                                    <th>Output</th>
+                                    <th title="Current limit">Limit A</th>
+                                    <th title="Inrush current limit">Inrush A</th>
+                                    <th title="How long the inrush limit applies">Inrush ms</th>
+                                    <th title="Automatic retries after an overcurrent trip">Retries</th>
+                                    <th title="Below 100 % the output is dimmed with PWM">Duty %</th>
+                                    <th title="Ramps the output up instead of switching it on at once">Soft ms</th>
+                                    <th>PWM Hz</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                @foreach (var output in AssignedOutputs)
+                                {
+                                    var o = output;
+                                    <tr>
+                                        <td class="vf-out-name">@o.Number · @o.Name</td>
+                                        <td>@Cell(o.CurrentLimit, v => o.CurrentLimit = v, 0, 100, $"lim{o.Number}")</td>
+                                        <td>@Cell(o.InrushCurrentLimit, v => o.InrushCurrentLimit = v, 0, 100, $"inr{o.Number}")</td>
+                                        <td>@WholeCell(o.InrushTime, v => o.InrushTime = v, 0, 10000, $"inrt{o.Number}")</td>
+                                        <td>@WholeCell(o.ResetCountLimit, v => { o.ResetCountLimit = v; o.ResetMode = v > 0 ? ResetMode.Count : ResetMode.None; }, 0, 20, $"rst{o.Number}")</td>
+                                        <td>@WholeCell(o.FixedDutyCycle, v => { o.FixedDutyCycle = v; UpdatePwm(o); }, 1, 100, $"duty{o.Number}")</td>
+                                        <td>@WholeCell(o.SoftStartEnabled ? o.SoftStartRampTime : 0, v => { o.SoftStartRampTime = v; o.SoftStartEnabled = v > 0; UpdatePwm(o); }, 0, 10000, $"soft{o.Number}")</td>
+                                        <td>@WholeCell(o.Frequency, v => o.Frequency = v, 1, 400, $"hz{o.Number}")</td>
+                                    </tr>
+                                }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+    }
+</MudPaper>
+
+@code {
+    [Parameter, EditorRequired] public VehicleFunction Function { get; set; } = null!;
+    [Parameter] public EventCallback OnRemoved { get; set; }
+
+    private bool _open;
+    private bool _advanced;
+    private int _refresh;
+
+    private record Row(string Label, InputSlot? Input, OutputSlot? Output);
+
+    protected override void OnInitialized()
+    {
+        // A fresh function opens for setting up, a finished one stays a single line
+        _open = Function.OutputSlots.All(s => !Function.HasOutputs(s.Key));
+    }
+
+    // A switch and the outputs it drives share a row
+    private IEnumerable<Row> Rows()
+    {
+        var inputs = Function.InputSlots.Where(s => !s.Advanced).ToList();
+        var outputs = Function.OutputSlots.ToList();
+        var single = inputs.Count == 1 && outputs.Count == 1;
+
+        foreach (var input in inputs)
+        {
+            var output = single ? outputs[0] : outputs.FirstOrDefault(o => o.Key == input.Key);
+            if (output != null)
+                outputs.Remove(output);
+            yield return new Row(output?.Label ?? input.Label, input, output);
+        }
+
+        foreach (var output in outputs)
+            yield return new Row(output.Label, null, output);
+    }
+
+    private List<Output> AssignedOutputs => Function.OutputSlots
+        .SelectMany(s => Function.OutputsIn(s.Key))
+        .Distinct()
+        .Select(n => Device.Outputs[n - 1])
+        .ToList();
+
+    private string SummaryText()
+    {
+        var parts = Function.OutputSlots
+            .Where(s => Function.HasOutputs(s.Key))
+            .Select(s => $"{s.Label} → {string.Join(", ", Function.OutputsIn(s.Key))}")
+            .ToList();
+        return parts.Count > 0 ? string.Join(" · ", parts) : "Not set up";
+    }
+
+    private RenderFragment InputPicker(InputSlot slot) => __builder =>
+    {
+        var input = Function.Input(slot.Key);
+        <MudTooltip Text="@slot.Label" Delay="600" RootClass="vf-pick-wrap">
+            <MudButton Variant="Variant.Outlined" Size="Size.Small" Class="vf-pick"
+                       Color="@(input.Var == 0 ? Color.Default : Color.Primary)"
+                       OnClick="@(() => OpenVariableSelectorAsync(["bool"], v => { input.Var = v; Rebuild(); }))">
+                @if (input.Var == 0)
+                {
+                    <span class="vf-placeholder">Select input</span>
+                }
+                else
+                {
+                    @VarName(input.Var)
+                }
+            </MudButton>
+        </MudTooltip>
+        @* Fixed slots keep the pickers lined up from row to row *@
+        <span class="vf-slot">
+            @if (input.Var != 0)
+            {
+                <MudIconButton Icon="@Icons.Material.Outlined.Close" Size="Size.Small"
+                               OnClick="@(() => { input.Var = 0; Rebuild(); })"/>
+            }
+        </span>
+        <span class="vf-type">
+            @if (slot.CanToggle)
+            {
+                <MudTooltip Text="@(input.Toggle ? "Push button: each press turns it on or off" : "Switch: on for as long as the switch is on")">
+                    <MudChip T="string" Size="Size.Small" Class="vf-type-chip"
+                             Variant="@(input.Toggle ? Variant.Filled : Variant.Outlined)"
+                             Color="@(input.Toggle ? Color.Primary : Color.Default)"
+                             Icon="@(input.Toggle ? Icons.Material.Filled.TouchApp : Icons.Material.Outlined.ToggleOn)"
+                             OnClick="@(() => { input.Toggle = !input.Toggle; Rebuild(); })">
+                        @(input.Toggle ? "Push button" : "Switch")
+                    </MudChip>
+                </MudTooltip>
+            }
+        </span>
+    };
+
+    private RenderFragment OutputChips(OutputSlot slot) => __builder =>
+    {
+        foreach (var number in Function.OutputsIn(slot.Key).ToList())
+        {
+            var output = Device.Outputs[number - 1];
+            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Class="vf-chip"
+                     Color="@(output.State == OutState.On ? Color.Success : Color.Default)"
+                     OnClose="@((MudChip<string> _) => RemoveOutput(slot.Key, number))">
+                <span title="@output.Name">@number</span>
+            </MudChip>
+        }
+        var free = VehicleFunctionService.FreeOutputs(Device).ToList();
+        var empty = Function.OutputsIn(slot.Key).Count == 0;
+        if (free.Count > 0)
+        {
+            <MudMenu Dense="true" AriaLabel="Add output">
+                <ActivatorContent>
+                    @if (empty)
+                    {
+                        @* A faint hint while the row has nothing, a bare + once it has *@
+                        <MudButton Variant="Variant.Text" Size="Size.Small" Class="vf-add-empty"
+                                   StartIcon="@Icons.Material.Filled.Add">Add output</MudButton>
+                    }
+                    else
+                    {
+                        <MudIconButton Icon="@Icons.Material.Filled.Add" Size="Size.Small"/>
+                    }
+                </ActivatorContent>
+                <ChildContent>
+                    @foreach (var output in free)
+                    {
+                        var number = output.Number;
+                        <MudMenuItem OnClick="@(() => AddOutput(slot.Key, number))">
+                            @number · @output.Name@(output.Enabled ? " (in use)" : "")
+                        </MudMenuItem>
+                    }
+                </ChildContent>
+            </MudMenu>
+        }
+        else if (empty)
+        {
+            <span class="vf-placeholder">No free outputs</span>
+        }
+    };
+
+    private string VarName(int index)
+    {
+        // "canInput3 - State" reads fine without the property for state-only blocks
+        var text = GetSelectedVarText(index);
+        return text.EndsWith(" - State") ? text[..^8] : text;
+    }
+
+    private void Rebuild()
+    {
+        VehicleFunctionService.Rebuild(Device, Function);
+        _refresh++;
+    }
+
+    private void AddOutput(string slot, int number) => VehicleFunctionService.AddOutput(Device, Function, slot, number);
+
+    private void RemoveOutput(string slot, int number) => VehicleFunctionService.RemoveOutput(Device, Function, slot, number);
+
+    private async Task RemoveAsync()
+    {
+        var confirm = await DialogService.ShowMessageBox(
+            $"Remove {Function.Title}",
+            "Its outputs are switched off and the virtual inputs, flashers and timers it built are freed.",
+            yesText: "Remove", cancelText: "Cancel");
+        if (confirm != true)
+            return;
+
+        VehicleFunctionService.Remove(Device, Function);
+        await OnRemoved.InvokeAsync();
+    }
+
+    // PWM is only needed for dimming or a soft start
+    private static void UpdatePwm(Output o) => o.PwmEnabled = o.FixedDutyCycle < 100 || o.SoftStartEnabled;
+
+    private RenderFragment Whole(int value, Action<int> set, int min, int max, string key, string unit) => __builder =>
+    {
+        <MudNumericField T="int" @key="@($"{key}-{_refresh}")" Value="value" HideSpinButtons="true"
+                         Variant="Variant.Outlined" Margin="Margin.Dense" Min="min" Max="max" Class="vf-num"
+                         Adornment="Adornment.End" AdornmentText="@unit"
+                         ValueChanged="@(v => { set(Math.Clamp(v, min, max)); _refresh++; })"/>
+    };
+
+    private RenderFragment Cell(double value, Action<double> set, double min, double max, string key) => __builder =>
+    {
+        <MudNumericField T="double" @key="@($"{key}-{_refresh}")" Value="value" HideSpinButtons="true"
+                         Variant="Variant.Text" Margin="Margin.Dense" Format="0.#" Min="min" Max="max"
+                         ValueChanged="@(v => { set(Math.Clamp(v, min, max)); _refresh++; })"/>
+    };
+
+    private RenderFragment WholeCell(int value, Action<int> set, int min, int max, string key) => __builder =>
+    {
+        <MudNumericField T="int" @key="@($"{key}-{_refresh}")" Value="value" HideSpinButtons="true"
+                         Variant="Variant.Text" Margin="Margin.Dense" Min="min" Max="max"
+                         ValueChanged="@(v => { set(Math.Clamp(v, min, max)); _refresh++; })"/>
+    };
+}
