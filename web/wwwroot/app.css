@@ -105,3 +105,8 @@ h1:focus {
     margin-right: 6px;
     border-radius: 2px;
 }
+
+/* Helper text next to a setting */
+.muted-text {
+    color: var(--mud-palette-text-secondary);
+}
