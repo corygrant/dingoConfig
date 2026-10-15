@@ -1,0 +1,12 @@
+@* Marks a block that an ignition role or a vehicle function sets up, so it is edited there *@
+@if (!string.IsNullOrEmpty(By))
+{
+    <MudTooltip Text="@($"Set up by {By}. Change it there.")">
+        <MudIcon Icon="@Icons.Material.Outlined.Lock" Color="Color.Primary" Size="Size.Small"
+                 Style="vertical-align: middle; margin-left: 4px;"/>
+    </MudTooltip>
+}
+
+@code {
+    [Parameter] public string? By { get; set; }
+}

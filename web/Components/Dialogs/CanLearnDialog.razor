@@ -1,0 +1,270 @@
+@using application.Services
+@using domain.Common
+@using domain.Interfaces
+@using domain.Models
+@inject ICommsAdapterManager AdapterManager
+@inject DeviceManager DeviceManager
+@implements IDisposable
+
+<style>
+    .learn-step { min-height: 220px; display: flex; flex-direction: column; gap: 12px; }
+    .learn-big { display: flex; align-items: center; gap: 16px; padding: 8px 0; }
+    .learn-dot { width: 46px; height: 46px; border-radius: 50%; flex: 0 0 auto;
+                 background: var(--mud-palette-action-disabled-background); border: 2px solid var(--mud-palette-lines-default);
+                 transition: background-color 80ms ease, box-shadow 80ms ease; }
+    .learn-dot.on { background: var(--mud-palette-success); border-color: var(--mud-palette-success);
+                    box-shadow: 0 0 14px var(--mud-palette-success); }
+    .learn-rec { width: 18px; height: 18px; border-radius: 50%; background: var(--mud-palette-error);
+                 animation: learn-pulse 1s ease-in-out infinite; flex: 0 0 auto; }
+    @@keyframes learn-pulse { 50% { opacity: 0.3; } }
+    @@media (prefers-reduced-motion: reduce) { .learn-rec { animation: none; } }
+    .learn-stats { font-size: 0.78rem; color: var(--mud-palette-text-secondary); }
+    .learn-cand { font-family: monospace; }
+</style>
+
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6">Learn from CAN: @Title</MudText>
+    </TitleContent>
+    <DialogContent>
+        <div class="learn-step">
+            @switch (_step)
+            {
+                case Step.Setup:
+                    <MudText Typo="Typo.body2">
+                        dingoConfig listens to the CAN bus while you switch it on and off, and picks the message
+                        bit that followed it. First it learns for 2 s what changes on its own, so keep still until
+                        it asks.
+                    </MudText>
+                    @if (!AdapterManager.IsConnected)
+                    {
+                        <MudAlert Severity="Severity.Warning" Dense="true" Variant="Variant.Outlined">
+                            Connect an adapter first. Over the PDM's own USB, "Connect USB to CAN" has to be on.
+                        </MudAlert>
+                    }
+                    <div class="d-flex align-center gap-2 flex-wrap">
+                        <MudTextField T="string" @bind-Value="_filter" Label="Only these IDs (hex)"
+                                      Placeholder="all, or for example 640-64F"
+                                      Variant="Variant.Outlined" Margin="Margin.Dense" Style="max-width: 260px"/>
+                        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" OnClick="@(() => _filter = "")">All</MudChip>
+                        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" OnClick="@(() => _filter = CanboardRange())">CANboard</MudChip>
+                    </div>
+                    <MudCheckBox T="bool" @bind-Value="_ignoreOwn" Dense="true" Label="Leave out this PDM's own messages"/>
+                    break;
+
+                case Step.Baseline:
+                    <div class="learn-big">
+                        <MudProgressCircular Indeterminate="true" Size="Size.Medium" Color="Color.Primary"/>
+                        <div>
+                            <MudText Typo="Typo.subtitle1">Don't touch any switch</MudText>
+                            <MudText Typo="Typo.body2" Class="muted-text">
+                                Learning what changes on its own… @Math.Max(0, Math.Ceiling(BaselineSeconds - Elapsed)) s
+                            </MudText>
+                        </div>
+                    </div>
+                    <MudProgressLinear Value="@(Math.Min(100, Elapsed / BaselineSeconds * 100))" Color="Color.Primary"/>
+                    <div class="learn-stats">@_learner!.FramesSeen frames from @_learner.IdsSeen IDs</div>
+                    break;
+
+                case Step.Recording:
+                    <div class="learn-big">
+                        <span class="learn-rec"></span>
+                        <div>
+                            <MudText Typo="Typo.subtitle1">Now switch it on, then off</MudText>
+                            <MudText Typo="Typo.body2" Class="muted-text">
+                                Recording. It stops by itself once the switch is back off.
+                            </MudText>
+                        </div>
+                    </div>
+                    <div class="learn-stats">@_learner!.FramesSeen frames from @_learner.IdsSeen IDs</div>
+                    break;
+
+                case Step.Verify:
+                    @if (_candidates.Count > 1)
+                    {
+                        <MudText Typo="Typo.body2">Several bits followed the switch. The most likely one is selected:</MudText>
+                        <MudRadioGroup T="CanBitCandidate" Value="_selected" ValueChanged="Select">
+                            @foreach (var c in _candidates)
+                            {
+                                <MudRadio T="CanBitCandidate" Value="c" Dense="true" Size="Size.Small">
+                                    <span class="learn-cand">@Describe(c)</span>
+                                </MudRadio>
+                            }
+                        </MudRadioGroup>
+                    }
+                    else
+                    {
+                        <MudText Typo="Typo.body2">Found it: <span class="learn-cand">@Describe(_selected!)</span></MudText>
+                    }
+                    <div class="learn-big">
+                        <span class="learn-dot @(_live ? "on" : "")"></span>
+                        <div>
+                            <MudText Typo="Typo.subtitle1">Check it: switch it on and off once more</MudText>
+                            <MudText Typo="Typo.body2" Class="muted-text">
+                                @(_checks == 0 ? "The light turns green while the switch is on." : $"Seen switching {_checks} time{(_checks == 1 ? "" : "s")}. Looks right?")
+                            </MudText>
+                        </div>
+                    </div>
+                    break;
+
+                case Step.NothingFound:
+                    <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Dense="true">
+                        Nothing followed the switch. Check the ID filter and that the adapter sees the bus
+                        (@_learner!.FramesSeen frames from @_learner.IdsSeen IDs were received), then try again.
+                    </MudAlert>
+                    break;
+            }
+        </div>
+    </DialogContent>
+    <DialogActions>
+        <MudButton Variant="Variant.Text" OnClick="Cancel">Cancel</MudButton>
+        @switch (_step)
+        {
+            case Step.Setup:
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Start"
+                           Disabled="!AdapterManager.IsConnected">Start</MudButton>
+                break;
+            case Step.Recording:
+                <MudButton Variant="Variant.Outlined" OnClick="Finish">Done</MudButton>
+                break;
+            case Step.Verify:
+                <MudButton Variant="Variant.Outlined" OnClick="Start">Record again</MudButton>
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Use">Use this</MudButton>
+                break;
+            case Step.NothingFound:
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Start">Try again</MudButton>
+                break;
+        }
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = null!;
+
+    [Parameter, EditorRequired] public domain.Devices.FwDevice Device { get; set; } = null!;
+    [Parameter] public string Title { get; set; } = "Switch";
+
+    private enum Step { Setup, Baseline, Recording, Verify, NothingFound }
+
+    private const double BaselineSeconds = 2.0;
+    private const double RecordTimeoutSeconds = 30.0;
+    private static readonly TimeSpan SettleTime = TimeSpan.FromMilliseconds(800);
+
+    private Step _step = Step.Setup;
+    private string _filter = "";
+    private bool _ignoreOwn = true;
+    private CanBitLearner? _learner;
+    private DateTime _stepStarted;
+    private List<CanBitCandidate> _candidates = [];
+    private CanBitCandidate? _selected;
+    private volatile bool _live;
+    private int _checks;
+    private Timer? _timer;
+
+    private double Elapsed => (DateTime.UtcNow - _stepStarted).TotalSeconds;
+
+    protected override void OnInitialized()
+    {
+        AdapterManager.DataReceived += OnFrame;
+        _timer = new Timer(_ => InvokeAsync(Tick), null, 100, 100);
+    }
+
+    private void Start()
+    {
+        var accept = CanBitLearner.ParseFilter(_filter);
+        var ownFrom = Device.BaseId;
+        var ownTo = Math.Max(Device.MaxCyclicId, Device.BaseId + 1);
+        _learner = new CanBitLearner(_ignoreOwn ? id => accept(id) && (id < ownFrom || id > ownTo) : accept);
+        _candidates = [];
+        _selected = null;
+        _checks = 0;
+        _step = Step.Baseline;
+        _stepStarted = DateTime.UtcNow;
+    }
+
+    private void Tick()
+    {
+        switch (_step)
+        {
+            case Step.Baseline when Elapsed >= BaselineSeconds:
+                _learner!.StartRecording();
+                _step = Step.Recording;
+                _stepStarted = DateTime.UtcNow;
+                break;
+
+            case Step.Recording:
+                // Done once a bit has gone on and back off and nothing has moved for a moment
+                var best = _learner!.Candidates(1).FirstOrDefault();
+                if (best is { Changes: >= 2 } && best.Changes % 2 == 0 && DateTime.UtcNow - best.LastChange > SettleTime)
+                    Finish();
+                else if (Elapsed > RecordTimeoutSeconds)
+                    Finish();
+                break;
+        }
+        StateHasChanged();
+    }
+
+    private void Finish()
+    {
+        _learner!.Stop();
+        _candidates = _learner.Candidates().ToList();
+        if (_candidates.Count == 0)
+        {
+            _step = Step.NothingFound;
+            return;
+        }
+        Select(_candidates[0]);
+        _step = Step.Verify;
+    }
+
+    private void Select(CanBitCandidate candidate)
+    {
+        _selected = candidate;
+        _live = false;
+        _checks = 0;
+    }
+
+    private void OnFrame(object? sender, CanFrameEventArgs e)
+    {
+        switch (_step)
+        {
+            case Step.Baseline:
+            case Step.Recording:
+                _learner?.Add(e.Frame);
+                break;
+
+            case Step.Verify when _selected != null:
+                var state = CanBitLearner.Read(_selected, e.Frame);
+                if (state == null)
+                    return;
+                if (state.Value && !_live)
+                    Interlocked.Increment(ref _checks);
+                _live = state.Value;
+                break;
+        }
+    }
+
+    private static string Describe(CanBitCandidate c) =>
+        $"ID 0x{c.Id:X3} · byte {c.Byte} bit {c.BitInByte} · on = {(c.ActiveHigh ? 1 : 0)}" +
+        (c.PeriodMs is > 0 and <= 1000 ? $" · every {c.PeriodMs} ms" : " · sent on change");
+
+    // CANboards in the project, or the default CANboard ID range
+    private string CanboardRange()
+    {
+        var boards = DeviceManager.GetDevices().OfType<domain.Devices.FwDevice>()
+            .Where(d => d.Def.TypeName.Contains("CANBoard", StringComparison.OrdinalIgnoreCase))
+            .Select(d => $"{d.BaseId:X3}-{Math.Max(d.MaxCyclicId, d.BaseId + 15):X3}")
+            .ToList();
+        return boards.Count > 0 ? string.Join(", ", boards) : "640-64F";
+    }
+
+    private void Use() => MudDialog.Close(DialogResult.Ok(_selected));
+
+    private void Cancel() => MudDialog.Cancel();
+
+    public void Dispose()
+    {
+        AdapterManager.DataReceived -= OnFrame;
+        _timer?.Dispose();
+    }
+}
