@@ -105,3 +105,19 @@ h1:focus {
     margin-right: 6px;
     border-radius: 2px;
 }
+
+/* Blocks set up elsewhere, by a vehicle function for example. They are greyed
+   out and locked in the general grids; the first column keeps its tooltip
+   saying what manages them. */
+.managed-row td {
+    opacity: 0.45;
+}
+
+.managed-row td:not(:first-child) {
+    pointer-events: none;
+}
+
+/* Helper text next to a setting */
+.muted-text {
+    color: var(--mud-palette-text-secondary);
+}
