@@ -101,6 +101,15 @@ public static class FlowNodeTypes
             x => [new("input", "Input", Bool, () => x.Input, v => x.Input = v)],
             x => [x.Value]),
 
+        Define<DeviceTimer>("timer", "Timer", FlowCategory.Logic, d => d.Timers,
+            x => x.Enabled, (x, v) => x.Enabled = v,
+            x =>
+            [
+                new("input", "Input", Any, () => x.Input, v => x.Input = v),
+                new("resetInput", "Reset", Any, () => x.ResetInput, v => x.ResetInput = v)
+            ],
+            x => [x.Value]),
+
         Define<Output>("output", "Output", FlowCategory.Sink, d => d.Outputs,
             x => x.Enabled, (x, v) => x.Enabled = v,
             x =>
