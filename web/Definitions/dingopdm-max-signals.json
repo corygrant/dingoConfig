@@ -149,6 +149,25 @@
       "signals": [
         { "target": "Output.DutyCycle", "count": 4,                "dbc": { "name": "Output{n}.DutyCycle", "length": 8, "unit": "%" } }
       ]
+    },
+    {
+      "idOffset": 29,
+      "signals": [
+        { "target": "Timer.Value",   "count": 8,                 "dbc": { "name": "Timer{n}.Output",  "length": 1 } },
+        { "target": "Timer.Running", "count": 8,                 "dbc": { "name": "Timer{n}.Running", "startBit": 8, "length": 1 } }
+      ]
+    },
+    {
+      "idOffset": 30,
+      "signals": [
+        { "target": "Timer.Elapsed", "count": 4,                 "dbc": { "name": "Timer{n}.Elapsed", "length": 16, "factor": 0.01, "unit": "s" } }
+      ]
+    },
+    {
+      "idOffset": 31,
+      "signals": [
+        { "target": "Timer.Elapsed", "count": 4, "startIndex": 4, "dbc": { "name": "Timer{n}.Elapsed", "length": 16, "factor": 0.01, "unit": "s" } }
+      ]
     }
   ]
 }

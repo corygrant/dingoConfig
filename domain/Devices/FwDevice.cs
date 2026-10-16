@@ -159,7 +159,9 @@ public class FwDevice : IDeviceConfigurable
         _indexedSetters["Flasher.Value"]      = (i, val) => Flashers[i].Value = val != 0;
         _indexedSetters["Counter.Value"]      = (i, val) => Counters[i].Value = (int)val;
         _indexedSetters["Condition.Value"]    = (i, val) => Conditions[i].Value = (int)val;
-        _indexedSetters["Timer.Value"]        = (i, val) => Timers[i].Value = (int)val;
+        _indexedSetters["Timer.Value"]        = (i, val) => Timers[i].Value = val != 0;
+        _indexedSetters["Timer.Running"]      = (i, val) => Timers[i].Running = val != 0;
+        _indexedSetters["Timer.Elapsed"]      = (i, val) => Timers[i].Elapsed = val;
     }
 
     public void BindCyclicSigs(CyclicSigsConfig config)

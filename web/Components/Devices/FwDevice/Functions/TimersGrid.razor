@@ -24,11 +24,24 @@
             <CellTemplate>
                 <MudChip T="string"
                          Variant="Variant.Outlined"
-                         Color="@(context.Item.Value > 0 ? Color.Success : Color.Default)"
+                         Color="@(context.Item.Value ? Color.Success : Color.Default)"
                          Size="Size.Small" Style="min-width: 50px;">
-                    @context.Item.Value
+                    @(context.Item.Value ? "ON" : "OFF")
                 </MudChip>
             </CellTemplate>
+        </PropertyColumn>
+        <PropertyColumn Property="x => x.Running" Title="Running" Editable="false" CellStyle="max-width: 100px">
+            <CellTemplate>
+                <MudChip T="string"
+                         Variant="Variant.Outlined"
+                         Color="@(context.Item.Running ? Color.Info : Color.Default)"
+                         Size="Size.Small" Style="min-width: 50px;">
+                    @(context.Item.Running ? "YES" : "NO")
+                </MudChip>
+            </CellTemplate>
+        </PropertyColumn>
+        <PropertyColumn Property="x => x.Elapsed" Title="Elapsed (s)" Editable="false" CellStyle="max-width: 100px">
+            <CellTemplate>@context.Item.Elapsed.ToString("0.00")</CellTemplate>
         </PropertyColumn>
         <PropertyColumn Property="x => x.Input" Title="Input" CellStyle="max-width: 250px;">
             <EditTemplate>
