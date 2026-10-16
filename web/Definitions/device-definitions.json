@@ -25,7 +25,8 @@
     "canBootloader": true,
     "minMajorVersion": 0,
     "minMinorVersion": 5,
-    "minBuildVersion": 1
+    "minBuildVersion": 1,
+    "numTimers": 8
   },
   {
     "deviceType": 1,
@@ -53,7 +54,8 @@
     "canBootloader": true,
     "minMajorVersion": 0,
     "minMinorVersion": 5,
-    "minBuildVersion": 1
+    "minBuildVersion": 1,
+    "numTimers": 8
   },
   {
     "deviceType": 2,
@@ -81,7 +83,8 @@
     "canBootloader": true,
     "minMajorVersion": 0,
     "minMinorVersion": 5,
-    "minBuildVersion": 1
+    "minBuildVersion": 1,
+    "numTimers": 8
   },
   {
     "deviceType": 3,
@@ -109,6 +112,7 @@
     "canBootloader": false,
     "minMajorVersion": 0,
     "minMinorVersion": 5,
-    "minBuildVersion": 1
+    "minBuildVersion": 1,
+    "numTimers": 0
   }
 ]
