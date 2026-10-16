@@ -17,7 +17,9 @@ public class DeviceTimer : IDeviceFunction
     [JsonPropertyName("mode")] public TimerMode Mode {get; set;} = TimerMode.OnDelay;
     [JsonPropertyName("time")] public int Time {get; set;} = 1000;
 
-    [JsonIgnore][Plotable(displayName:"State")] public int Value {get; set;}
+    [JsonIgnore][Plotable(displayName:"State")] public bool Value {get; set;}
+    [JsonIgnore][Plotable(displayName:"Running")] public bool Running {get; set;}
+    [JsonIgnore][Plotable(unit:"s", displayName:"Elapsed")] public double Elapsed {get; set;}
 
     [JsonIgnore] public List<DeviceParameter> Params { get; }
 

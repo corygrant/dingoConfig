@@ -157,6 +157,25 @@
         { "target": "AnalogInput.RotaryPos", "count": 2, "dbc": {"name": "AnalogInputs{n}.Rotary.Pos", "startBit": 32, "length": 4}},
         { "target": "AnalogInput.DigitalMode", "count": 2, "dbc": {"name": "AnalogInputs{n}.Switch.State", "startBit": 40, "length": 1}}
       ]
+    },
+    {
+      "idOffset": 30,
+      "signals": [
+        { "target": "Timer.Value",   "count": 8,                 "dbc": { "name": "Timer{n}.Output",  "length": 1 } },
+        { "target": "Timer.Running", "count": 8,                 "dbc": { "name": "Timer{n}.Running", "startBit": 8, "length": 1 } }
+      ]
+    },
+    {
+      "idOffset": 31,
+      "signals": [
+        { "target": "Timer.Elapsed", "count": 4,                 "dbc": { "name": "Timer{n}.Elapsed", "length": 16, "factor": 0.01, "unit": "s" } }
+      ]
+    },
+    {
+      "idOffset": 32,
+      "signals": [
+        { "target": "Timer.Elapsed", "count": 4, "startIndex": 4, "dbc": { "name": "Timer{n}.Elapsed", "length": 16, "factor": 0.01, "unit": "s" } }
+      ]
     }
   ]
 }
