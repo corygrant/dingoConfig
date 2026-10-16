@@ -1,0 +1,31 @@
+name: Version Guard
+
+# Only the repo owner bumps the version. Fails a PR from anyone else
+# that changes <Version> in web/web.csproj. Builds nothing.
+
+on:
+  pull_request:
+    paths:
+      - "web/web.csproj"
+
+permissions:
+  contents: read
+
+jobs:
+  version-guard:
+    if: github.event.pull_request.user.login != github.repository_owner
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check version is unchanged
+        run: |
+          if git diff ${{ github.event.pull_request.base.sha }} HEAD -- web/web.csproj \
+             | grep -E '^[+-].*<Version>'; then
+            echo "::error file=web/web.csproj::Version is bumped by the maintainer, please revert the version change"
+            exit 1
+          fi
