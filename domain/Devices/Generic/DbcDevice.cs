@@ -81,12 +81,23 @@ public class DbcDevice : IDevice
     {
         if (DbcSignals.Count == 0) return;
 
+        // Multiplexors first, so multiplexed signals know which page this frame carries
+        long? mux = null;
         foreach (var dbcProp in DbcSignals)
         {
-            if (id == dbcProp.Id)
+            if (id == dbcProp.Id && dbcProp.IsMultiplexor)
             {
                 dbcProp.Value = DbcSignalCodec.ExtractSignal(data, dbcProp);
+                mux = DbcSignalCodec.ExtractSignalInt(data, dbcProp.StartBit, dbcProp.Length, dbcProp.ByteOrder);
             }
+        }
+
+        foreach (var dbcProp in DbcSignals)
+        {
+            if (id != dbcProp.Id || dbcProp.IsMultiplexor) continue;
+            if (dbcProp.MultiplexValue != null && dbcProp.MultiplexValue != mux) continue;
+
+            dbcProp.Value = DbcSignalCodec.ExtractSignal(data, dbcProp);
         }
         
         LastRxTime = DateTime.Now;

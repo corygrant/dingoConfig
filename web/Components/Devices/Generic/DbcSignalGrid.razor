@@ -15,7 +15,7 @@
                 <MudChip T="string" Variant="Variant.Outlined"
                          Color="@GetChipColor(context.Item.Value)"
                          Size="Size.Small" Style="min-width: 100px;">
-                    @context.Item.Value.ToString("F2") @context.Item.Unit
+                    @context.Item.DisplayValue
                 </MudChip>
             </CellTemplate>
         </PropertyColumn>

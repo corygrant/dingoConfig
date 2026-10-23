@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using domain.Enums;
 using domain.Models;
 using Microsoft.Extensions.Logging;
@@ -65,6 +66,19 @@ public static class DbcParser
                         logger?.LogWarning(ex, "Failed to parse signal line: {Line}", trimmedLine);
                     }
                 }
+                // Parse value tables: VAL_ <MessageID> <SignalName> <Value> "<Text>" ... ;
+                else if (trimmedLine.StartsWith("VAL_ "))
+                {
+                    var valParts = trimmedLine.Split(' ', 4, StringSplitOptions.RemoveEmptyEntries);
+                    if (valParts.Length < 4 || !int.TryParse(valParts[1], out var valMsgId)) continue;
+
+                    var signal = properties.FirstOrDefault(p => p.Id == valMsgId && p.Name == valParts[2]);
+                    if (signal == null) continue;
+
+                    signal.ValueTable = new Dictionary<long, string>();
+                    foreach (Match m in Regex.Matches(valParts[3], @"(-?\d+)\s+""([^""]*)"""))
+                        signal.ValueTable[long.Parse(m.Groups[1].Value)] = m.Groups[2].Value;
+                }
             }
 
             logger?.LogInformation("Parsed {Count} signals from DBC file", properties.Count);
@@ -86,12 +100,25 @@ public static class DbcParser
     private static DbcSignal? ParseSignalLine(string line, int messageId)
     {
         // Example: SG_ Speed : 0|16@1+ (0.1,0) [0|655.35] "km/h" ECU2
+        // Multiplexed: SG_ Frame_ID M : ... (multiplexor) / SG_ RPM m0 : ... (multiplexed)
         var parts = line.Split(new[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries);
 
-        if (parts.Length < 4) return null;
+        var colonIdx = Array.IndexOf(parts, ":");
+        if (colonIdx < 2 || colonIdx + 1 >= parts.Length) return null;
 
         var signalName = parts[1];
-        var signalDef = parts[3]; // Format: <StartBit>|<Length>@<ByteOrder><IsSigned>
+        var signalDef = parts[colonIdx + 1]; // Format: <StartBit>|<Length>@<ByteOrder><IsSigned>
+
+        var isMultiplexor = false;
+        int? multiplexValue = null;
+        if (colonIdx == 3)
+        {
+            // "M", "m<n>", or extended "m<n>M"
+            var mux = parts[2];
+            isMultiplexor = mux.EndsWith('M');
+            if (mux.StartsWith('m') && int.TryParse(mux.AsSpan(1, mux.Length - (isMultiplexor ? 2 : 1)), out var muxVal))
+                multiplexValue = muxVal;
+        }
 
         // Parse start bit and length: "0|16@1+"
         var bitParts = signalDef.Split('|');
@@ -166,7 +193,9 @@ public static class DbcParser
             Offset = offset,
             Min = min,
             Max = max,
-            Unit = unit
+            Unit = unit,
+            IsMultiplexor = isMultiplexor,
+            MultiplexValue = multiplexValue
         };
     }
 }
