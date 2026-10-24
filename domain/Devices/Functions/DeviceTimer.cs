@@ -85,6 +85,14 @@ public class DeviceTimer : IDeviceFunction
                 DataType = "bool",
                 VariableIndex = index++,
                 SingleVariable = false
+            },
+            new()
+            {
+                GetName = () => Name,
+                PropertyName = "Running",
+                DataType = "bool",
+                VariableIndex = index++,
+                SingleVariable = false
             }
         ];
 

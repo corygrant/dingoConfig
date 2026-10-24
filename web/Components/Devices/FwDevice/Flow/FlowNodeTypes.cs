@@ -108,7 +108,7 @@ public static class FlowNodeTypes
                 new("input", "Input", Any, () => x.Input, v => x.Input = v),
                 new("resetInput", "Reset", Any, () => x.ResetInput, v => x.ResetInput = v)
             ],
-            x => [x.Value]),
+            x => [x.Value, x.Running]),
 
         Define<Output>("output", "Output", FlowCategory.Sink, d => d.Outputs,
             x => x.Enabled, (x, v) => x.Enabled = v,
