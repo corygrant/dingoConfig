@@ -200,6 +200,15 @@
       "signals": [
         { "target": "Math.Value", "count": 2, "startIndex": 6,    "dbc": { "name": "Math{n}.Value", "length": 32, "isSigned": true, "factor": 0.001 } }
       ]
+    },
+    {
+      "idOffset": 37,
+      "signals": [
+        { "target": "DigitalInput.Duty",      "count": 1, "dbc": { "name": "DigitalInput{n}.Duty",      "startBit": 0,  "length": 16, "factor": 0.01, "unit": "%" } },
+        { "target": "DigitalInput.Frequency", "count": 1, "dbc": { "name": "DigitalInput{n}.Frequency", "startBit": 16, "length": 16, "factor": 0.1, "unit": "Hz" } },
+        { "target": "DigitalInput.Duty",      "count": 1, "startIndex": 1, "dbc": { "name": "DigitalInput{n}.Duty",      "startBit": 32,  "length": 16, "factor": 0.01, "unit": "%" } },
+        { "target": "DigitalInput.Frequency", "count": 1, "startIndex": 1, "dbc": { "name": "DigitalInput{n}.Frequency", "startBit": 48, "length": 16, "factor": 0.1, "unit": "Hz" } }
+      ]
     }
   ]
 }

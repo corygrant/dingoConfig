@@ -154,7 +154,9 @@ public sealed class FlowGraph
 
         foreach (var slot in visible)
         {
+            // Unavailable outputs (e.g. PWM vars with PWM off) are hidden unless already connected
             var outputs = _varsByOwner.GetValueOrDefault(slot.Function, [])
+                .Where(v => v.IsAvailable() || connectedOutputs.Contains(v.VariableIndex))
                 .Select(v => OutputHandle(v, OutputLabel(slot.Function, v), connectedOutputs))
                 .ToList();
 

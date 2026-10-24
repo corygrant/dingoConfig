@@ -10,4 +10,5 @@ public class DeviceVariable
     public bool SingleVariable { get; set; }
     public string DataType { get; set; } = string.Empty;
     public IDeviceFunction? Owner { get; set; } // null for device level variables
+    public Func<bool> IsAvailable { get; init; } = () => true; // e.g. PWM vars only while PWM is enabled
 }

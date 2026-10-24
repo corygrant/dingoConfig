@@ -154,12 +154,28 @@
                         <MudCardContent>
                             <MudStack AlignItems="AlignItems.Center" Spacing="1">
                                 <MudText Typo="Typo.body1">@input.Name</MudText>
-                                <MudChip T="string" Variant="Variant.Outlined"
-                                         Color="@(input.State ? Color.Success : Color.Default)"
-                                         Size="Size.Small" Style="min-width: 100px;">
-                                    @(input.State ? "ON" : "OFF")
-                                </MudChip>
-                                <Sparkline Source="input" Property="@nameof(DigitalInput.State)"/>
+                                @if (!input.Pwm)
+                                {
+                                    <MudChip T="string" Variant="Variant.Outlined"
+                                             Color="@(input.State ? Color.Success : Color.Default)"
+                                             Size="Size.Small" Style="min-width: 100px;">
+                                        @(input.State ? "ON" : "OFF")
+                                    </MudChip>
+                                }
+                                @if (input.Pwm)
+                                {
+                                    <MudChip T="string" Variant="Variant.Outlined"
+                                             Color="@(input.State ? Color.Success : Color.Default)"
+                                             Size="Size.Small" Style="min-width: 100px;">
+                                        @input.Duty.ToString("F1")%
+                                    </MudChip>
+                                    <MudChip T="string" Variant="Variant.Outlined"
+                                             Color="@(input.State ? Color.Success : Color.Default)"
+                                             Size="Size.Small" Style="min-width: 100px;">
+                                        @input.Frequency.ToString("F1")Hz
+                                    </MudChip>
+                                }
+                                <Sparkline Source="input" Property="@(input.Pwm ? nameof(DigitalInput.Duty) : nameof(DigitalInput.State))"/>
                             </MudStack>
                         </MudCardContent>
                     </MudCard>

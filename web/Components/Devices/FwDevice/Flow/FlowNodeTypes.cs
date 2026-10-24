@@ -54,7 +54,7 @@ public static class FlowNodeTypes
         Define<DigitalInput>("digitalInput", "Digital Input", FlowCategory.Source, d => d.DigitalInputs,
             x => x.Enabled, (x, v) => x.Enabled = v,
             _ => [],
-            x => [x.State]),
+            x => [x.State, x.Duty, x.Frequency]),
 
         Define<AnalogInput>("analogInput", "Analog Input", FlowCategory.Source, d => d.AnalogInputs,
             x => x.Enabled, (x, v) => x.Enabled = v,

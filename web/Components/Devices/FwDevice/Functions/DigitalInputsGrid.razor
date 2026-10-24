@@ -28,6 +28,26 @@
                 </MudChip>
             </CellTemplate>
         </PropertyColumn>
+        <PropertyColumn Property="x => x.Duty" Title="Duty (%)" Editable="false" Hidden="@(!Inputs.Any(i => i.Pwm))" CellStyle="max-width: 100px">
+            <CellTemplate>
+                @if (context.Item.Pwm)
+                {
+                    <MudChip T="string" Variant="Variant.Outlined" Size="Size.Small" Style="min-width: 50px;">
+                        @context.Item.Duty.ToString("F1")
+                    </MudChip>
+                }
+            </CellTemplate>
+        </PropertyColumn>
+        <PropertyColumn Property="x => x.Frequency" Title="Frequency (Hz)" Editable="false" Hidden="@(!Inputs.Any(i => i.Pwm))" CellStyle="max-width: 100px">
+            <CellTemplate>
+                @if (context.Item.Pwm)
+                {
+                    <MudChip T="string" Variant="Variant.Outlined" Size="Size.Small" Style="min-width: 50px;">
+                        @context.Item.Frequency.ToString("F1")
+                    </MudChip>
+                }
+            </CellTemplate>
+        </PropertyColumn>
         <PropertyColumn Property="x => x.Mode" CellStyle="max-width: 200px">
             <EditTemplate>
                 <MudSelect T="domain.Enums.InputMode" @bind-Value="context.Item.Mode" Variant="Variant.Outlined" Dense="true"
@@ -63,6 +83,19 @@
                                  ValueChanged="@((int val) => OnDebounceChanged(context.Item, val))"/>
             </EditTemplate>
         </TemplateColumn>
+        <PropertyColumn Property="x => x.Pwm" Title="PWM" CellStyle="max-width: 100px">
+            <EditTemplate>
+                <MudCheckBox @bind-Value="context.Item.Pwm" Dense="true" Disabled="!context.Item.Enabled"/>
+            </EditTemplate>
+        </PropertyColumn>
+        <TemplateColumn Title="PWM Min Pulse (us)" Resizable="true" CellStyle="max-width: 150px">
+            <EditTemplate>
+                <MudNumericField @key="@($"pwmMinPulse-{context.Item.Number}-{_refreshCounter}")"
+                                 Value="@context.Item.PwmMinPulseUs"
+                                 Disabled="@(!context.Item.Enabled || !context.Item.Pwm)"
+                                 ValueChanged="@((int val) => OnPwmMinPulseChanged(context.Item, val))"/>
+            </EditTemplate>
+        </TemplateColumn>
     </Columns>
 </MudDataGrid>
 
@@ -81,6 +114,18 @@
             Notification.NewWarning($"{item.Name}.DebounceTime must be {min} to {max}");
         }
         item.DebounceTime = Math.Clamp(value, min, max);
+        _refreshCounter++;
+    }
+
+    private void OnPwmMinPulseChanged(DigitalInput item, int value)
+    {
+        const int min = 0;
+        const int max = 10000;
+        if (value < min || value > max)
+        {
+            Notification.NewWarning($"{item.Name}.PwmMinPulseUs must be {min} to {max}");
+        }
+        item.PwmMinPulseUs = Math.Clamp(value, min, max);
         _refreshCounter++;
     }
 }

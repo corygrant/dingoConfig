@@ -61,6 +61,42 @@
       "signals": [
         { "target": "CanInput.Value", "count": 2, "startIndex": 6,        "dbc": { "name": "CanInput{n}.Value", "length": 32, "isSigned": true } }
       ]
+    },
+    {
+      "idOffset": 11,
+      "signals": [
+        { "target": "DigitalInput.Duty",      "count": 1, "dbc": { "name": "DigitalInput{n}.Duty",      "startBit": 0,  "length": 16, "factor": 0.01, "unit": "%" } },
+        { "target": "DigitalInput.Frequency", "count": 1, "dbc": { "name": "DigitalInput{n}.Frequency", "startBit": 16, "length": 16, "factor": 0.1, "unit": "Hz" } },
+        { "target": "DigitalInput.Duty",      "count": 1, "startIndex": 1, "dbc": { "name": "DigitalInput{n}.Duty",      "startBit": 32,  "length": 16, "factor": 0.01, "unit": "%" } },
+        { "target": "DigitalInput.Frequency", "count": 1, "startIndex": 1, "dbc": { "name": "DigitalInput{n}.Frequency", "startBit": 48, "length": 16, "factor": 0.1, "unit": "Hz" } }
+      ]
+    },
+    {
+      "idOffset": 12,
+      "signals": [
+        { "target": "DigitalInput.Duty",      "count": 1, "startIndex": 2, "dbc": { "name": "DigitalInput{n}.Duty",      "startBit": 0,  "length": 16, "factor": 0.01, "unit": "%" } },
+        { "target": "DigitalInput.Frequency", "count": 1, "startIndex": 2, "dbc": { "name": "DigitalInput{n}.Frequency", "startBit": 16, "length": 16, "factor": 0.1, "unit": "Hz" } },
+        { "target": "DigitalInput.Duty",      "count": 1, "startIndex": 3, "dbc": { "name": "DigitalInput{n}.Duty",      "startBit": 32,  "length": 16, "factor": 0.01, "unit": "%" } },
+        { "target": "DigitalInput.Frequency", "count": 1, "startIndex": 3, "dbc": { "name": "DigitalInput{n}.Frequency", "startBit": 48, "length": 16, "factor": 0.1, "unit": "Hz" } }
+      ]
+    },
+    {
+      "idOffset": 13,
+      "signals": [
+        { "target": "DigitalInput.Duty",      "count": 1, "startIndex": 4, "dbc": { "name": "DigitalInput{n}.Duty",      "startBit": 0,  "length": 16, "factor": 0.01, "unit": "%" } },
+        { "target": "DigitalInput.Frequency", "count": 1, "startIndex": 4, "dbc": { "name": "DigitalInput{n}.Frequency", "startBit": 16, "length": 16, "factor": 0.1, "unit": "Hz" } },
+        { "target": "DigitalInput.Duty",      "count": 1, "startIndex": 5, "dbc": { "name": "DigitalInput{n}.Duty",      "startBit": 32,  "length": 16, "factor": 0.01, "unit": "%" } },
+        { "target": "DigitalInput.Frequency", "count": 1, "startIndex": 5, "dbc": { "name": "DigitalInput{n}.Frequency", "startBit": 48, "length": 16, "factor": 0.1, "unit": "Hz" } }
+      ]
+    },
+    {
+      "idOffset": 14,
+      "signals": [
+        { "target": "DigitalInput.Duty",      "count": 1, "startIndex": 6, "dbc": { "name": "DigitalInput{n}.Duty",      "startBit": 0,  "length": 16, "factor": 0.01, "unit": "%" } },
+        { "target": "DigitalInput.Frequency", "count": 1, "startIndex": 6, "dbc": { "name": "DigitalInput{n}.Frequency", "startBit": 16, "length": 16, "factor": 0.1, "unit": "Hz" } },
+        { "target": "DigitalInput.Duty",      "count": 1, "startIndex": 7, "dbc": { "name": "DigitalInput{n}.Duty",      "startBit": 32,  "length": 16, "factor": 0.01, "unit": "%" } },
+        { "target": "DigitalInput.Frequency", "count": 1, "startIndex": 7, "dbc": { "name": "DigitalInput{n}.Frequency", "startBit": 48, "length": 16, "factor": 0.1, "unit": "Hz" } }
+      ]
     }
   ]
 }

@@ -16,8 +16,12 @@ public class DigitalInput : IDeviceFunction
     [JsonPropertyName("mode")] public InputMode Mode { get; set; } = InputMode.Momentary;
     [JsonPropertyName("debounceTime")] public int DebounceTime { get; set; } = 20;
     [JsonPropertyName("pull")] public InputPull Pull { get; set; } = InputPull.NoPull;
+    [JsonPropertyName("pwm")] public bool Pwm { get; set; }
+    [JsonPropertyName("pwmMinPulseUs")] public int PwmMinPulseUs { get; set; }
 
     [JsonIgnore][Plotable(displayName:"State")] public bool State { get; set; }
+    [JsonIgnore][Plotable(displayName:"Duty", unit:"%")] public double Duty { get; set; }
+    [JsonIgnore][Plotable(displayName:"Frequency", unit:"Hz")] public double Frequency { get; set; }
 
     [JsonIgnore] public List<DeviceParameter> Params { get; }
 
@@ -68,6 +72,20 @@ public class DigitalInput : IDeviceFunction
                 GetValue = () => Pull, SetValue = val => Pull = (InputPull)val,
                 ValueType = Pull.GetType(),
                 DefaultValue = InputPull.NoPull
+            },
+            new DeviceParameter
+            {
+                ParentName = Name, Name = $"input[{Number}].pwm", Index = BaseIndex + (Number - 1), SubIndex = subIndex++,
+                GetValue = () => Pwm, SetValue = val => Pwm = (bool)val,
+                ValueType = Pwm.GetType(),
+                DefaultValue = false
+            },
+            new DeviceParameter
+            {
+                ParentName = Name, Name = $"input[{Number}].pwmMinPulseUs", Index = BaseIndex + (Number - 1), SubIndex = subIndex++,
+                GetValue = () => PwmMinPulseUs, SetValue = val => PwmMinPulseUs = (int)val,
+                ValueType = PwmMinPulseUs.GetType(),
+                DefaultValue = 0
             }
         ];
     }
@@ -89,4 +107,27 @@ public class DigitalInput : IDeviceFunction
 
         return varMap;
     }
+
+    // Appended after all other vars in the firmware's InitVarMap(), so FwDevice adds these separately
+    public List<DeviceVariable> GetPwmVarMap(ref int index) =>
+    [
+        new()
+        {
+            GetName = () => Name,
+            PropertyName = "Duty",
+            DataType = "float",
+            VariableIndex = index++,
+            SingleVariable = false,
+            IsAvailable = () => Pwm
+        },
+        new()
+        {
+            GetName = () => Name,
+            PropertyName = "Frequency",
+            DataType = "float",
+            VariableIndex = index++,
+            SingleVariable = false,
+            IsAvailable = () => Pwm
+        }
+    ];
 }

@@ -149,6 +149,8 @@ public class FwDevice : IDeviceConfigurable
         _indexedSetters["AnalogInput.RotaryPos"]    = (i, val) => AnalogInputs[i].Rotary.Pos = (short)val;
         _indexedSetters["AnalogInput.DigitalMode"]  = (i, val) => AnalogInputs[i].Switch.State = val != 0;
         _indexedSetters["DigitalInput.State"]       = (i, val) => DigitalInputs[i].State = val != 0;
+        _indexedSetters["DigitalInput.Duty"]        = (i, val) => DigitalInputs[i].Duty = val;
+        _indexedSetters["DigitalInput.Frequency"]   = (i, val) => DigitalInputs[i].Frequency = val;
         _indexedSetters["DigitalOutput.State"]      = (i, val) => DigitalOutputs[i].State = val != 0;
         _indexedSetters["Output.Current"]     = (i, val) => Outputs[i].Current = val;
         _indexedSetters["Output.State"]       = (i, val) => Outputs[i].State = (OutState)val;
@@ -366,6 +368,14 @@ public class FwDevice : IDeviceConfigurable
 
         for (var i = 0; i < Def.NumMath; i++)
             AddVars(MathBlocks[i], ref index);
+
+        for (var i = 0; i < Def.NumDigitalInputs; i++)
+        {
+            var vars = DigitalInputs[i].GetPwmVarMap(ref index);
+            foreach (var variable in vars)
+                variable.Owner = DigitalInputs[i];
+            VarMap.AddRange(vars);
+        }
     }
 
     private void AddVars(IDeviceFunction function, ref int index)
