@@ -24,28 +24,20 @@
                             <MudCardContent>
                                 <MudStack Justify="Justify.Center" AlignItems="AlignItems.Center">
                                     <MudIcon Size="Size.Large" Icon="@Utils.GetIcon(device.Icon, Env.WebRootPath)"/>
-                                    <MudText Typo="Typo.h6">
-                                        @device.TypeName
-                                    </MudText>
+                                    @if (GetDeviceLogo(device) is { } logo)
+                                    {
+                                        <MudImage Src="@logo" Width="120" ObjectPosition="ObjectPosition.Left"/>
+                                    }
+                                    else
+                                    {
+                                        <MudText Typo="Typo.h6">@device.TypeName</MudText>
+                                    }
                                 </MudStack>
                             </MudCardContent>
                         </MudCard>
                     </MudItem>
                 }
 
-                <MudItem>
-                    <MudCard Elevation="4" Style="width: 175px; height: 100%;">
-                        <MudCardContent>
-                            <MudStack Justify="Justify.Center" AlignItems="AlignItems.Center">
-                                <MudIcon Size="Size.Large" Icon="@Icons.Material.Filled.DeveloperBoard"/>
-                                <MudText Typo="Typo.h6">
-                                    CANBoard
-                                </MudText>
-                            </MudStack>
-                        </MudCardContent>
-                    </MudCard>
-                </MudItem>
-                
                 <MudItem>
                     <MudCard Elevation="4" Style="width: 175px; height: 100%;">
                         <MudCardContent>
@@ -125,5 +117,17 @@
     {
         _devices = FwDeviceDefManager.GetAllDevices();
     }
+    
+    private static string? GetDeviceLogo(FwDeviceDef device) => device switch
+    {
+        not null => device.TypeName switch
+        {
+            "dingoPDM" => "logo/dingoPDM-logo-color-no-bg.svg",
+            "dingoPDM-Max" => "logo/dingoPDM-MAX-logo-color-no-bg.svg",
+            "CANBoard" => "logo/CANboard-logo-color-no-bg.svg",
+            _ => null
+        },
+        _ => null
+    };
     
 }
