@@ -1,10 +1,14 @@
 @page "/"
 @using application.Services
 @using domain.Devices
+@using domain.Interfaces
+@using domain.Devices.Keypad.BlinkMarine
+@using domain.Devices.Keypad.Grayhill
 @using web.Services
 @inject DeviceManager DeviceManager
 @inject FwDeviceDefManager FwDeviceDefManager
 @inject IWebHostEnvironment Env
+@inject NavigationManager Navigation
 
 <PageTitle>Home</PageTitle>
 
@@ -20,7 +24,7 @@
                 @foreach (var device in _devices)
                 {
                     <MudItem>
-                        <MudCard Elevation="4" Style="width: 175px; height: 100%;">
+                        <MudCard Elevation="4" Style="width: 175px; height: 100%; cursor: pointer;" @onclick="@(() => OpenFirst(d => d is FwDevice f && f.Def.DeviceType == device.DeviceType))">
                             <MudCardContent>
                                 <MudStack Justify="Justify.Center" AlignItems="AlignItems.Center">
                                     <MudIcon Size="Size.Large" Icon="@Utils.GetIcon(device.Icon, Env.WebRootPath)"/>
@@ -39,7 +43,7 @@
                 }
 
                 <MudItem>
-                    <MudCard Elevation="4" Style="width: 175px; height: 100%;">
+                    <MudCard Elevation="4" Style="width: 175px; height: 100%; cursor: pointer;" @onclick="@(() => OpenFirst(d => d is BlinkMarineKeypadDevice))">
                         <MudCardContent>
                             <MudStack Justify="Justify.Center" AlignItems="AlignItems.Center">
                                 <MudIcon Size="Size.Large" Icon="@Icons.Material.Filled.CalendarViewMonth"/>
@@ -52,7 +56,7 @@
                 </MudItem>
                 
                 <MudItem>
-                    <MudCard Elevation="4" Style="width: 175px; height: 100%;">
+                    <MudCard Elevation="4" Style="width: 175px; height: 100%; cursor: pointer;" @onclick="@(() => OpenFirst(d => d is GrayhillKeypadDevice))">
                         <MudCardContent>
                             <MudStack Justify="Justify.Center" AlignItems="AlignItems.Center">
                                 <MudIcon Size="Size.Large" Icon="@Icons.Material.Filled.CalendarViewMonth"/>
@@ -116,6 +120,12 @@
     protected override void OnInitialized()
     {
         _devices = FwDeviceDefManager.GetAllDevices();
+    }
+
+    private void OpenFirst(Func<IDevice, bool> match)
+    {
+        var device = DeviceManager.GetAllDevices().FirstOrDefault(match);
+        Navigation.NavigateTo(device is null ? "/devices" : $"/device/{device.Guid}");
     }
     
     private static string? GetDeviceLogo(FwDeviceDef device) => device switch
