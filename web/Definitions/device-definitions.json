@@ -26,7 +26,8 @@
     "minMajorVersion": 0,
     "minMinorVersion": 5,
     "minBuildVersion": 1,
-    "numTimers": 8
+    "numTimers": 8,
+    "hasIgnition": true
   },
   {
     "deviceType": 1,
@@ -55,7 +56,8 @@
     "minMajorVersion": 0,
     "minMinorVersion": 5,
     "minBuildVersion": 1,
-    "numTimers": 8
+    "numTimers": 8,
+    "hasIgnition": true
   },
   {
     "deviceType": 2,
@@ -84,7 +86,8 @@
     "minMajorVersion": 0,
     "minMinorVersion": 5,
     "minBuildVersion": 1,
-    "numTimers": 8
+    "numTimers": 8,
+    "hasIgnition": true
   },
   {
     "deviceType": 3,
@@ -113,6 +116,7 @@
     "minMajorVersion": 0,
     "minMinorVersion": 5,
     "minBuildVersion": 1,
-    "numTimers": 0
+    "numTimers": 0,
+    "hasIgnition": false
   }
 ]
