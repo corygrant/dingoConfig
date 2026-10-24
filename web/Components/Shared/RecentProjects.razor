@@ -1,0 +1,209 @@
+@using System.Globalization
+@using application.Models
+@using application.Services
+@using web.Services
+@inject ConfigFileManager FileManager
+@inject DeviceManager DeviceManager
+@inject ProjectService Projects
+@inject IDialogService DialogService
+@inject NavigationManager Nav
+@implements IDisposable
+
+<style>
+    .recent-project {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        padding: 12px 16px;
+        cursor: pointer;
+        transition: background-color 120ms ease;
+    }
+    .recent-project:hover { background-color: rgba(127, 255, 0, 0.06); }
+    .recent-project.missing { opacity: 0.55; }
+    .recent-project.missing:hover { background-color: rgba(255, 255, 255, 0.03); }
+    .recent-project-main { flex: 1 1 auto; min-width: 0; }
+    .recent-project-title { display: flex; align-items: center; gap: 8px; }
+    .recent-project-path {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    .recent-project-devices { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+    .recent-project-time { flex: 0 0 auto; white-space: nowrap; }
+    /* Color.Secondary is the accent green in this theme, not muted text */
+    .recent-project-muted { color: var(--mud-palette-text-secondary); }
+</style>
+
+<MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-3">
+    <MudText Typo="Typo.h5">Recent projects</MudText>
+    <MudSpacer/>
+    <MudButton Variant="Variant.Outlined"
+               Color="Color.Primary"
+               Size="Size.Small"
+               StartIcon="@Icons.Material.Outlined.FolderOpen"
+               OnClick="BrowseAsync">
+        Open project…
+    </MudButton>
+</MudStack>
+
+@if (FileManager.RecentProjects.Count == 0)
+{
+    <MudPaper Outlined="true" Class="pa-8 d-flex flex-column align-center">
+        <MudIcon Icon="@Icons.Material.Outlined.History" Size="Size.Large" Class="mb-2" Style="opacity: 0.5"/>
+        <MudText Typo="Typo.body2" Class="recent-project-muted">
+            Projects you open or save will appear here.
+        </MudText>
+    </MudPaper>
+}
+else
+{
+    <MudPaper Outlined="true">
+        @for (var i = 0; i < FileManager.RecentProjects.Count; i++)
+        {
+            var project = FileManager.RecentProjects[i];
+            var missing = !File.Exists(project.Path);
+            var current = IsCurrent(project);
+
+            if (i > 0)
+            {
+                <MudDivider/>
+            }
+
+            <div class="recent-project @(missing ? "missing" : "")"
+                 title="@project.Path"
+                 @onclick="() => OpenAsync(project)">
+
+                <MudIcon Icon="@(missing ? Icons.Material.Outlined.InsertDriveFile : Icons.Material.Outlined.Description)"
+                         Color="@(missing ? Color.Default : Color.Primary)"/>
+
+                <div class="recent-project-main">
+                    <div class="recent-project-title">
+                        <MudText Typo="Typo.subtitle1"><b>@Path.GetFileNameWithoutExtension(project.Path)</b></MudText>
+                        @if (current)
+                        {
+                            <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined">Open</MudChip>
+                        }
+                        @if (missing)
+                        {
+                            <MudChip T="string" Size="Size.Small" Color="Color.Error" Variant="Variant.Outlined">File not found</MudChip>
+                        }
+                    </div>
+
+                    <MudText Typo="Typo.caption" Class="recent-project-path recent-project-muted">
+                        @Path.GetDirectoryName(project.Path)
+                    </MudText>
+
+                    @if (project.Devices.Count > 0)
+                    {
+                        <div class="recent-project-devices">
+                            @foreach (var device in project.Devices.Take(MaxDeviceChips))
+                            {
+                                <MudChip T="string" Size="Size.Small" Variant="Variant.Text" Icon="@Icons.Material.Outlined.Memory">
+                                    @device.Replace(" ()", "")
+                                </MudChip>
+                            }
+                            @if (project.Devices.Count > MaxDeviceChips)
+                            {
+                                <MudChip T="string" Size="Size.Small" Variant="Variant.Text">
+                                    +@(project.Devices.Count - MaxDeviceChips) more
+                                </MudChip>
+                            }
+                        </div>
+                    }
+                </div>
+
+                <MudText Typo="Typo.caption" Class="recent-project-time recent-project-muted">
+                    @Ago(project.LastUsed)
+                </MudText>
+
+                @* Its own click must not open the project as well *@
+                <span @onclick:stopPropagation="true">
+                    <MudTooltip Text="Remove from list">
+                        <MudIconButton Icon="@Icons.Material.Outlined.Close"
+                                       Size="Size.Small"
+                                       OnClick="() => FileManager.ForgetProject(project.Path)"/>
+                    </MudTooltip>
+                </span>
+            </div>
+        }
+    </MudPaper>
+}
+
+@code {
+    private const int MaxDeviceChips = 3;
+
+    protected override void OnInitialized()
+    {
+        FileManager.OnStateChanged += OnFileStateChanged;
+    }
+
+    private void OnFileStateChanged() => InvokeAsync(StateHasChanged);
+
+    private bool IsCurrent(RecentProject project) =>
+        !string.IsNullOrEmpty(FileManager.CurrentFilePath) &&
+        string.Equals(project.Path, FileManager.CurrentFilePath, StringComparison.OrdinalIgnoreCase);
+
+    private async Task OpenAsync(RecentProject project)
+    {
+        if (!File.Exists(project.Path))
+        {
+            var remove = await DialogService.ShowMessageBox(
+                "File not found",
+                $"{project.Path} no longer exists. Remove it from the list?",
+                yesText: "Remove",
+                cancelText: "Keep");
+
+            if (remove == true)
+                FileManager.ForgetProject(project.Path);
+            return;
+        }
+
+        await OpenPathAsync(project.Path);
+    }
+
+    private async Task BrowseAsync()
+    {
+        var parameters = new DialogParameters { { nameof(OpenFileDialog.FileFilter), "*.json" } };
+        var options = new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth = true };
+
+        var dialog = await DialogService.ShowAsync<OpenFileDialog>("Open File", parameters, options);
+        var result = await dialog.Result;
+
+        if (result is { Canceled: false, Data: string fileName })
+            await OpenPathAsync(fileName);
+    }
+
+    private async Task OpenPathAsync(string path)
+    {
+        if (DeviceManager.GetDevices().Count > 0)
+        {
+            var proceed = await DialogService.ShowMessageBox(
+                "Open project",
+                "Opening a project replaces the devices currently loaded. Continue?",
+                yesText: "Open",
+                cancelText: "Cancel");
+
+            if (proceed != true)
+                return;
+        }
+
+        if (await Projects.OpenAsync(path))
+            Nav.NavigateTo("/devices");
+    }
+
+    private static string Ago(DateTime time)
+    {
+        var age = DateTime.Now - time;
+        if (age.TotalMinutes < 1) return "just now";
+        if (age.TotalHours < 1) return $"{(int)age.TotalMinutes} min ago";
+        if (age.TotalDays < 1) return $"{(int)age.TotalHours} h ago";
+        if (age.TotalDays < 2) return "yesterday";
+        if (age.TotalDays < 7) return $"{(int)age.TotalDays} days ago";
+        return time.ToString("d MMM yyyy", CultureInfo.InvariantCulture);
+    }
+
+    public void Dispose()
+    {
+        FileManager.OnStateChanged -= OnFileStateChanged;
+    }
+}
