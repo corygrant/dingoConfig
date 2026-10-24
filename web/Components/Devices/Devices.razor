@@ -172,11 +172,15 @@
             @foreach (var device in _devices)
             {
                 <MudItem>
-                    <MudCard Outlined="true">
+                    <MudCard Outlined="true" Style="height: 100%">
                         <MudCardHeader>
                             <CardHeaderContent>
-                                <MudText Typo="Typo.h6">@device.Name</MudText>
-                                <MudIcon Icon="@GetDeviceIcon(device)" Size="Size.Large"></MudIcon>
+                                <MudStack Row="true">
+                                    <MudIcon Icon="@GetDeviceIcon(device)" Size="Size.Large"/>
+                                    <MudText Typo="Typo.body2">
+                                        @(Utils.FormatId(device.BaseId, UserPrefs.Preferences.IdFormat))
+                                    </MudText>
+                                </MudStack>
                             </CardHeaderContent>
                             <CardHeaderActions>
                                 <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="@(device.Connected ? Color.Success : Color.Error)">
@@ -185,12 +189,14 @@
                             </CardHeaderActions>
                         </MudCardHeader>
                         <MudCardContent>
-                            <MudText Typo="Typo.body1">
-                                @device.Type
-                            </MudText>
-                            <MudText Typo="Typo.body2">
-                                Base ID: @(Utils.FormatId(device.BaseId, UserPrefs.Preferences.IdFormat))
-                            </MudText>
+                            @if (GetDeviceLogo(device) is { } logo)
+                            {
+                                <MudImage Src="@logo" Width="200" ObjectPosition="ObjectPosition.Left"/>
+                            }
+                            else
+                            {
+                                <MudText Typo="Typo.h6">@device.Type</MudText>
+                            }
                         </MudCardContent>
                         <MudCardActions>
                             <MudButton Class="mx-2"
@@ -404,6 +410,18 @@
     {
         Navigation.NavigateTo($"/device/{deviceId}");
     }
+    
+    private static string? GetDeviceLogo(IDevice device) => device switch
+    {
+        domain.Devices.FwDevice fwd => fwd.Def.TypeName switch
+        {
+            "dingoPDM" => "logo/dingoPDM-logo-color-no-bg.svg",
+            "dingoPDM-Max" => "logo/dingoPDM-MAX-logo-color-no-bg.svg",
+            "CANBoard" => "logo/CANboard-logo-color-no-bg.svg",
+            _ => null
+        },
+        _ => null
+    };
     
     private string GetDeviceIcon(IDevice device) => device switch
     {
