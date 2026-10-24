@@ -406,6 +406,65 @@
             </MudCardContent>
         </MudCard>
     }
+    
+    @* Timer *@
+    @if (Device.Timers.Count > 0)
+    {
+        <MudDivider Class="my-4"/>
+        <MudText Typo="Typo.h6" Class="mb-2">Timers</MudText>
+        <MudGrid Spacing="2">
+            @foreach (var (timer, _) in Device.GetTimers().Select((i, idx) => (i, idx)))
+            {
+                <MudItem>
+                    <MudCard Class="@(timer.Enabled ? "" : "card-disabled")">
+                        <MudCardContent>
+                            <MudStack AlignItems="AlignItems.Center" Spacing="1">
+                                <MudText Typo="Typo.body1">@timer.Name</MudText>
+                                <MudChip T="string" Variant="Variant.Outlined"
+                                         Color="@(timer.Running ? Color.Success : Color.Default)"
+                                         Size="Size.Small" Style="min-width: 100px;">
+                                    @(timer.Elapsed)
+                                </MudChip>
+                                <MudChip T="string" Variant="Variant.Outlined"
+                                         Color="@(timer.Value ? Color.Success : Color.Default)"
+                                         Size="Size.Small" Style="min-width: 100px;">
+                                    @(timer.Value ? "ON" : "OFF")
+                                </MudChip>
+                                <Sparkline Source="timer.Elapsed" Property="@nameof(DeviceTimer.Elapsed)"/>
+                            </MudStack>
+                        </MudCardContent>
+                    </MudCard>
+                </MudItem>
+            }
+        </MudGrid>
+    }
+    
+    @* Math *@
+    @if (Device.MathBlocks.Count > 0)
+    {
+        <MudDivider Class="my-4"/>
+        <MudText Typo="Typo.h6" Class="mb-2">Math</MudText>
+        <MudGrid Spacing="2">
+            @foreach (var (math, _) in Device.GetMathBlocks().Select((i, idx) => (i, idx)))
+            {
+                <MudItem>
+                    <MudCard Class="@(math.Enabled ? "" : "card-disabled")">
+                        <MudCardContent>
+                            <MudStack AlignItems="AlignItems.Center" Spacing="1">
+                                <MudText Typo="Typo.body1">@math.Name</MudText>
+                                <MudChip T="string" Variant="Variant.Outlined"
+                                         Color="Color.Default"
+                                         Size="Size.Small" Style="min-width: 100px;">
+                                    @(math.Value)
+                                </MudChip>
+                                <Sparkline Source="math" Property="@nameof(MathBlock.Value)"/>
+                            </MudStack>
+                        </MudCardContent>
+                    </MudCard>
+                </MudItem>
+            }
+        </MudGrid>
+    }
 </div>
 </SparklineHost>
 

@@ -3,7 +3,6 @@
 @typeparam TDevice where TDevice : domain.Interfaces.IDeviceConfigurable
 @inherits FunctionComponentBase<TDevice>
 
-<MudText Typo="Typo.caption">Result = (A op B) × Factor + Offset. B unset uses Const B. Divide by 0 gives 0.</MudText>
 <MudDataGrid Items="@MathBlocks" Dense="true" Hover="true" Striped="false" EditMode="DataGridEditMode.Cell" ReadOnly="false"
              SortMode="SortMode.None" ColumnResizeMode="ResizeMode.Container" Virtualize="true"
              FixedHeader="true" HorizontalScrollbar="true" Style="max-height: 400px;">

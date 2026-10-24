@@ -852,5 +852,6 @@ public class FwDevice : IDeviceConfigurable
     public Wiper GetWipers() => Wipers;
     public StarterDisable GetStarterDisable() => StarterDisable;
     public IReadOnlyList<DeviceTimer> GetTimers() => Timers.AsReadOnly();
+    public IReadOnlyList<MathBlock> GetMathBlocks() => MathBlocks.AsReadOnly();
     public IReadOnlyList<KeypadMaster> GetKeypads() => Keypads.AsReadOnly();
 }
