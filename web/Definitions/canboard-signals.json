@@ -41,25 +41,25 @@
     {
       "idOffset": 7,
       "signals": [
-        { "target": "CanInput.Value", "count": 2,                          "dbc": { "name": "CanInput{n}.Value", "length": 32 } }
+        { "target": "CanInput.Value", "count": 2,                          "dbc": { "name": "CanInput{n}.Value", "length": 32, "isSigned": true } }
       ]
     },
     {
       "idOffset": 8,
       "signals": [
-        { "target": "CanInput.Value", "count": 2, "startIndex": 2,        "dbc": { "name": "CanInput{n}.Value", "length": 32 } }
+        { "target": "CanInput.Value", "count": 2, "startIndex": 2,        "dbc": { "name": "CanInput{n}.Value", "length": 32, "isSigned": true } }
       ]
     },
     {
       "idOffset": 9,
       "signals": [
-        { "target": "CanInput.Value", "count": 2, "startIndex": 4,        "dbc": { "name": "CanInput{n}.Value", "length": 32 } }
+        { "target": "CanInput.Value", "count": 2, "startIndex": 4,        "dbc": { "name": "CanInput{n}.Value", "length": 32, "isSigned": true } }
       ]
     },
     {
       "idOffset": 10,
       "signals": [
-        { "target": "CanInput.Value", "count": 2, "startIndex": 6,        "dbc": { "name": "CanInput{n}.Value", "length": 32 } }
+        { "target": "CanInput.Value", "count": 2, "startIndex": 6,        "dbc": { "name": "CanInput{n}.Value", "length": 32, "isSigned": true } }
       ]
     }
   ]
