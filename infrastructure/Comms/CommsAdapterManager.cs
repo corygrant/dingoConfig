@@ -82,7 +82,9 @@ public class CommsAdapterManager(IServiceProvider serviceProvider, ILogger<Comms
     
     public async Task<bool> ConnectAsync(ICommsAdapter commsAdapter, string port, CanBitRate bitRate, CancellationToken ct = default)
     {
-        if (_activeAdapter is { IsConnected: true })
+        // Stop the previous adapter whatever its link state. One that has gone quiet
+        // still holds its port, read loop and event handlers.
+        if (_activeAdapter != null)
         {
             await DisconnectAsync();
         }
