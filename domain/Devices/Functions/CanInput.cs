@@ -40,7 +40,7 @@ public class CanInput : IDeviceFunction
     [JsonIgnore] public List<DeviceParameter> Params { get; }
 
     [JsonIgnore][Plotable(displayName:"State")] public bool Output { get; set; }
-    [JsonIgnore][Plotable(displayName:"Value")] public int Value {get; set;}
+    [JsonIgnore][Plotable(displayName:"Value")] public double Value {get; set;}
     
 
     [JsonConstructor]

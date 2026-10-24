@@ -155,7 +155,8 @@ public class FwDevice : IDeviceConfigurable
         _indexedSetters["Output.ResetCount"]  = (i, val) => Outputs[i].ResetCount = (int)val;
         _indexedSetters["Output.DutyCycle"]   = (i, val) => Outputs[i].CurrentDutyCycle = val;
         _indexedSetters["CanInput.Output"]    = (i, val) => CanInputs[i].Output = val != 0;
-        _indexedSetters["CanInput.Value"]     = (i, val) => CanInputs[i].Value = (int)val;
+        // FW sends the raw value (scaled back by the input's own factor/offset)
+        _indexedSetters["CanInput.Value"]     = (i, val) => CanInputs[i].Value = val * CanInputs[i].Factor + CanInputs[i].Offset;
         _indexedSetters["VirtualInput.Value"] = (i, val) => VirtualInputs[i].Value = val != 0;
         _indexedSetters["Flasher.Value"]      = (i, val) => Flashers[i].Value = val != 0;
         _indexedSetters["Counter.Value"]      = (i, val) => Counters[i].Value = (int)val;
