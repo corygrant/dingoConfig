@@ -70,6 +70,7 @@ public class FwDevice : IDeviceConfigurable
     [JsonPropertyName("keypads")] public List<KeypadMaster> Keypads { get; init; } = [];
     [JsonPropertyName("flowLayout")] public Dictionary<string, FlowNodePosition> FlowLayout { get; set; } = new();
     [JsonPropertyName("timers")] public List<DeviceTimer> Timers { get; init; } = [];
+    [JsonPropertyName("mathBlocks")] public List<MathBlock> MathBlocks { get; init; } = [];
     
     [JsonIgnore] private DateTime LastRxTime { get; set; }
 
@@ -162,6 +163,7 @@ public class FwDevice : IDeviceConfigurable
         _indexedSetters["Timer.Value"]        = (i, val) => Timers[i].Value = val != 0;
         _indexedSetters["Timer.Running"]      = (i, val) => Timers[i].Running = val != 0;
         _indexedSetters["Timer.Elapsed"]      = (i, val) => Timers[i].Elapsed = val;
+        _indexedSetters["Math.Value"]         = (i, val) => MathBlocks[i].Value = val;
     }
 
     public void BindCyclicSigs(CyclicSigsConfig config)
@@ -252,6 +254,10 @@ public class FwDevice : IDeviceConfigurable
         if (Timers.Count == 0)
             for (var i = 0; i < Def.NumTimers; i++)
                 Timers.Add(new DeviceTimer(i + 1, "timer" + (i + 1)));
+
+        if (MathBlocks.Count == 0)
+            for (var i = 0; i < Def.NumMath; i++)
+                MathBlocks.Add(new MathBlock(i + 1, "math" + (i + 1)));
 
         StarterDisable ??= new StarterDisable("starterDisable", Def.NumOutputs);
 
@@ -357,6 +363,9 @@ public class FwDevice : IDeviceConfigurable
         // Appended last, matching InitVarMap() in the firmware
         for (var i = 0; i < Def.NumTimers; i++)
             AddVars(Timers[i], ref index);
+
+        for (var i = 0; i < Def.NumMath; i++)
+            AddVars(MathBlocks[i], ref index);
     }
 
     private void AddVars(IDeviceFunction function, ref int index)
@@ -450,6 +459,7 @@ public class FwDevice : IDeviceConfigurable
         if (Def.HasStarterDisable) allParams.AddRange(StarterDisable.Params);
         if (Def.HasWipers) allParams.AddRange(Wipers.Params);
         foreach (var timer in Timers) allParams.AddRange(timer.Params);
+        foreach (var math in MathBlocks) allParams.AddRange(math.Params);
         foreach (var canOutput in CanOutputs) allParams.AddRange(canOutput.Params);
         foreach (var digOutput in DigitalOutputs) allParams.AddRange(digOutput.Params);
         foreach (var analogInput in AnalogInputs) allParams.AddRange(analogInput.Params);

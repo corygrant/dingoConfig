@@ -110,6 +110,15 @@ public static class FlowNodeTypes
             ],
             x => [x.Value]),
 
+        Define<MathBlock>("math", "Math", FlowCategory.Logic, d => d.MathBlocks,
+            x => x.Enabled, (x, v) => x.Enabled = v,
+            x =>
+            [
+                new("inputA", "A", Any, () => x.InputA, v => x.InputA = v),
+                new("inputB", "B", Any, () => x.InputB, v => x.InputB = v)
+            ],
+            x => [x.Value]),
+
         Define<Output>("output", "Output", FlowCategory.Sink, d => d.Outputs,
             x => x.Enabled, (x, v) => x.Enabled = v,
             x =>
