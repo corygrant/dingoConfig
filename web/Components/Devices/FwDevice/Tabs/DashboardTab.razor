@@ -423,14 +423,14 @@
                                 <MudChip T="string" Variant="Variant.Outlined"
                                          Color="@(timer.Running ? Color.Success : Color.Default)"
                                          Size="Size.Small" Style="min-width: 100px;">
-                                    @(timer.Elapsed)
+                                    @timer.Elapsed.ToString("F2") s
                                 </MudChip>
                                 <MudChip T="string" Variant="Variant.Outlined"
                                          Color="@(timer.Value ? Color.Success : Color.Default)"
                                          Size="Size.Small" Style="min-width: 100px;">
                                     @(timer.Value ? "ON" : "OFF")
                                 </MudChip>
-                                <Sparkline Source="timer.Elapsed" Property="@nameof(DeviceTimer.Elapsed)"/>
+                                <Sparkline Source="timer" Property="@nameof(DeviceTimer.Elapsed)"/>
                             </MudStack>
                         </MudCardContent>
                     </MudCard>
@@ -455,7 +455,7 @@
                                 <MudChip T="string" Variant="Variant.Outlined"
                                          Color="Color.Default"
                                          Size="Size.Small" Style="min-width: 100px;">
-                                    @(math.Value)
+                                    @math.Value.ToString("0.###")
                                 </MudChip>
                                 <Sparkline Source="math" Property="@nameof(MathBlock.Value)"/>
                             </MudStack>
