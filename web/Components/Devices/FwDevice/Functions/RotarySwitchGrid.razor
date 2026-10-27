@@ -95,20 +95,20 @@
         @for (var k = 0; k < RotarySwitch.MaxCalibratedPos; k++)
         {
             var pos = k;
-            <TemplateColumn Title="@($"Pos {pos} (mV)")" Resizable="true" CellStyle="max-width: 110px">
+            <TemplateColumn T="AnalogInput" Title="@($"Pos {pos} (mV)")" Resizable="true" CellStyle="max-width: 110px">
                 <EditTemplate>
                     @if (IsCalibrated(context.Item) && pos < context.Item.Rotary.NumPos)
                     {
-                        var item = context.Item;
-                        <MudNumericField @key="@($"center-{item.Number}-{pos}-{_refreshCounter}")"
-                                         Value="@item.Rotary.Centers[pos]"
-                                         Disabled="!item.Enabled"
+                        <MudNumericField T="int"
+                                         @key="@($"center-{context.Item.Number}-{pos}-{_refreshCounter}")"
+                                         Value="@context.Item.Rotary.Centers[pos]"
+                                         Disabled="!context.Item.Enabled"
                                          Adornment="Adornment.End"
                                          AdornmentIcon="@Icons.Material.Filled.Troubleshoot"
                                          AdornmentAriaLabel="Capture current voltage"
-                                         OnAdornmentClick="@(() => OnCenterChanged(item, pos, (int)item.Millivolts))"
+                                         OnAdornmentClick="@(() => OnCenterChanged(context.Item, pos, (int)context.Item.Millivolts))"
                                          HideSpinButtons="true"
-                                         ValueChanged="@((int val) => OnCenterChanged(item, pos, val))"/>
+                                         ValueChanged="@((int val) => OnCenterChanged(context.Item, pos, val))"/>
                     }
                 </EditTemplate>
             </TemplateColumn>
