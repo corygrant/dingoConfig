@@ -40,7 +40,7 @@ public class FwDeviceDefManager
         MinBuildVersion: 0);
 
     private readonly List<FwDeviceDef> _fwDeviceDefs;
-    private readonly List<CyclicSigsConfig> _fwDeviceCyclicSigsConfigs = [];
+    private readonly Dictionary<int, CyclicSigsConfig> _fwDeviceCyclicSigsConfigs = [];
 
     public FwDeviceDefManager()
     {
@@ -52,7 +52,7 @@ public class FwDeviceDefManager
         {
             var signals = LoadCyclicSigsConfig(device.SignalsFile);
             if(signals != null)
-                _fwDeviceCyclicSigsConfigs.Add(signals);
+                _fwDeviceCyclicSigsConfigs[device.DeviceType] = signals;
         }
     }
 
@@ -96,11 +96,6 @@ public class FwDeviceDefManager
     public FwDeviceDef? GetByDeviceType(int deviceType) =>
         _fwDeviceDefs.FirstOrDefault(d => d.DeviceType == deviceType);
 
-    public CyclicSigsConfig? GetDeviceCyclicSigsConfig(int deviceType)
-    {
-        if (deviceType < 0 || deviceType >= _fwDeviceCyclicSigsConfigs.Count) return null;
-        
-        var sigs = _fwDeviceCyclicSigsConfigs[deviceType];
-        return sigs;
-    }
+    public CyclicSigsConfig? GetDeviceCyclicSigsConfig(int deviceType) =>
+        _fwDeviceCyclicSigsConfigs.GetValueOrDefault(deviceType);
 }
