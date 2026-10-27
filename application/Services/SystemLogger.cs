@@ -77,14 +77,9 @@ public class SystemLogger : IDisposable
         OnNotify?.Invoke(entry);
     }
 
-    public List<LogEntry> GetLogs(LogLevel? filterLevel = null, string? filterSource = null)
+    public List<LogEntry> GetLogs(string? filterSource = null)
     {
         var logs = _logBuffer.ToList();
-
-        if (filterLevel.HasValue)
-        {
-            logs = logs.Where(l => l.Level == filterLevel.Value).ToList();
-        }
 
         if (!string.IsNullOrEmpty(filterSource))
         {

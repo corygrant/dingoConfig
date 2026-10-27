@@ -10,18 +10,14 @@
 
 <MudContainer MaxWidth="MaxWidth.False" Style="padding: 16px;">
     <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="mb-3">
-        <MudSelect @bind-Value="_levelFilter"
-                   @bind-Value:after="LoadData"
-                   Label="Level"
-                   Dense="true"
-                   Variant="Variant.Outlined"
-                   Style="min-width: 50px;">
-            <MudSelectItem Value="@((LogLevel?)null)">All</MudSelectItem>
-            <MudSelectItem Value="@((LogLevel?)LogLevel.Debug)">Debug</MudSelectItem>
-            <MudSelectItem Value="@((LogLevel?)LogLevel.Info)">Info</MudSelectItem>
-            <MudSelectItem Value="@((LogLevel?)LogLevel.Warning)">Warning</MudSelectItem>
-            <MudSelectItem Value="@((LogLevel?)LogLevel.Error)">Error</MudSelectItem>
-        </MudSelect>
+        @foreach (var level in Enum.GetValues<LogLevel>())
+        {
+            <MudCheckBox Value="@_levels.Contains(level)"
+                         ValueChanged="@((bool on) => ToggleLevel(level, on))"
+                         Label="@level.ToString()"
+                         Color="@GetLevelColor(level)"
+                         Dense="true"/>
+        }
 
         <MudSelect @bind-Value="_sourceFilter"
                    @bind-Value:after="LoadData"
@@ -95,7 +91,7 @@
     private List<LogEntry> _allLogs = [];
     private List<string> _availableSources = [];
     private Timer? _refreshTimer;
-    private LogLevel? _levelFilter;
+    private readonly HashSet<LogLevel> _levels = [..Enum.GetValues<LogLevel>()];
     private string? _sourceFilter;
 
     protected override void OnInitialized()
@@ -115,14 +111,22 @@
 
     private void LoadData()
     {
-        _allLogs = Logger.GetLogs(_levelFilter, _sourceFilter);
+        var logs = Logger.GetLogs(_sourceFilter);
+        _allLogs = logs.Where(l => _levels.Contains(l.Level)).ToList();
 
         // Extract unique sources for dropdown
-        _availableSources = _allLogs
+        _availableSources = logs
             .Select(l => l.Source)
             .Distinct()
             .OrderBy(s => s)
             .ToList();
+    }
+
+    private void ToggleLevel(LogLevel level, bool on)
+    {
+        if (on) _levels.Add(level);
+        else _levels.Remove(level);
+        LoadData();
     }
 
     private void ClearLogs()
