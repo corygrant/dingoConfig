@@ -12,4 +12,7 @@ public class UserPreferences
     public string? SelectedPort { get; set; }
     public CanBitRate SelectedBitrate { get; set; }
     public NumberFormat IdFormat { get; set; }
+
+    /// <summary>Most recently used first.</summary>
+    public List<RecentProject> RecentProjects { get; set; } = [];
 }
