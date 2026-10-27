@@ -17,6 +17,8 @@ public class SlcanAdapter : ICommsAdapter
     private const int InterFrameDelayMs = 2;
 
     protected SerialPort? Serial;
+    // Byte transport the SLCAN text rides on: Serial.BaseStream, or a NetworkStream for SlcanTcpAdapter
+    protected Stream? Io;
     protected string? PortName;
     protected Stopwatch? RxStopwatch;
     protected Timer? ConnectionMonitorTimer;
@@ -32,58 +34,72 @@ public class SlcanAdapter : ICommsAdapter
     
     private int _bitrate;
 
-    public Task<bool> InitAsync(string port, CanBitRate bitRate, CancellationToken ct)
+    public async Task<bool> InitAsync(string port, CanBitRate bitRate, CancellationToken ct)
     {
         try
         {
             PortName = port;
-            Serial = new SerialPort(port, 115200, Parity.None, 8, StopBits.One);
-            Serial.Handshake = Handshake.None;
-            Serial.NewLine = "\r";
-            Serial.ReadBufferSize = 65536;
-            Serial.WriteBufferSize = 65536;
-            Serial.ReadTimeout = 500;
-            Serial.ErrorReceived += _serial_ErrorReceived;
-            Serial.Open();
+            Io = await OpenTransportAsync(port, ct);
 
             RxStopwatch = Stopwatch.StartNew();
         }
         catch
         {
-            Serial?.ErrorReceived -= _serial_ErrorReceived;
-            Serial?.Close();
+            CloseTransport();
 
             RxStopwatch?.Stop();
             PortName = null;
 
-            return Task.FromResult(false);
+            return false;
         }
         
         _bitrate = ToSlcanBitrate(bitRate);
         
-        return Task.FromResult(true);
+        return true;
+    }
+
+    protected virtual Task<Stream> OpenTransportAsync(string port, CancellationToken ct)
+    {
+        Serial = new SerialPort(port, 115200, Parity.None, 8, StopBits.One);
+        Serial.Handshake = Handshake.None;
+        Serial.ReadBufferSize = 65536;
+        Serial.WriteBufferSize = 65536;
+        Serial.ReadTimeout = 500;
+        Serial.ErrorReceived += _serial_ErrorReceived;
+        Serial.Open();
+        return Task.FromResult(Serial.BaseStream);
+    }
+
+    protected virtual void CloseTransport()
+    {
+        Serial?.ErrorReceived -= _serial_ErrorReceived;
+        try { Serial?.Close(); }
+        catch
+        {
+            // ignored
+        }
+
+        Serial = null;
+        Io = null;
     }
 
     public Task<bool> StartAsync(CancellationToken ct)
     {
-        if (Serial is { IsOpen: false }) return Task.FromResult(false);
+        if (Io == null) return Task.FromResult(false);
 
         try
         {
             // Send SLCAN commands
             var sData = "C\r";
-            if (Serial != null)
-            {
-                Serial.Write(Encoding.ASCII.GetBytes(sData), 0, Encoding.ASCII.GetByteCount(sData));
+            Io.Write(Encoding.ASCII.GetBytes(sData), 0, Encoding.ASCII.GetByteCount(sData));
 
-                //Set bitrate
-                sData = "S" + _bitrate + "\r";
-                Serial.Write(Encoding.ASCII.GetBytes(sData), 0, Encoding.ASCII.GetByteCount(sData));
+            //Set bitrate
+            sData = "S" + _bitrate + "\r";
+            Io.Write(Encoding.ASCII.GetBytes(sData), 0, Encoding.ASCII.GetByteCount(sData));
 
-                //Open slcan
-                sData = "O\r";
-                Serial.Write(Encoding.ASCII.GetBytes(sData), 0, Encoding.ASCII.GetByteCount(sData));
-            }
+            //Open slcan
+            sData = "O\r";
+            Io.Write(Encoding.ASCII.GetBytes(sData), 0, Encoding.ASCII.GetByteCount(sData));
 
             StartConnectionMonitor();
             StartReadLoop();
@@ -99,22 +115,28 @@ public class SlcanAdapter : ICommsAdapter
 
     public Task<bool> StopAsync()
     {
-        StopReadLoop();
         StopConnectionMonitor();
 
-        if (Serial is { IsOpen: false }) return Task.FromResult(false);
+        if (Io == null)
+        {
+            StopReadLoop();
+            return Task.FromResult(false);
+        }
 
         const string sData = "C\r";
-        if (Serial == null) return Task.FromResult(true);
-
         try
         {
-            Serial.Write(Encoding.ASCII.GetBytes(sData), 0, Encoding.ASCII.GetByteCount(sData));
+            Io.Write(Encoding.ASCII.GetBytes(sData), 0, Encoding.ASCII.GetByteCount(sData));
         }
         catch
         {
             // Ignore errors during shutdown
         }
+
+        // Close before joining the reader: a socket read has no timeout, closing is what unblocks it
+        _readCts?.Cancel();
+        CloseTransport();
+        StopReadLoop();
 
         RxStopwatch?.Stop();
 
@@ -152,14 +174,14 @@ public class SlcanAdapter : ICommsAdapter
 
     public Task<bool> WriteAsync(CanFrame frame, CancellationToken ct)
     {
-        if (Serial is { IsOpen: false })
+        if (Io == null)
             return Task.FromResult(false);
 
         try
         {
             var buffer = new byte[22];
             var len = EncodeFrame(frame, buffer, 0);
-            Serial?.Write(buffer, 0, len);
+            Io.Write(buffer, 0, len);
         }
         catch (InvalidOperationException)
         {
@@ -187,7 +209,7 @@ public class SlcanAdapter : ICommsAdapter
 
     public Task<bool> WriteBatchAsync(IReadOnlyList<CanFrame> frames, CancellationToken ct)
     {
-        if (Serial is { IsOpen: false }) return Task.FromResult(false);
+        if (Io == null) return Task.FromResult(false);
 
         var frameBuffer = new byte[22];
         try
@@ -206,7 +228,7 @@ public class SlcanAdapter : ICommsAdapter
                 }
                 
                 var len = EncodeFrame(frame, frameBuffer, 0);
-                Serial!.Write(frameBuffer, 0, len);
+                Io.Write(frameBuffer, 0, len);
                 
                 // Keep bursts within what common SLCAN firmware can reliably drain.
                 if (i < frames.Count - 1)
@@ -259,17 +281,45 @@ public class SlcanAdapter : ICommsAdapter
 
     private void ReadLoop(CancellationToken ct)
     {
-        while (!ct.IsCancellationRequested && (Serial?.IsOpen ?? false))
+        var io = Io;
+        if (io == null) return;
+
+        var buf = new byte[4096];
+        var line = new StringBuilder(32);
+        while (!ct.IsCancellationRequested)
         {
+            int n;
             try
             {
-                var raw = Serial.ReadLine(); // Blocks until '\r'; Serial.NewLine = "\r"
-                ProcessFrame(raw);
+                n = io.Read(buf, 0, buf.Length); // Serial honours ReadTimeout; a socket blocks until data or close
             }
-            catch (TimeoutException) { }
-            catch (InvalidOperationException) { HandleDisconnection(); return; }
-            catch (IOException) { HandleDisconnection(); return; }
-            catch (ArgumentOutOfRangeException) { HandleDisconnection(); return; }
+            catch (TimeoutException) { continue; }
+            catch (Exception) when (ct.IsCancellationRequested) { return; }
+            catch (Exception e) when (e is InvalidOperationException or IOException or ArgumentOutOfRangeException)
+            {
+                HandleDisconnection();
+                return;
+            }
+
+            if (n == 0)
+            {
+                // End of stream: TCP peer closed the connection
+                if (!ct.IsCancellationRequested) HandleDisconnection();
+                return;
+            }
+
+            for (var i = 0; i < n; i++)
+            {
+                if (buf[i] == '\r')
+                {
+                    ProcessFrame(line.ToString());
+                    line.Clear();
+                }
+                else if (line.Length < 64) // Longest valid line is 'T' ext frame (27 chars); drop runaway garbage
+                {
+                    line.Append((char)buf[i]);
+                }
+            }
         }
     }
 
@@ -343,6 +393,9 @@ public class SlcanAdapter : ICommsAdapter
 
         try
         {
+            // Only serial ports can be enumerated; socket drops are caught by ReadLoop
+            if (Serial == null) return;
+
             // Cross-platform approach: Check if the port still exists in the system
             // Works on Linux, Windows, and macOS
             if (string.IsNullOrEmpty(PortName))

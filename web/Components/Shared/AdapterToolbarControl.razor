@@ -14,7 +14,7 @@
           Dot="true"
           Overlap="true"
           Bordered="true"
-          Visible="@(_available.Ports.Length == 0)">
+          Visible="@(UsesPortList && _available.Ports.Length == 0)">
     <MudChip T="string"
              Icon="@Icons.Material.Filled.Cable"
              Color="@GetAdapterChipColor()"
@@ -82,8 +82,18 @@
                     }
                 </MudSelect>
 
-                @* Show port selector for USB and SLCAN only (not PCAN or Sim) *@
-                @if (!string.IsNullOrEmpty(_selectedAdapterType) && _selectedAdapterType != "Sim" && _selectedAdapterType != "PCAN")
+                @if (_selectedAdapterType == "SLCAN TCP")
+                {
+                    <MudTextField @bind-Value="_tcpEndpoint"
+                                  Label="Host:Port"
+                                  Placeholder="192.168.1.10:7778"
+                                  Variant="Variant.Outlined"
+                                  Margin="Margin.Dense"
+                                  Immediate="true"
+                                  Class="mb-2" />
+                }
+
+                @if (UsesPortList)
                 {
                     <MudSelect @bind-Value="_selectedPort"
                                Label="Port"
@@ -119,7 +129,7 @@
                     <div class="mb-3"></div>
                 }
 
-                @if (_available.Adapters.Length == 0 || _available.Ports.Length == 0)
+                @if (_available.Adapters.Length == 0 || (UsesPortList && _available.Ports.Length == 0))
                 {
                     <MudAlert Severity="Severity.Warning" Class="mb-3" Dense="true">
                         @if (_available.Adapters.Length == 0)
@@ -176,6 +186,7 @@
 
     private string _selectedAdapterType = string.Empty;
     private string _selectedPort = string.Empty;
+    private string _tcpEndpoint = string.Empty;
     private CanBitRate _selectedBitrate = CanBitRate.BitRate500K;
 
     protected override void OnInitialized()
@@ -186,6 +197,8 @@
 
         if (!string.IsNullOrEmpty(UserPrefs.Preferences.SelectedPort))
             _selectedPort = UserPrefs.Preferences.SelectedPort;
+
+        _tcpEndpoint = UserPrefs.Preferences.SelectedTcpEndpoint ?? string.Empty;
         
         _selectedBitrate = UserPrefs.Preferences.SelectedBitrate;
 
@@ -280,6 +293,8 @@
             {
                 "Sim" => "Simulated",
                 "PCAN" => "PCAN_USBBUS1", // Default PCAN port
+                "Kvaser" => "0", // CANlib channel 0
+                "SLCAN TCP" => _tcpEndpoint.Trim(),
                 _ => _selectedPort
             };
 
@@ -295,6 +310,7 @@
                 // Save adapter settings to user preferences
                 UserPrefs.Preferences.SelectedAdapter = _selectedAdapterType;
                 UserPrefs.Preferences.SelectedPort = _selectedPort;
+                UserPrefs.Preferences.SelectedTcpEndpoint = _tcpEndpoint;
                 UserPrefs.Preferences.SelectedBitrate = _selectedBitrate;
                 UserPrefs.Save();
 
@@ -335,6 +351,9 @@
         }
     }
 
+    // USB, SLCAN and SocketCAN pick from the detected port list
+    private bool UsesPortList => _selectedAdapterType is "USB" or "SLCAN" or "SocketCAN";
+
     private bool CanConnect()
     {
         if (_connecting || string.IsNullOrWhiteSpace(_selectedAdapterType))
@@ -348,9 +367,12 @@
         if (_selectedAdapterType == "USB")
             return !string.IsNullOrWhiteSpace(_selectedPort);
 
-        // PCAN needs bitrate but not port
-        if (_selectedAdapterType == "PCAN")
+        // PCAN/Kvaser need bitrate but not port
+        if (_selectedAdapterType is "PCAN" or "Kvaser")
             return true;
+
+        if (_selectedAdapterType == "SLCAN TCP")
+            return !string.IsNullOrWhiteSpace(_tcpEndpoint);
 
         // SLCAN needs both port and bitrate
         return !string.IsNullOrWhiteSpace(_selectedPort);

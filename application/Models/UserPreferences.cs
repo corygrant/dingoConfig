@@ -10,6 +10,7 @@ public class UserPreferences
 
     public string? SelectedAdapter { get; set; }
     public string? SelectedPort { get; set; }
+    public string? SelectedTcpEndpoint { get; set; }
     public CanBitRate SelectedBitrate { get; set; }
     public NumberFormat IdFormat { get; set; }
 }

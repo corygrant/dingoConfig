@@ -56,6 +56,8 @@ builder.Services.AddScoped<NotificationService>();
 // Add API services
 builder.Services.AddTransient<UsbAdapter>();
 builder.Services.AddTransient<SlcanAdapter>();
+builder.Services.AddTransient<SlcanTcpAdapter>();
+builder.Services.AddTransient<KvaserAdapter>();
 #if LINUX
 builder.Services.AddTransient<SocketCanAdapter>();
 #endif
