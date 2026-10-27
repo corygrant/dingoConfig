@@ -91,7 +91,7 @@
     private List<LogEntry> _allLogs = [];
     private List<string> _availableSources = [];
     private Timer? _refreshTimer;
-    private readonly HashSet<LogLevel> _levels = [..Enum.GetValues<LogLevel>()];
+    private readonly HashSet<LogLevel> _levels = [LogLevel.Info, LogLevel.Warning, LogLevel.Error];
     private string? _sourceFilter;
 
     protected override void OnInitialized()
