@@ -20,6 +20,7 @@ public class CanOutput : IDeviceFunction
     [JsonPropertyName("byteOrder")] public ByteOrder ByteOrder {get; set;} =  ByteOrder.LittleEndian;
     [JsonPropertyName("signed")] public bool Signed {get; set;}
     [JsonPropertyName("interval")] public int Interval { get; set; } = 1000;
+    [JsonPropertyName("bus")] public int Bus {get; set;}
     
     [JsonPropertyName("id")]
     public int Id
@@ -124,6 +125,13 @@ public class CanOutput : IDeviceFunction
                 GetValue = () => Interval, SetValue = val => Interval = (int)val,
                 ValueType = Interval.GetType(),
                 DefaultValue = 1000
+            },
+            new DeviceParameter
+            {
+                ParentName = Name, Name = $"canOutput[{Number}].bus", Index = BaseIndex + (Number - 1), SubIndex = subIndex++,
+                GetValue = () => Bus, SetValue = val => Bus = (int)val,
+                ValueType = Bus.GetType(),
+                DefaultValue = 0
             },
         ];
     }

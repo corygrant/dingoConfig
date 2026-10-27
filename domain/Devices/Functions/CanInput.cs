@@ -25,6 +25,7 @@ public class CanInput : IDeviceFunction
     [JsonPropertyName("operator")] public Operator Operator { get; set; } = Operator.Equal;
     [JsonPropertyName("operand")] public double Operand {get; set;}
     [JsonPropertyName("mode")] public InputMode Mode { get; set; } = InputMode.Momentary;
+    [JsonPropertyName("bus")] public int Bus {get; set;}
 
     [JsonPropertyName("id")]
     public int Id
@@ -154,6 +155,13 @@ public class CanInput : IDeviceFunction
                 GetValue = () => Mode, SetValue = val => Mode = (InputMode)val,
                 ValueType = Mode.GetType(),
                 DefaultValue = InputMode.Momentary
+            },
+            new DeviceParameter
+            {
+                ParentName = Name, Name = $"canInput[{Number}].bus", Index = BaseIndex + (Number - 1), SubIndex = subIndex++,
+                GetValue = () => Bus, SetValue = val => Bus = (int)val,
+                ValueType = Bus.GetType(),
+                DefaultValue = 0
             }
         ];
     }

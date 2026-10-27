@@ -28,5 +28,6 @@ public record FwDeviceDef(
     int MinMinorVersion,
     int MinBuildVersion,
     int NumTimers = 0,
-    int NumMath = 0
+    int NumMath = 0,
+    int NumCanBuses = 1
     );

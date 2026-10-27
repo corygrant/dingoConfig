@@ -107,12 +107,21 @@
                                      ValueChanged="@((int val) => OnIntervalChanged(context.Item, val))"/>
                 </EditTemplate>
             </TemplateColumn>
+            @if (NumCanBuses > 1)
+            {
+                <TemplateColumn Title="Bus" CellStyle="max-width: 120px">
+                    <EditTemplate>
+                        <BusSelect @bind-Value="context.Item.Bus" NumBuses="NumCanBuses" Disabled="!context.Item.Enabled"/>
+                    </EditTemplate>
+                </TemplateColumn>
+            }
         </Columns>
     </MudDataGrid>
 </MudPaper>
 
 @code {
     [Parameter, EditorRequired] public List<CanOutput> CanOutputs { get; set; } = null!;
+    [Parameter] public int NumCanBuses { get; set; } = 1;
 
     private string[] _id = null!;
     

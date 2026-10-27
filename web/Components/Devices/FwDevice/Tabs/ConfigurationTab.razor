@@ -24,7 +24,7 @@
                                           Style="max-width: 200px"
                                           T="string"/>
                             <MudSelect @bind-Value="@Device.BitRate"
-                                       Label="Bitrate"
+                                       Label="@(Device.Def.NumCanBuses > 1 ? "CAN 1 Bitrate" : "Bitrate")"
                                        Variant="Variant.Outlined"
                                        Dense="true"
                                        Class="mb-3"
@@ -36,6 +36,22 @@
                                 <MudSelectItem T="CanBitRate" Value="@(CanBitRate.BitRate125K)">125K</MudSelectItem>
                                 <MudSelectItem T="CanBitRate" Value="@(CanBitRate.BitRate100K)">100K</MudSelectItem>
                             </MudSelect>
+                            @if (Device.Def.NumCanBuses > 1)
+                            {
+                                <MudSelect @bind-Value="@Device.BitRate2"
+                                           Label="CAN 2 Bitrate"
+                                           Variant="Variant.Outlined"
+                                           Dense="true"
+                                           Class="mb-3"
+                                           T="CanBitRate"
+                                           Style="max-width: 200px">
+                                    <MudSelectItem T="CanBitRate" Value="@(CanBitRate.BitRate1000K)">1000K</MudSelectItem>
+                                    <MudSelectItem T="CanBitRate" Value="@(CanBitRate.BitRate500K)">500K</MudSelectItem>
+                                    <MudSelectItem T="CanBitRate" Value="@(CanBitRate.BitRate250K)">250K</MudSelectItem>
+                                    <MudSelectItem T="CanBitRate" Value="@(CanBitRate.BitRate125K)">125K</MudSelectItem>
+                                    <MudSelectItem T="CanBitRate" Value="@(CanBitRate.BitRate100K)">100K</MudSelectItem>
+                                </MudSelect>
+                            }
                         </MudCardContent>
                     </MudCard>
                 </MudItem>
@@ -110,6 +126,13 @@
                                     <MudSwitch @bind-Value="kp.Enabled"
                                                Color="Color.Success"
                                                Label=@label/>
+                                    @if (Device.Def.NumCanBuses > 1)
+                                    {
+                                        <BusSelect @bind-Value="kp.Bus"
+                                                   NumBuses="Device.Def.NumCanBuses"
+                                                   Label="@($"Keypad {kp.Number} Bus")"
+                                                   Disabled="!kp.Enabled"/>
+                                    }
                                 }
                             </MudCardContent>
                         </MudCard>
@@ -191,7 +214,7 @@
                                ExpandedChanged="@((bool expanded) => _canInputsExpanded = expanded)">
                 @if (_canInputsExpanded)
                 {
-                    <CanInputsGrid CanInputs="Device.CanInputs" Device="Device"/>
+                    <CanInputsGrid CanInputs="Device.CanInputs" Device="Device" NumCanBuses="Device.Def.NumCanBuses"/>
                 }
             </MudExpansionPanel>
         }
@@ -203,7 +226,7 @@
                                ExpandedChanged="@((bool expanded) => _canOutputsExpanded = expanded)">
                 @if (_canOutputsExpanded)
                 {
-                    <CanOutputsGrid CanOutputs="Device.CanOutputs" Device="Device"/>
+                    <CanOutputsGrid CanOutputs="Device.CanOutputs" Device="Device" NumCanBuses="Device.Def.NumCanBuses"/>
                 }
             </MudExpansionPanel>
         }

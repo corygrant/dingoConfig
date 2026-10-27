@@ -226,7 +226,7 @@
                                 <MudText Typo="Typo.body1">@input.Name</MudText>
                                 <MudText Typo="Typo.body2">@input.Millivolts.ToString("F1") mV</MudText>
                                 <Sparkline Source="input" Property="@nameof(AnalogInput.Millivolts)"/>
-                                <MudText Typo="Typo.body2">Rotary: @input.Rotary.Pos</MudText>
+                                <MudText Typo="Typo.body2">Rotary: @(input.Rotary.Pos == RotarySwitch.NoPos ? "-" : input.Rotary.Pos)</MudText>
                                 <MudChip T="string" Variant="Variant.Outlined"
                                          Color="@(input.Switch.State ? Color.Success : Color.Default)"
                                          Size="Size.Small" Style="min-width: 100px;">

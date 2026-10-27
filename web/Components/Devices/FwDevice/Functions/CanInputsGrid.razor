@@ -135,6 +135,14 @@
                                      ValueChanged="@((int val) => OnTimeoutChanged(context.Item, val))"/>
                 </EditTemplate>
             </TemplateColumn>
+            @if (NumCanBuses > 1)
+            {
+                <TemplateColumn Title="Bus" CellStyle="max-width: 120px">
+                    <EditTemplate>
+                        <BusSelect @bind-Value="context.Item.Bus" NumBuses="NumCanBuses" Disabled="!context.Item.Enabled"/>
+                    </EditTemplate>
+                </TemplateColumn>
+            }
         </Columns>
     </MudDataGrid>
 </MudPaper>
@@ -142,6 +150,7 @@
 @code {
     [Parameter, EditorRequired] public List<CanInput> CanInputs { get; set; } = null!;
     [Parameter, EditorRequired] public TDevice Device { get; set; } = default!;
+    [Parameter] public int NumCanBuses { get; set; } = 1;
     
     private string[] _id = null!;
     

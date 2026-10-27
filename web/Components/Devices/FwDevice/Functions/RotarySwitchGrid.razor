@@ -18,7 +18,20 @@
                 <MudTextField @bind-Value="context.Item.Name" Variant="Variant.Outlined" Margin="Margin.Dense" />
             </EditTemplate>
         </PropertyColumn>
-        <PropertyColumn Title="Position" Property="x => x.Rotary.Pos" Resizable="true" Editable="false" CellStyle="max-width: 100px"/>
+        <TemplateColumn Title="Position" Resizable="true" Editable="false" CellStyle="max-width: 100px">
+            <CellTemplate>@(context.Item.Rotary.Pos == RotarySwitch.NoPos ? "-" : context.Item.Rotary.Pos)</CellTemplate>
+        </TemplateColumn>
+        <PropertyColumn Property="x => x.Rotary.Mode" Title="Mode" CellStyle="max-width: 150px">
+            <EditTemplate>
+                <MudSelect T="RotaryMode" @bind-Value="context.Item.Rotary.Mode" Variant="Variant.Outlined"
+                           Disabled="!context.Item.Enabled" Dense="true">
+                    @foreach (RotaryMode mode in Enum.GetValues<RotaryMode>())
+                    {
+                        <MudSelectItem T="RotaryMode" Value="@mode">@mode</MudSelectItem>
+                    }
+                </MudSelect>
+            </EditTemplate>
+        </PropertyColumn>
         <PropertyColumn Property="x => x.Switch.Invert" Title="Switch Invert" CellStyle="max-width: 100px">
             <EditTemplate>
                 <MudCheckBox @bind-Value="context.Item.Switch.Invert" Dense="true" Disabled="!context.Item.Enabled"/>
@@ -26,28 +39,80 @@
         </PropertyColumn>
         <TemplateColumn Title="Offset (mV)" Resizable="true" CellStyle="max-width: 100px">
             <EditTemplate>
-                <MudNumericField @key="@($"offset-{context.Item.Number}-{_refreshCounter}")"
-                                 Value="@context.Item.Rotary.Offset"
-                                 Disabled="!context.Item.Enabled"
-                                 ValueChanged="@((double val) => OnOffsetChanged(context.Item, val))"/>
+                @if (!IsCalibrated(context.Item))
+                {
+                    <MudNumericField @key="@($"offset-{context.Item.Number}-{_refreshCounter}")"
+                                     Value="@context.Item.Rotary.Offset"
+                                     Disabled="@(!context.Item.Enabled || IsCalibrated(context.Item))"
+                                     ValueChanged="@((double val) => OnOffsetChanged(context.Item, val))"/>
+                }
             </EditTemplate>
         </TemplateColumn>
         <TemplateColumn Title="Step (mV)" Resizable="true" CellStyle="max-width: 100px">
             <EditTemplate>
+                @if (!IsCalibrated(context.Item))
+            {
                 <MudNumericField @key="@($"step-{context.Item.Number}-{_refreshCounter}")"
                                  Value="@context.Item.Rotary.Step"
-                                 Disabled="!context.Item.Enabled"
+                                 Disabled="@(!context.Item.Enabled || IsCalibrated(context.Item))"
                                  ValueChanged="@((double val) => OnStepChanged(context.Item, val))"/>
+            }
             </EditTemplate>
         </TemplateColumn>
         <TemplateColumn Title="Max Pos" Resizable="true" CellStyle="max-width: 100px">
             <EditTemplate>
+                @if (!IsCalibrated(context.Item))
+            {
                 <MudNumericField @key="@($"maxpos-{context.Item.Number}-{_refreshCounter}")"
                                  Value="@context.Item.Rotary.MaxPos"
-                                 Disabled="!context.Item.Enabled"
+                                 Disabled="@(!context.Item.Enabled || IsCalibrated(context.Item))"
                                  ValueChanged="@((double val) => OnMaxPosChanged(context.Item, val))"/>
+            }
             </EditTemplate>
         </TemplateColumn>
+        <TemplateColumn Title="Num Pos" Resizable="true" CellStyle="max-width: 100px">
+            <EditTemplate>
+                @if (IsCalibrated(context.Item))
+            {
+                <MudNumericField @key="@($"numpos-{context.Item.Number}-{_refreshCounter}")"
+                                 Value="@context.Item.Rotary.NumPos"
+                                 Disabled="@(!context.Item.Enabled || !IsCalibrated(context.Item))"
+                                 ValueChanged="@((int val) => OnNumPosChanged(context.Item, val))"/>
+            }
+            </EditTemplate>
+        </TemplateColumn>
+        <TemplateColumn Title="Tolerance (mV)" Resizable="true" CellStyle="max-width: 100px">
+            <EditTemplate>
+                @if (IsCalibrated(context.Item))
+                {
+                <MudNumericField @key="@($"tolerance-{context.Item.Number}-{_refreshCounter}")"
+                                 Value="@context.Item.Rotary.Tolerance"
+                                 Disabled="@(!context.Item.Enabled || !IsCalibrated(context.Item))"
+                                 ValueChanged="@((int val) => OnToleranceChanged(context.Item, val))"/>
+            }
+            </EditTemplate>
+        </TemplateColumn>
+        @for (var k = 0; k < RotarySwitch.MaxCalibratedPos; k++)
+        {
+            var pos = k;
+            <TemplateColumn Title="@($"Pos {pos} (mV)")" Resizable="true" CellStyle="max-width: 110px">
+                <EditTemplate>
+                    @if (IsCalibrated(context.Item) && pos < context.Item.Rotary.NumPos)
+                    {
+                        var item = context.Item;
+                        <MudNumericField @key="@($"center-{item.Number}-{pos}-{_refreshCounter}")"
+                                         Value="@item.Rotary.Centers[pos]"
+                                         Disabled="!item.Enabled"
+                                         Adornment="Adornment.End"
+                                         AdornmentIcon="@Icons.Material.Filled.Troubleshoot"
+                                         AdornmentAriaLabel="Capture current voltage"
+                                         OnAdornmentClick="@(() => OnCenterChanged(item, pos, (int)item.Millivolts))"
+                                         HideSpinButtons="true"
+                                         ValueChanged="@((int val) => OnCenterChanged(item, pos, val))"/>
+                    }
+                </EditTemplate>
+            </TemplateColumn>
+        }
     </Columns>
 </MudDataGrid>
 
@@ -56,6 +121,44 @@
     public List<AnalogInput> Inputs { get; set; } = null!;
 
     private int _refreshCounter = 0;
+
+    private static bool IsCalibrated(AnalogInput item) => item.Rotary.Mode == RotaryMode.Calibrated;
+
+    private void OnNumPosChanged(AnalogInput item, int value)
+    {
+        const int min = 2;
+        const int max = RotarySwitch.MaxCalibratedPos;
+        if (value < min || value > max)
+        {
+            Notification.NewWarning($"{item.Name}.NumPos must be {min} to {max}");
+        }
+        item.Rotary.NumPos = Math.Clamp(value, min, max);
+        _refreshCounter++;
+    }
+
+    private void OnToleranceChanged(AnalogInput item, int value)
+    {
+        const int min = 0;
+        const int max = 5000;
+        if (value < min || value > max)
+        {
+            Notification.NewWarning($"{item.Name}.Tolerance must be {min} to {max}");
+        }
+        item.Rotary.Tolerance = Math.Clamp(value, min, max);
+        _refreshCounter++;
+    }
+
+    private void OnCenterChanged(AnalogInput item, int pos, int value)
+    {
+        const int min = 0;
+        const int max = 5000;
+        if (value < min || value > max)
+        {
+            Notification.NewWarning($"{item.Name}.Center[{pos}] must be {min} to {max}");
+        }
+        item.Rotary.Centers[pos] = Math.Clamp(value, min, max);
+        _refreshCounter++;
+    }
 
     private void OnOffsetChanged(AnalogInput item, double value)
     {

@@ -50,6 +50,7 @@ public class FwDevice : IDeviceConfigurable
     [JsonPropertyName("disableCanWake")] public bool DisableCanWake { get; set; }
     [JsonPropertyName("connectUsbToCan")] public bool ConnectUsbToCan { get; set; } = true;
     [JsonPropertyName("bitrate")] public CanBitRate BitRate { get; set; } = CanBitRate.BitRate500K;
+    [JsonPropertyName("bitrate2")] public CanBitRate BitRate2 { get; set; } = CanBitRate.BitRate500K;
     [JsonPropertyName("muteCanTxInput")] public int MuteCanTxInput { get; set; }
     [JsonPropertyName("forceSleepInput")] public int ForceSleepInput { get; set; }
     [JsonIgnore] public TimeSpan CyclicGap { get; } =  TimeSpan.FromSeconds(0);
@@ -456,6 +457,13 @@ public class FwDevice : IDeviceConfigurable
                 GetValue = () => ForceSleepInput, SetValue = val => ForceSleepInput = (int)val,
                 ValueType = ForceSleepInput.GetType(),
                 DefaultValue = 0
+            },
+            new DeviceParameter
+            {
+                ParentName = Name, Name = "device.canSpeed2", Index = BaseIndex, SubIndex = subIndex++,
+                GetValue = () => BitRate2, SetValue = val => BitRate2 = (CanBitRate)val,
+                ValueType = BitRate2.GetType(),
+                DefaultValue = CanBitRate.BitRate500K
             }
         ]);
         

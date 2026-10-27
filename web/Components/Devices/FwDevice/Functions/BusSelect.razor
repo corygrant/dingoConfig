@@ -1,0 +1,16 @@
+<MudSelect T="int" Value="@Value" ValueChanged="@ValueChanged" Label="@Label" Variant="Variant.Outlined"
+           Disabled="@Disabled" Dense="true" Margin="Margin.Dense">
+    @for (var i = 0; i < NumBuses; i++)
+    {
+        var bus = i;
+        <MudSelectItem T="int" Value="@bus">CAN @(bus + 1)</MudSelectItem>
+    }
+</MudSelect>
+
+@code {
+    [Parameter] public int Value { get; set; }
+    [Parameter] public EventCallback<int> ValueChanged { get; set; }
+    [Parameter] public int NumBuses { get; set; } = 1;
+    [Parameter] public bool Disabled { get; set; }
+    [Parameter] public string? Label { get; set; }
+}

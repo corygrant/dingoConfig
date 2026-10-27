@@ -31,6 +31,7 @@ public class KeypadMaster : IDeviceFunction
 
     [JsonPropertyName("dimButtonBrightness")]
     public int DimButtonBrightness { get; set; } = 32;
+    [JsonPropertyName("bus")] public int Bus {get; set;}
     [JsonPropertyName("buttons")] public List<Button> Buttons { get; init; } = [];
     [JsonPropertyName("dials")] public List<Dial> Dials { get; init; } = [];
     
@@ -145,6 +146,13 @@ public class KeypadMaster : IDeviceFunction
                 GetValue = () => DimButtonBrightness, SetValue = val => DimButtonBrightness = (int)val,
                 ValueType = DimButtonBrightness.GetType(),
                 DefaultValue = 32
+            },
+            new DeviceParameter
+            {
+                ParentName = Name, Name = $"keypad[{Number}].bus", Index = BaseIndex + (Number - 1), SubIndex = subIndex++,
+                GetValue = () => Bus, SetValue = val => Bus = (int)val,
+                ValueType = Bus.GetType(),
+                DefaultValue = 0
             },
         ];
 
