@@ -398,10 +398,7 @@
             };
         }
 
-        if (_newDeviceName.Length == 0)
-            _newDeviceName = fwDevDef?.TypeName ?? deviceType;
-        else
-            _newDeviceName = _newDeviceType.Trim().Replace(" ", "");
+        _newDeviceName = fwDevDef?.TypeName ?? deviceType;
 
         _newDeviceBaseIdString = Utils.FormatId(defaultId, UserPrefs.Preferences.IdFormat);
     }
