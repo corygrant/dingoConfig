@@ -43,8 +43,12 @@ public class SlcanAdapter : ICommsAdapter
 
             RxStopwatch = Stopwatch.StartNew();
         }
-        catch
+        catch (Exception e)
         {
+            // The manager only logs that init failed; say why, usually "access denied"
+            // because another program holds the port, or a TCP connect refused/timed out
+            Console.WriteLine($"{Name}: cannot open {port}: {e.Message}");
+
             CloseTransport();
 
             RxStopwatch?.Stop();
