@@ -45,11 +45,6 @@
                    Color="Color.Primary"
                    Label="Log to File" />
         
-        <MudCheckBox @bind-Value="_showDebug"
-                     @bind-Value:after="LoadData"
-                     Label="Show Debug"
-                     Dense="true"/>
-        
         <MudDivider Vertical="true" FlexItem="true"/>
         
         <MudButton Variant="Variant.Outlined" 
@@ -62,7 +57,7 @@
 
     @* Data Grid *@
     <MudDataGrid T="LogEntry"
-                 Items="@_filteredLogs"
+                 Items="@_allLogs"
                  Dense="true"
                  Hover="true"
                  Striped="false"
@@ -98,12 +93,10 @@
 
 @code {
     private List<LogEntry> _allLogs = [];
-    private List<LogEntry> _filteredLogs = [];
     private List<string> _availableSources = [];
     private Timer? _refreshTimer;
     private LogLevel? _levelFilter;
     private string? _sourceFilter;
-    private bool _showDebug;
 
     protected override void OnInitialized()
     {
@@ -122,18 +115,7 @@
 
     private void LoadData()
     {
-        // Get all logs
         _allLogs = Logger.GetLogs(_levelFilter, _sourceFilter);
-
-        // Apply debug filter
-        if (!_showDebug)
-        {
-            _filteredLogs = _allLogs.Where(l => l.Level >= Logger.MinimumDisplayLevel).ToList();
-        }
-        else
-        {
-            _filteredLogs = _allLogs;
-        }
 
         // Extract unique sources for dropdown
         _availableSources = _allLogs

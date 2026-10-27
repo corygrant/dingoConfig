@@ -12,7 +12,6 @@ public class SystemLogger : IDisposable
     private StreamWriter? _logWriter;
 
     public bool LogToFile { get; set; }
-    public LogLevel MinimumDisplayLevel { get; set; } = LogLevel.Info;
 
     /// <summary>
     /// Event fired when an error or critical log is recorded
