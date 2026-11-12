@@ -9,8 +9,13 @@ using Microsoft.Extensions.Logging;
 
 namespace application.Services;
 
-public class ConfigFileManager(ILogger<ConfigFileManager> logger, FwDeviceDefManager fwDeviceDefManager)
+public class ConfigFileManager(
+    ILogger<ConfigFileManager> logger,
+    FwDeviceDefManager fwDeviceDefManager,
+    UserPreferencesManager userPrefs)
 {
+    public const int MaxRecentProjects = 8;
+
     private readonly JsonSerializerOptions _options = new() { WriteIndented = true, PropertyNameCaseInsensitive = true};
 
     private string _workingDirectory = Path.Combine(
@@ -54,6 +59,48 @@ public class ConfigFileManager(ILogger<ConfigFileManager> logger, FwDeviceDefMan
     /// </summary>
     public string? CurrentFileName =>
         string.IsNullOrEmpty(CurrentFilePath) ? null : Path.GetFileName(CurrentFilePath);
+
+    /// <summary>
+    /// Config files opened or saved recently, most recent first.
+    /// </summary>
+    public IReadOnlyList<RecentProject> RecentProjects => userPrefs.Preferences.RecentProjects;
+
+    public void ForgetProject(string path)
+    {
+        if (userPrefs.Preferences.RecentProjects.RemoveAll(p => SamePath(p.Path, path)) == 0)
+            return;
+
+        userPrefs.Save();
+        OnStateChanged?.Invoke();
+    }
+
+    private void RememberProject(string fullPath, IEnumerable<IDevice> devices)
+    {
+        var recent = userPrefs.Preferences.RecentProjects;
+        recent.RemoveAll(p => SamePath(p.Path, fullPath));
+        recent.Insert(0, new RecentProject
+        {
+            Path = fullPath,
+            LastUsed = DateTime.Now,
+            Devices = devices.Select(DeviceLabel).ToList()
+        });
+
+        if (recent.Count > MaxRecentProjects)
+            recent.RemoveRange(MaxRecentProjects, recent.Count - MaxRecentProjects);
+
+        userPrefs.Save();
+        OnStateChanged?.Invoke();
+    }
+
+    private static string DeviceLabel(IDevice device)
+    {
+        // Firmware devices leave Type empty, their type name lives in the definition
+        var type = device is FwDevice fw ? fw.Def?.TypeName : device.Type;
+        return string.IsNullOrWhiteSpace(type) ? device.Name : $"{device.Name} ({type})";
+    }
+
+    private static bool SamePath(string a, string b) =>
+        string.Equals(Path.GetFullPath(a), Path.GetFullPath(b), StringComparison.OrdinalIgnoreCase);
 
     private void EnsureWorkingDirectoryExists()
     {
@@ -115,6 +162,7 @@ public class ConfigFileManager(ILogger<ConfigFileManager> logger, FwDeviceDefMan
             await File.WriteAllTextAsync(fullPath, jsonString);
 
             CurrentFilePath = fullPath;
+            RememberProject(fullPath, devices);
 
             logger.LogInformation($"Saved {devices.Count} devices to {targetFileName}");
         }
@@ -162,6 +210,8 @@ public class ConfigFileManager(ILogger<ConfigFileManager> logger, FwDeviceDefMan
             allDevices.AddRange(config.DbcDevices);
             allDevices.AddRange(config.BlinkMarineKeypads);
             allDevices.AddRange(config.GrayhillKeypads);
+
+            RememberProject(fullPath, allDevices);
 
             logger.LogInformation($"Loaded {allDevices.Count} devices from {fileName}");
             return allDevices;
