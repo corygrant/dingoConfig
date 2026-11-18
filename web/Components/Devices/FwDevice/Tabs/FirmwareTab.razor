@@ -1,0 +1,92 @@
+@using application.Services
+@using domain.Devices
+@using domain.Interfaces
+@using web.Services
+@inject DeviceManager DeviceManager
+@inject ICommsAdapterManager AdapterManager
+@inject NotificationService Notification
+@inject IDialogService DialogService
+@typeparam TDevice where TDevice : domain.Devices.FwDevice
+
+<div style="padding: 24px; display: flex; flex-direction: column; gap: 12px; max-width: 800px;">
+    <MudText Typo="Typo.body2">
+        Updates the firmware over CAN through the OpenBLT bootloader. Use the <code>.srec</code> file built for this
+        exact board. If an update was cut short, the module waits in the bootloader on the default base ID
+        (@Device.Def.DefaultId) at 500K: set this device to that ID and the adapter to 500K, then flash again.
+    </MudText>
+
+    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+        <MudFileUpload T="IBrowserFile" Accept=".srec,.s19,.s37" FilesChanged="LoadFileAsync" Disabled="@Device.Firmware.Busy">
+            <ActivatorContent>
+                <MudButton Variant="Variant.Outlined" Color="Color.Default" StartIcon="@Icons.Material.Filled.FileOpen"
+                           Disabled="@Device.Firmware.Busy">Open .srec</MudButton>
+            </ActivatorContent>
+        </MudFileUpload>
+        <MudButton Variant="Variant.Outlined" Color="Color.Default" StartIcon="@Icons.Material.Filled.SystemUpdateAlt"
+                   Disabled="@(_image == null || Device.Firmware.Busy || !AdapterManager.IsConnected)" OnClick="FlashAsync">
+            Flash
+        </MudButton>
+        <MudText Typo="Typo.body2">@(_fileInfo ?? "No file")</MudText>
+    </MudStack>
+
+    @if (Device.Firmware.Busy)
+    {
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+            <MudText Typo="Typo.body2" Style="min-width: 140px">@Device.Firmware.Status</MudText>
+            @if (Device.Firmware.Total > 0)
+            {
+                <MudProgressLinear Color="Color.Primary" Value="@(100.0 * Device.Firmware.Done / Device.Firmware.Total)"/>
+            }
+            else
+            {
+                <MudProgressLinear Color="Color.Primary" Indeterminate="true"/>
+            }
+        </MudStack>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public TDevice Device { get; set; } = null!;
+
+    private List<FirmwareUpdate.Segment>? _image;
+    private string? _fileInfo;
+
+    private async Task LoadFileAsync(IBrowserFile? file)
+    {
+        _image = null;
+        _fileInfo = null;
+        if (file == null) return;
+        try
+        {
+            using var reader = new StreamReader(file.OpenReadStream(maxAllowedSize: 8 * 1024 * 1024));
+            _image = FirmwareUpdate.ParseSrec(await reader.ReadToEndAsync());
+            _fileInfo = $"{file.Name}: {_image.Sum(s => s.Data.Length) / 1024.0:F1} KB at 0x{_image[0].Address:X8}";
+        }
+        catch (Exception ex)
+        {
+            Notification.NewError($"Can't read {file.Name}", ex);
+        }
+    }
+
+    private async Task FlashAsync()
+    {
+        if (_image == null) return;
+        var ok = await DialogService.ShowMessageBox("Flash firmware",
+            $"Flash {_fileInfo} to {Device.Name} (0x{Device.BaseId:X3})? Outputs turn off during the update.",
+            yesText: "Flash", cancelText: "Cancel");
+        if (ok != true) return;
+
+        // Not on the bus: assume it's already waiting in the bootloader
+        var enter = Device.Connected ? Device.GetBootloaderMsg(canUpdate: true) : null;
+        var err = await Device.Firmware.FlashAsync(Device.BaseId, _image, enter, DeviceManager.Transmit);
+        if (err != null)
+        {
+            Notification.NewError($"{Device.Name} firmware update failed: {err}");
+            return;
+        }
+        Notification.NewSuccess($"{Device.Name} firmware updated");
+
+        await Task.Delay(1500); // New app boots
+        DeviceManager.RequestVersion(Device.Guid);
+    }
+}

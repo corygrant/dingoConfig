@@ -74,6 +74,7 @@ public class FwDevice : IDeviceConfigurable
     [JsonPropertyName("mathBlocks")] public List<MathBlock> MathBlocks { get; init; } = [];
     [JsonPropertyName("luaScript")] public LuaScript LuaScript { get; set; } = null!;
     [JsonIgnore] public LuaProtocol Lua { get; } = new();
+    [JsonIgnore] public FirmwareUpdate Firmware { get; } = new();
     
     [JsonIgnore] private DateTime LastRxTime { get; set; }
 
@@ -541,7 +542,7 @@ public class FwDevice : IDeviceConfigurable
     
     public bool InIdRange(int id)
     {
-        return (id >= BaseId) && (id <= MaxCyclicId);
+        return (id >= BaseId) && (id <= Math.Max(MaxCyclicId, BaseId + FirmwareUpdate.XcpRxOffset));
     }
     
     public void Read(int id, byte[] data, 
@@ -549,6 +550,13 @@ public class FwDevice : IDeviceConfigurable
             List<DeviceCanFrame> outgoing)
     {
         var offset = id - BaseId;
+
+        // The app isn't running during an update, this id only carries the bootloader's replies
+        if (Firmware.Busy && offset == FirmwareUpdate.XcpRxOffset)
+        {
+            Firmware.HandleReply(data);
+            return;
+        }
 
         // Use dictionary lookup for status messages
         if (CyclicSigs.TryGetValue(offset, out var signals))
@@ -774,7 +782,8 @@ public class FwDevice : IDeviceConfigurable
         };
     }
 
-    public DeviceCanFrame GetBootloaderMsg()
+    // canUpdate: OpenBLT over CAN (FirmwareUpdate), otherwise ST USB DFU
+    public DeviceCanFrame GetBootloaderMsg(bool canUpdate = false)
     {
         return new DeviceCanFrame
         {
@@ -785,7 +794,7 @@ public class FwDevice : IDeviceConfigurable
                 Id: BaseId + ConfigTxOffset,
                 Len: 8,
                 Payload: [
-                    Convert.ToByte(MessageCommand.Bootloader), (byte)'B', (byte)'O', (byte)'O', (byte)'T', (byte)'L', 0,
+                    Convert.ToByte(MessageCommand.Bootloader), (byte)'B', (byte)'O', (byte)'O', (byte)'T', (byte)'L', (byte)(canUpdate ? 1 : 0),
                     0
                 ]
             ),

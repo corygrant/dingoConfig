@@ -17,7 +17,7 @@ public interface IDeviceConfigurable : IDevice
     DeviceCanFrame GetVersionMsg();
     DeviceCanFrame? GetSleepMsg();
     DeviceCanFrame? GetWakeupMsg();
-    DeviceCanFrame? GetBootloaderMsg();
+    DeviceCanFrame? GetBootloaderMsg(bool canUpdate = false);
     DeviceCanFrame? GetResetDeviceMsg();
 
 }
