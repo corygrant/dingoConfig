@@ -201,6 +201,102 @@
         { "target": "DigitalInput.Duty",      "count": 1, "startIndex": 1, "dbc": { "name": "DigitalInput{n}.Duty",      "startBit": 32,  "length": 16, "factor": 0.01, "unit": "%" } },
         { "target": "DigitalInput.Frequency", "count": 1, "startIndex": 1, "dbc": { "name": "DigitalInput{n}.Frequency", "startBit": 48, "length": 16, "factor": 0.1, "unit": "Hz" } }
       ]
+    },
+    {
+      "idOffset": 37,
+      "signals": [
+        { "target": "LuaScript.Value", "count": 2,                     "dbc": { "name": "LuaOut{n}.Value", "length": 32, "isSigned": true, "factor": 0.001 } }
+      ]
+    },
+    {
+      "idOffset": 38,
+      "signals": [
+        { "target": "LuaScript.Value", "count": 2, "startIndex": 2, "dbc": { "name": "LuaOut{n}.Value", "length": 32, "isSigned": true, "factor": 0.001 } }
+      ]
+    },
+    {
+      "idOffset": 39,
+      "signals": [
+        { "target": "LuaScript.Value", "count": 2, "startIndex": 4, "dbc": { "name": "LuaOut{n}.Value", "length": 32, "isSigned": true, "factor": 0.001 } }
+      ]
+    },
+    {
+      "idOffset": 40,
+      "signals": [
+        { "target": "LuaScript.Value", "count": 2, "startIndex": 6, "dbc": { "name": "LuaOut{n}.Value", "length": 32, "isSigned": true, "factor": 0.001 } }
+      ]
+    },
+    {
+      "idOffset": 41,
+      "signals": [
+        { "target": "LuaScript.Value", "count": 2, "startIndex": 8, "dbc": { "name": "LuaOut{n}.Value", "length": 32, "isSigned": true, "factor": 0.001 } }
+      ]
+    },
+    {
+      "idOffset": 42,
+      "signals": [
+        { "target": "LuaScript.Value", "count": 2, "startIndex": 10, "dbc": { "name": "LuaOut{n}.Value", "length": 32, "isSigned": true, "factor": 0.001 } }
+      ]
+    },
+    {
+      "idOffset": 43,
+      "signals": [
+        { "target": "LuaScript.Value", "count": 2, "startIndex": 12, "dbc": { "name": "LuaOut{n}.Value", "length": 32, "isSigned": true, "factor": 0.001 } }
+      ]
+    },
+    {
+      "idOffset": 44,
+      "signals": [
+        { "target": "LuaScript.Value", "count": 2, "startIndex": 14, "dbc": { "name": "LuaOut{n}.Value", "length": 32, "isSigned": true, "factor": 0.001 } }
+      ]
+    },
+    {
+      "idOffset": 45,
+      "signals": [
+        { "target": "LuaScript.Value", "count": 2, "startIndex": 16, "dbc": { "name": "LuaOut{n}.Value", "length": 32, "isSigned": true, "factor": 0.001 } }
+      ]
+    },
+    {
+      "idOffset": 46,
+      "signals": [
+        { "target": "LuaScript.Value", "count": 2, "startIndex": 18, "dbc": { "name": "LuaOut{n}.Value", "length": 32, "isSigned": true, "factor": 0.001 } }
+      ]
+    },
+    {
+      "idOffset": 47,
+      "signals": [
+        { "target": "LuaScript.Value", "count": 2, "startIndex": 20, "dbc": { "name": "LuaOut{n}.Value", "length": 32, "isSigned": true, "factor": 0.001 } }
+      ]
+    },
+    {
+      "idOffset": 48,
+      "signals": [
+        { "target": "LuaScript.Value", "count": 2, "startIndex": 22, "dbc": { "name": "LuaOut{n}.Value", "length": 32, "isSigned": true, "factor": 0.001 } }
+      ]
+    },
+    {
+      "idOffset": 49,
+      "signals": [
+        { "target": "LuaScript.Value", "count": 2, "startIndex": 24, "dbc": { "name": "LuaOut{n}.Value", "length": 32, "isSigned": true, "factor": 0.001 } }
+      ]
+    },
+    {
+      "idOffset": 50,
+      "signals": [
+        { "target": "LuaScript.Value", "count": 2, "startIndex": 26, "dbc": { "name": "LuaOut{n}.Value", "length": 32, "isSigned": true, "factor": 0.001 } }
+      ]
+    },
+    {
+      "idOffset": 51,
+      "signals": [
+        { "target": "LuaScript.Value", "count": 2, "startIndex": 28, "dbc": { "name": "LuaOut{n}.Value", "length": 32, "isSigned": true, "factor": 0.001 } }
+      ]
+    },
+    {
+      "idOffset": 52,
+      "signals": [
+        { "target": "LuaScript.Value", "count": 2, "startIndex": 30, "dbc": { "name": "LuaOut{n}.Value", "length": 32, "isSigned": true, "factor": 0.001 } }
+      ]
     }
-  ]
+]
 }

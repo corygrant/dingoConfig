@@ -34,6 +34,9 @@ public class DeviceManager(ILogger<DeviceManager> logger, ILoggerFactory loggerF
         _batchTransmitCallback = callback;
     }
 
+    // Send without response tracking, for protocols that match their own replies (LuaProtocol)
+    public void Transmit(List<DeviceCanFrame> frames) => _batchTransmitCallback?.Invoke(frames);
+
     /// <summary>
     /// Get UI state for a device (creates device UI state if it doesn't exist)
     /// </summary>

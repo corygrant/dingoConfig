@@ -11,4 +11,7 @@ public class DeviceVariable
     public string DataType { get; set; } = string.Empty;
     public IDeviceFunction? Owner { get; set; } // null for device level variables
     public Func<bool> IsAvailable { get; init; } = () => true; // e.g. PWM vars only while PWM is enabled
+
+    // "any" (Lua outputs) fits every input, the firmware reads every var as a float
+    public bool Accepts(IEnumerable<string> dataTypes) => DataType == "any" || dataTypes.Contains(DataType);
 }

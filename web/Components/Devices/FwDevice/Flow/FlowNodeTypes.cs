@@ -38,6 +38,9 @@ public sealed class FlowNodeType
 
     public bool IsSingleton { get; init; }
 
+    /// <summary>False when the firmware has no enable for it (Lua): enabled only puts the node on the canvas, never shown disabled.</summary>
+    public bool HasEnable { get; init; } = true;
+
     public string NodeId(IDeviceFunction function) => $"{Kind}-{function.Number}";
 
     public string SlotLabel(IDeviceFunction function) => IsSingleton ? Label : $"{Label} {function.Number}";
@@ -70,6 +73,14 @@ public static class FlowNodeTypes
             x => x.Enabled, (x, v) => x.Enabled = v,
             KeypadInputs,
             _ => []),
+
+        Define<LuaScript>("luaScript", "Lua Script", FlowCategory.Source,
+            d => d.Def.NumLuaOutputs > 0 ? [d.LuaScript] : [],
+            x => x.Enabled, (x, v) => x.Enabled = v,
+            _ => [],
+            x => x.Values.Cast<object?>().ToArray(),
+            singleton: true,
+            hasEnable: false),
 
         Define<VirtualInput>("virtualInput", "Virtual Input", FlowCategory.Logic, d => d.VirtualInputs,
             x => x.Enabled, (x, v) => x.Enabled = v,
@@ -194,7 +205,8 @@ public static class FlowNodeTypes
         Action<T, bool> setEnabled,
         Func<T, IReadOnlyList<FlowInputDef>> inputs,
         Func<T, object?[]> values,
-        bool singleton = false) where T : IDeviceFunction
+        bool singleton = false,
+        bool hasEnable = true) where T : IDeviceFunction
     {
         return new FlowNodeType
         {
@@ -202,6 +214,7 @@ public static class FlowNodeTypes
             Label = label,
             Category = category,
             IsSingleton = singleton,
+            HasEnable = hasEnable,
             Slots = d => slots(d).Cast<IDeviceFunction>().ToList(),
             GetEnabled = f => getEnabled((T)f),
             SetEnabled = (f, v) => setEnabled((T)f, v),

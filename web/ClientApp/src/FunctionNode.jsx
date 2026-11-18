@@ -12,7 +12,7 @@ function typeClass(dataTypes) {
 function formatValue(value, dataType) {
   if (value === undefined || value === null) return null;
   if (typeof value === 'boolean') return value ? 'ON' : 'OFF';
-  if (typeof value === 'number') return dataType === 'float' ? value.toFixed(2) : String(Math.round(value));
+  if (typeof value === 'number') return dataType === 'float' || dataType === 'any' ? value.toFixed(2) : String(Math.round(value));
   return String(value);
 }
 

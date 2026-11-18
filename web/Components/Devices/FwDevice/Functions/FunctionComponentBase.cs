@@ -48,7 +48,7 @@ public abstract class FunctionComponentBase<TDevice> : ComponentBase
         {
             "bool" => 1,
             "int" => 16,
-            "float" => 32,
+            "float" or "any" => 32,
             _ => 0
         };
     }

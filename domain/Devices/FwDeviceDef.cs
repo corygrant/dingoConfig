@@ -29,5 +29,6 @@ public record FwDeviceDef(
     int MinBuildVersion,
     int NumTimers = 0,
     int NumMath = 0,
-    int NumCanBuses = 1
+    int NumCanBuses = 1,
+    int NumLuaOutputs = 0 // > 0 means the firmware runs Lua scripts
     );

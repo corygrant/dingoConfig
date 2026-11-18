@@ -93,7 +93,7 @@
     {
         return Device.VarMap.Where(n => (n.GetName().ToLower().Contains(_searchText.ToLower()) ||
                                         n.PropertyName.ToLower().Contains(_searchText.ToLower())) &&
-                                        Datatypes.Any(dt => string.Equals(n.DataType, dt))).ToList();
+                                        n.Accepts(Datatypes)).ToList();
     }
 
     private IEnumerable<IGrouping<string, DeviceVariable>> GetGroupedVariables()

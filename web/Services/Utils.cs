@@ -5,6 +5,11 @@ namespace web.Services;
 
 public static class Utils
 {
+    // URL for a wwwroot JS module, versioned by its write time: a rebuilt bundle gets a new URL, so the
+    // browser can't keep serving the old one from cache (the app version doesn't change between builds)
+    public static string ModuleUrl(IWebHostEnvironment env, string path) =>
+        $"./{path}?v={env.WebRootFileProvider.GetFileInfo(path).LastModified.ToUnixTimeSeconds()}";
+
     public static string FormatId(int id, NumberFormat format)
     {
         if (format == NumberFormat.Hex)

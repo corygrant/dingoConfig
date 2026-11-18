@@ -4,6 +4,7 @@
 @using web.Services
 @typeparam TDevice where TDevice : domain.Devices.FwDevice
 @inject IJSRuntime JS
+@inject IWebHostEnvironment Env
 @inject IDialogService DialogService
 @inject NotificationService Notification
 @implements IAsyncDisposable
@@ -66,8 +67,6 @@
 
     private const int SyncIntervalMs = 200;
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
-    private static readonly string ModulePath =
-        $"./js/flow/flow-editor.js?v={typeof(FlowGraph).Assembly.GetName().Version}";
 
     private ElementReference _host;
     private IJSObjectReference? _module;
@@ -120,7 +119,7 @@
         _initializing = true;
         try
         {
-            _module = await JS.InvokeAsync<IJSObjectReference>("import", ModulePath);
+            _module = await JS.InvokeAsync<IJSObjectReference>("import", Utils.ModuleUrl(Env, "js/flow/flow-editor.js"));
             _dotNetRef = DotNetObjectReference.Create(this);
 
             var flow = new FlowGraph(Device);

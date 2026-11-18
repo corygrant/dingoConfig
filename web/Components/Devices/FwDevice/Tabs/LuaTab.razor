@@ -1,0 +1,150 @@
+@using application.Services
+@using web.Services
+@inject DeviceManager DeviceManager
+@inject NotificationService Notification
+@inject IDialogService DialogService
+@inject IJSRuntime JS
+@inject IWebHostEnvironment Env
+@implements IAsyncDisposable
+@typeparam TDevice where TDevice : domain.Devices.FwDevice
+
+<div style="height: calc(100vh - 250px); padding: 24px; display: flex; flex-direction: column; gap: 12px;">
+    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+        <MudButton Variant="Variant.Outlined" Color="Color.Default" StartIcon="@Icons.Material.Filled.Download"
+                   Disabled="@(!CanTransfer)" OnClick="ReadAsync">Read</MudButton>
+        <MudButton Variant="Variant.Outlined" Color="Color.Default" StartIcon="@Icons.Material.Filled.Upload"
+                   Disabled="@(!CanTransfer)" OnClick="WriteAsync">Write</MudButton>
+        <MudButton Variant="Variant.Outlined" Color="Color.Default" StartIcon="@Icons.Material.Filled.Rule"
+                   Disabled="@(!CanTransfer)" OnClick="VerifyAsync">Verify</MudButton>
+        <MudButton Variant="Variant.Outlined" Color="Color.Default" StartIcon="@Icons.Material.Filled.Message"
+                   Disabled="@(!CanTransfer)" OnClick="ReadMessageAsync">Read Message</MudButton>
+        <MudSpacer/>
+        <MudText Typo="Typo.body2">@System.Text.Encoding.UTF8.GetByteCount(Device.LuaScript.Script) bytes</MudText>
+    </MudStack>
+
+    @if (Device.Lua.Busy)
+    {
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+            <MudText Typo="Typo.body2" Style="min-width: 120px">@Device.Lua.Status</MudText>
+            @if (Device.Lua.Total > 0)
+            {
+                <MudProgressLinear Color="Color.Primary" Value="@(100.0 * Device.Lua.Done / Device.Lua.Total)"/>
+            }
+            else
+            {
+                <MudProgressLinear Color="Color.Primary" Indeterminate="true"/>
+            }
+        </MudStack>
+    }
+
+    <div @ref="_host" style="flex: 1; min-height: 0; border: 1px solid var(--mud-palette-lines-default); border-radius: 4px; overflow: hidden;"></div>
+
+    <MudText Typo="Typo.body2">Device message: @(_message ?? "-")</MudText>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public TDevice Device { get; set; } = null!;
+
+    private string? _message;
+    private ElementReference _host;
+    private IJSObjectReference? _module;
+    private IJSObjectReference? _editor;
+    private DotNetObjectReference<LuaTab<TDevice>>? _dotNetRef;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+        try
+        {
+            _module = await JS.InvokeAsync<IJSObjectReference>("import", Utils.ModuleUrl(Env, "js/lua/lua-editor.js"));
+            _dotNetRef = DotNetObjectReference.Create(this);
+            _editor = await _module.InvokeAsync<IJSObjectReference>("create", _host, _dotNetRef, Device.LuaScript.Script);
+        }
+        catch (JSDisconnectedException)
+        {
+        }
+    }
+
+    [JSInvokable]
+    public void SetScript(string text) => Device.LuaScript.Script = text;
+
+    // Edits reach .NET debounced, take the editor's text before a transfer
+    private async Task SyncFromEditorAsync()
+    {
+        if (_editor != null)
+            Device.LuaScript.Script = await _editor.InvokeAsync<string>("getValue");
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        try
+        {
+            if (_editor != null)
+            {
+                await _editor.InvokeVoidAsync("dispose");
+                await _editor.DisposeAsync();
+            }
+            if (_module != null)
+                await _module.DisposeAsync();
+        }
+        catch (JSDisconnectedException)
+        {
+        }
+        _dotNetRef?.Dispose();
+    }
+
+    private bool CanTransfer => Device.Connected && !Device.Lua.Busy;
+
+    private async Task WriteAsync()
+    {
+        await SyncFromEditorAsync();
+        var err = await Device.Lua.UploadAsync(Device.BaseId, Device.LuaScript.Script, DeviceManager.Transmit);
+        if (err != null)
+        {
+            Notification.NewError($"{Device.Name} Lua upload failed: {err}");
+            return;
+        }
+        Notification.NewSuccess($"{Device.Name} Lua script uploaded and verified");
+
+        await Task.Delay(300); // Let the device parse the script, a syntax error shows up in the message
+        await ReadMessageAsync();
+    }
+
+    private async Task ReadAsync()
+    {
+        await SyncFromEditorAsync();
+        if (Device.LuaScript.Script.Length > 0)
+        {
+            var ok = await DialogService.ShowMessageBox("Read Lua script",
+                "Replace the script in the editor with the one on the device?", yesText: "Replace", cancelText: "Cancel");
+            if (ok != true) return;
+        }
+
+        var script = await Device.Lua.ReadAsync(Device.BaseId, DeviceManager.Transmit);
+        if (script == null)
+        {
+            Notification.NewError($"{Device.Name} Lua read failed: no reply");
+            return;
+        }
+        Device.LuaScript.Script = script;
+        if (_editor != null)
+            await _editor.InvokeVoidAsync("setValue", script);
+        Notification.NewSuccess($"{Device.Name} Lua script read ({script.Length} chars)");
+    }
+
+    private async Task VerifyAsync()
+    {
+        await SyncFromEditorAsync();
+        var err = await Device.Lua.VerifyAsync(Device.BaseId, Device.LuaScript.Script, DeviceManager.Transmit);
+        if (err != null)
+            Notification.NewWarning($"{Device.Name} Lua verify: {err}");
+        else
+            Notification.NewSuccess($"{Device.Name} Lua script matches the device");
+    }
+
+    private async Task ReadMessageAsync()
+    {
+        _message = await Device.Lua.ReadMessageAsync(Device.BaseId, DeviceManager.Transmit) ?? "No reply";
+        if (_message.Length == 0) _message = "(none)";
+    }
+}

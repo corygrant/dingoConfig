@@ -166,7 +166,7 @@ public sealed class FlowGraph
                 .ToList();
 
             nodes.Add(new FlowNodeDto(slot.Id, slot.Type.Category.ToString(), slot.Function.Name, slot.Label,
-                0, 0, slot.Enabled, Deletable: true, inputs, outputs));
+                0, 0, slot.Enabled || !slot.Type.HasEnable, Deletable: true, inputs, outputs));
         }
 
         return new FlowGraphDto(ApplyLayout(nodes), edges);
@@ -202,7 +202,7 @@ public sealed class FlowGraph
         if (FindInput(targetId, targetHandle) is not { } input)
             return "Unknown target input";
 
-        if (!input.DataTypes.Contains(variable.DataType))
+        if (!variable.Accepts(input.DataTypes))
             return $"{input.Label} accepts {string.Join("/", input.DataTypes)}, not {variable.DataType}";
 
         input.Set(index);

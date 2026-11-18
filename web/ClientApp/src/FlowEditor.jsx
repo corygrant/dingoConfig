@@ -110,7 +110,7 @@ function Editor({ dotnet, initialGraph, api }) {
     (c) => {
       const source = handleInfo(c.source, c.sourceHandle, 'outputs');
       const target = handleInfo(c.target, c.targetHandle, 'inputs');
-      return !!source && !!target && source.dataTypes.some((t) => target.dataTypes.includes(t));
+      return !!source && !!target && (source.dataTypes.includes('any') || source.dataTypes.some((t) => target.dataTypes.includes(t)));
     },
     [handleInfo],
   );

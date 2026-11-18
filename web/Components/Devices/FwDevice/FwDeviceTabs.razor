@@ -31,6 +31,13 @@
     <MudTabPanel @ref="_flowPanel" Text="Flow" Icon="@Icons.Material.Filled.DataExploration">
         <FlowEditorTab TDevice="TDevice" Device="Device" IsActive="@(_tabs?.ActivePanel == _flowPanel && _flowPanel is not null)" />
     </MudTabPanel>
+
+    @if (Device.Def.NumLuaOutputs > 0)
+    {
+        <MudTabPanel Text="Lua" Icon="@Icons.Material.Filled.Code">
+            <LuaTab TDevice="TDevice" Device="Device" />
+        </MudTabPanel>
+    }
 </MudTabs>
 
 @code {

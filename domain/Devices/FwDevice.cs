@@ -72,6 +72,8 @@ public class FwDevice : IDeviceConfigurable
     [JsonPropertyName("flowLayout")] public Dictionary<string, FlowNodePosition> FlowLayout { get; set; } = new();
     [JsonPropertyName("timers")] public List<DeviceTimer> Timers { get; init; } = [];
     [JsonPropertyName("mathBlocks")] public List<MathBlock> MathBlocks { get; init; } = [];
+    [JsonPropertyName("luaScript")] public LuaScript LuaScript { get; set; } = null!;
+    [JsonIgnore] public LuaProtocol Lua { get; } = new();
     
     [JsonIgnore] private DateTime LastRxTime { get; set; }
 
@@ -167,6 +169,7 @@ public class FwDevice : IDeviceConfigurable
         _indexedSetters["Timer.Running"]      = (i, val) => Timers[i].Running = val != 0;
         _indexedSetters["Timer.Elapsed"]      = (i, val) => Timers[i].Elapsed = val;
         _indexedSetters["Math.Value"]         = (i, val) => MathBlocks[i].Value = val;
+        _indexedSetters["LuaScript.Value"]    = (i, val) => LuaScript.Values[i] = val;
     }
 
     public void BindCyclicSigs(CyclicSigsConfig config)
@@ -265,6 +268,9 @@ public class FwDevice : IDeviceConfigurable
         StarterDisable ??= new StarterDisable("starterDisable", Def.NumOutputs);
 
         Wipers ??= new Wiper("wiper");
+
+        LuaScript ??= new LuaScript();
+        LuaScript.NumOutputs = Def.NumLuaOutputs;
 
         if (Keypads.Count == 0)
             for (var i = 0; i < Def.NumKeypads; i++)
@@ -377,6 +383,8 @@ public class FwDevice : IDeviceConfigurable
                 variable.Owner = DigitalInputs[i];
             VarMap.AddRange(vars);
         }
+
+        AddVars(LuaScript, ref index); // Empty when the firmware has no Lua
     }
 
     private void AddVars(IDeviceFunction function, ref int index)
@@ -559,6 +567,8 @@ public class FwDevice : IDeviceConfigurable
                 _paramProtocol.HandleMessage(BaseId,BaseId + ConfigTxOffset, Name, data, queue, outgoing);
                 
                 ReadInfoWarnErrorMessage(data);
+
+                Lua.HandleReply(data);
                 
                 if (((MessageCommand)data[0]) == MessageCommand.Version)
                     ReadVersion(BaseId, Name, data, queue);

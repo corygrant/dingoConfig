@@ -1,5 +1,6 @@
 @using application.Services
 @inject IJSRuntime JS
+@inject IWebHostEnvironment Env
 @inject PlotService PlotService
 @implements IAsyncDisposable
 
@@ -45,7 +46,7 @@
 
         try
         {
-            _module = await JS.InvokeAsync<IJSObjectReference>("import", PlotInterop.ModulePath);
+            _module = await JS.InvokeAsync<IJSObjectReference>("import", PlotInterop.ModulePath(Env));
             _group = await _module.InvokeAsync<IJSObjectReference>("createSparklineGroup",
                 PlotService.Live.Capacity, PlotService.LiveSeconds);
         }

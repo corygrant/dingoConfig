@@ -132,7 +132,8 @@
   color: var(--df-text-2);
   font-variant-numeric: tabular-nums;
 }
-.df-badge-on  { background: var(--df-active); color: #fff; }
+/* Outlined like the MudChip Variant.Outlined states elsewhere in the app */
+.df-badge-on  { background: transparent; border: 1px solid var(--df-active); color: var(--df-active); }
 .df-badge-off { background: transparent; border: 1px solid var(--df-border); }
 
 .df-expand {

@@ -3,6 +3,7 @@
 @using web.Services
 @inject PlotService PlotService
 @inject IJSRuntime JS
+@inject IWebHostEnvironment Env
 @inject IDialogService DialogService
 @rendermode InteractiveServer
 @implements IAsyncDisposable
@@ -126,7 +127,7 @@
         try
         {
             _dotNetRef = DotNetObjectReference.Create(this);
-            _module = await JS.InvokeAsync<IJSObjectReference>("import", PlotInterop.ModulePath);
+            _module = await JS.InvokeAsync<IJSObjectReference>("import", PlotInterop.ModulePath(Env));
             _plot = await _module.InvokeAsync<IJSObjectReference>("createAppPlot", _chartHost, _dotNetRef);
             await _plot.InvokeVoidAsync("setWindow", _windowSeconds);
         }

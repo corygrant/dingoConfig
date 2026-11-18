@@ -27,5 +27,10 @@ public enum MessageCommand
     Bootloader = 33,
     CheckCrc = 34,
     CheckCrcRsp = 35,
-    Restart = 36
+    Restart = 36,
+
+    LuaWrite = 40,
+    LuaWriteComplete = 41,
+    LuaRead = 42,
+    LuaErr = 43
 }
