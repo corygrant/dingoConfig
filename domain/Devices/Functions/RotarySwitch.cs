@@ -13,9 +13,9 @@ public class RotarySwitch(int number, string name) : IDeviceFunction
     [JsonPropertyName("name")] public string Name { get; set; } = name;
     [JsonPropertyName("enabled")] public bool Enabled { get; set; }
     [JsonPropertyName("invert")] public bool Invert { get; set; }
-    [JsonPropertyName("fOffset")] public double Offset { get; set; }
-    [JsonPropertyName("fStep")] public double Step { get; set; }
-    [JsonPropertyName("fMaxPos")] public double MaxPos { get; set; }
+    [JsonPropertyName("offset")] public double Offset { get; set; } = 0.0;
+    [JsonPropertyName("step")] public double Step { get; set; } = 100.0;
+    [JsonPropertyName("maxPos")] public double MaxPos { get; set; } = 10.0;
     [JsonPropertyName("mode")] public RotaryMode Mode { get; set; } = RotaryMode.Uniform;
     [JsonPropertyName("numPos")] public int NumPos { get; set; } = 2;
     [JsonPropertyName("tolerance")] public int Tolerance { get; set; } = 200;

@@ -15,7 +15,7 @@ public class AnalogSwitch(int number, string name) : IDeviceFunction
     [JsonPropertyName("enabled")] public bool Enabled { get; set; }
     [JsonPropertyName("mode")] public InputMode Mode { get; set; } = InputMode.Momentary;
     [JsonPropertyName("invert")] public bool Invert { get; set; }
-    [JsonPropertyName("threshold")] public int Threshold { get; set; }
+    [JsonPropertyName("threshold")] public int Threshold { get; set; } = 2000;
     
     [JsonIgnore][Plotable(displayName:"InState")] public bool State { get; set; }
     

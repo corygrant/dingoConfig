@@ -12,7 +12,7 @@ public class Wiper : IDeviceFunction
     [JsonPropertyName("name")] public string Name {get; set;}
     [JsonIgnore] public int Number => 1; // Singleton function
     [JsonPropertyName("enabled")] public bool Enabled {get; set;}
-    [JsonPropertyName("mode")] public WiperMode Mode { get; set; }
+    [JsonPropertyName("mode")] public WiperMode Mode { get; set; } = WiperMode.DigIn;
     [JsonPropertyName("slowInput")] public int SlowInput { get; set; }
     [JsonPropertyName("fastInput")] public int FastInput { get; set; }
     [JsonPropertyName("interInput")] public int InterInput { get; set; }
